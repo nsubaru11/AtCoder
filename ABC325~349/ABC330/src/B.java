@@ -14,16 +14,13 @@ public class B {
 		int r = sc.nextInt();
 		int[] a = sc.nextInt(n);
 		for (int i = 0; i < n; i++) {
-			if (a[i] < l || r < a[i]) {
-				if (abs(a[i] - l) < abs(a[i] - r)) {
-					a[i] = l;
-				} else {
-					a[i] = r;
-				}
+			if (a[i] < l) {
+				a[i] = l;
+			} else if (r < a[i]) {
+				a[i] = r;
 			}
 		}
-		out.print(a);
-		out.println();
+		out.println(a, ' ');
 	}
 
 	public static void main(String[] args) {
@@ -31,7 +28,7 @@ public class B {
 			 final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			e.printStackTrace();
 		}
 	}
 
@@ -120,12 +117,13 @@ public class B {
 			}
 			if (b == '.') {
 				b = read();
-				double factor = 10;
+				long f = 0, d = 1;
 				while ('0' <= b && b <= '9') {
-					result += (b - '0') / factor;
-					factor *= 10;
+					f = f * 10 + b - '0';
+					d *= 10;
 					b = read();
 				}
+				result += (double) f / d;
 			}
 			return negative ? -result : result;
 		}

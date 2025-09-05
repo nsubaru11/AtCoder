@@ -6,15 +6,30 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public class C {
+public class D {
 
 	private static void solve(final FastScanner sc, final FastPrinter out) {
-		long d = sc.nextLong();
-		long ans = Long.MAX_VALUE;
-		for (int x = 0; x <= (int) sqrt(d); x++) {
-			long x2 = (long) x * x;
-			int y = (int) round(sqrt(d - x2));
-			ans = min(ans, abs(d - x2 - (long) y * y));
+		int n = sc.nextInt();
+		int[] row = new int[n];
+		int[] col = new int[n];
+		char[] grid = new char[n * n];
+		for (int i = 0, k = 0; i < n; i++) {
+			for (int j = 0; j < n; j++, k++) {
+				char c = sc.nextChar();
+				grid[k] = c;
+				if (c == 'o') {
+					col[i]++;
+					row[j]++;
+				}
+			}
+		}
+		long ans = 0;
+		for (int i = 0, k = 0; i < n; i++) {
+			for (int j = 0; j < n; j++, k++) {
+				if (grid[k] == 'o') {
+					ans += (long) (row[j] - 1) * (col[i] - 1);
+				}
+			}
 		}
 		out.println(ans);
 	}

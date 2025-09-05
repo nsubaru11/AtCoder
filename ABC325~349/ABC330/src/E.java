@@ -6,17 +6,94 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public class C {
+public class E {
 
 	private static void solve(final FastScanner sc, final FastPrinter out) {
-		long d = sc.nextLong();
-		long ans = Long.MAX_VALUE;
-		for (int x = 0; x <= (int) sqrt(d); x++) {
-			long x2 = (long) x * x;
-			int y = (int) round(sqrt(d - x2));
-			ans = min(ans, abs(d - x2 - (long) y * y));
+		int n = sc.nextInt();
+		int q = sc.nextInt();
+		int[] a = new int[n];
+		TreeMap<Integer, Boolean> lr = new TreeMap<>();
+		TreeMap<Integer, Integer> tm = new TreeMap<>();
+		for (int i = 0; i < n; i++) {
+			int k = sc.nextInt();
+			a[i] = k;
+			int cnt = tm.getOrDefault(k, 0) + 1;
+			tm.put(k, cnt);
+			if (cnt == 1 && outRange(lr, k)) set(lr, k);
 		}
-		out.println(ans);
+		while (q-- > 0) {
+			int i = sc.nextInt() - 1;
+			int x = sc.nextInt();
+			int cnt = tm.get(a[i]);
+			if (cnt == 1) {
+				Boolean f = lr.get(a[i]);
+				if (f == null) { // 範囲内の時
+					lr.putIfAbsent(a[i] - 1, false);
+					lr.put(a[i] + 1, true);
+				} else if (f) { // 左端または一点の時
+					Map.Entry<Integer, Boolean> e = lr.higherEntry(a[i]);
+					if (e != null && !e.getValue()) {
+						lr.put(a[i] + 1, true);
+					}
+					lr.remove(a[i]);
+				} else { // 右端の時
+					lr.putIfAbsent(a[i] - 1, false);
+					lr.remove(a[i]);
+				}
+				tm.remove(a[i]);
+			} else {
+				tm.put(a[i], cnt - 1);
+			}
+			a[i] = x;
+
+			int cnt2 = tm.getOrDefault(x, 0) + 1;
+			tm.put(x, cnt2);
+			if (cnt2 == 1 && outRange(lr, x)) set(lr, x);
+
+			out.println(mex(lr));
+		}
+	}
+
+	private static void set(TreeMap<Integer, Boolean> lr, int x) {
+		Boolean f = lr.get(x - 1);
+		Boolean f2 = lr.get(x + 1);
+		if (f != null && f2 != null) {
+			Map.Entry<Integer, Boolean> e = lr.higherEntry(x + 1);
+			if (e != null && !e.getValue()) {
+				lr.remove(x + 1);
+			} else {
+				lr.put(x + 1, false);
+			}
+			if (!f) lr.remove(x - 1);
+		} else if (f != null) {
+			lr.put(x, false);
+			if (!f) lr.remove(x - 1);
+		} else if (f2 != null) {
+			lr.put(x, true);
+			Map.Entry<Integer, Boolean> e = lr.higherEntry(x + 1);
+			if (e != null && !e.getValue()) {
+				lr.remove(x + 1);
+			} else {
+				lr.put(x + 1, false);
+			}
+		} else {
+			lr.put(x, true);
+		}
+	}
+
+	private static int mex(TreeMap<Integer, Boolean> lr) {
+		int k = lr.firstKey();
+		if (k > 0) return 0;
+		Map.Entry<Integer, Boolean> e = lr.higherEntry(k);
+		if (e == null) return k + 1;
+		if (!e.getValue()) return e.getKey() + 1;
+		return k + 1;
+	}
+
+	private static boolean outRange(TreeMap<Integer, Boolean> map, int k) {
+		boolean floor = map.floorKey(k) != null ? map.floorEntry(k).getValue() : false;
+		boolean ceiling = map.ceilingKey(k) != null ? map.ceilingEntry(k).getValue() : true;
+		return !floor || ceiling;
 	}
 
 	public static void main(String[] args) {
