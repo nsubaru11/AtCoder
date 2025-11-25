@@ -706,6 +706,7 @@ public final class ${NAME}  {
 
 		public FastPrinter println(final boolean b) {
 			write(b);
+			ensureCapacity(1);
 			BYTE_ARRAY_HANDLE.set(buffer, pos++, LINE);
 			if (autoFlush) flush();
 			return this;
