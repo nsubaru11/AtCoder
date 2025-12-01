@@ -25,7 +25,7 @@ public final class ${NAME}  {
 		DEBUG = true;
 		MOD = 998244353;
 		// MOD = 1_000_000_007;
-		dij = new int[]{-1, -1, -1, 0, 0, 1, 1, 1, -1, 0, 1, -1, 1, -1, 0, 1};
+		dij = new int[]{0, -1, 0, 1, -1, -1, 1, 1, -1, 0, 1, 0, -1, 1, 1, -1};
 		sc = new FastScanner(System.in);
 		out = new FastPrinter(System.out);
 	}
