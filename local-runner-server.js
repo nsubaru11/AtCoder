@@ -6,24 +6,24 @@ const os = require('os');
 const crypto = require('crypto');
 
 const PORT = 8080;
-const JAVA_HOME_24 = process.env.JAVA_HOME_24;
+const JAVA_HOME = process.env.JAVA_HOME;
 
 function getJavaEnv() {
-	if (!JAVA_HOME_24) {
-		console.log('JAVA_HOME_24 is not set.  Using default Java.');
+	if (!JAVA_HOME) {
+		console.log('JAVA_HOME is not set. Using default Java.');
 		return process.env;
 	}
-	console.log(`Using Java from: ${JAVA_HOME_24}`);
+	console.log(`Using Java from: ${JAVA_HOME}`);
 	return {
 		...process.env,
-		JAVA_HOME: JAVA_HOME_24,
-		PATH: path.join(JAVA_HOME_24, 'bin') + path.delimiter + process.env.PATH
+		JAVA_HOME: JAVA_HOME,
+		PATH: path.join(JAVA_HOME, 'bin') + path.delimiter + process.env.PATH
 	};
 }
 
 const javaEnv = getJavaEnv();
-const JAVA_PATH = JAVA_HOME_24 ? path.join(JAVA_HOME_24, 'bin', 'java') : 'java';
-const JAVAC_PATH = JAVA_HOME_24 ? path.join(JAVA_HOME_24, 'bin', 'javac') : 'javac';
+const JAVA_PATH = JAVA_HOME ? path.join(JAVA_HOME, 'bin', 'java') : 'java';
+const JAVAC_PATH = JAVA_HOME ? path.join(JAVA_HOME, 'bin', 'javac') : 'javac';
 
 // ウォームアップ
 console.log('Warming up JVM...');
@@ -107,6 +107,20 @@ function getCompiledEntry(sourceCode) {
 	return promise;
 }
 
+// Javaバージョンを取得してラベルに使用
+function getJavaVersion() {
+	try {
+		const result = spawnSync(JAVA_PATH, ['-version'], {env: javaEnv, encoding: 'utf8'});
+		const output = result.stderr || result.stdout || '';
+		const match = output.match(/version "(\d+)/);
+		return match ? match[1] : 'Unknown';
+	} catch {
+		return 'Unknown';
+	}
+}
+
+const javaVersion = getJavaVersion();
+
 const server = http.createServer(async (req, res) => {
 	res.setHeader('Access-Control-Allow-Origin', '*');
 	res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -137,8 +151,8 @@ const server = http.createServer(async (req, res) => {
 			response = [
 				{
 					language: 'Java',
-					compilerName: 'java24',
-					label: 'Java 24 (Local)'
+					compilerName: `java${javaVersion}`,
+					label: `Java ${javaVersion} (Local)`
 				}
 			];
 		} else if (request.mode === 'precompile') {

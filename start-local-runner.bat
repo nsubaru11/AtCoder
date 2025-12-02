@@ -3,21 +3,33 @@ chcp 65001 > nul
 
 set "SERVER_PATH=C:\Users\20051\Projects\WebStorm\AtCoder_Scripts\EasyTestv2\local-runner-server.js"
 
-echo ========================================
-echo   Local Runner Server for Java 24
-echo ========================================
-echo.
-echo JAVA_HOME_24: %JAVA_HOME_24%
-echo.
+REM デフォルトは24、引数があればそれを使用
+if "%~1"=="" (
+    set "JAVA_VER=24"
+) else (
+    set "JAVA_VER=%~1"
+)
 
-if not defined JAVA_HOME_24 (
-    echo [ERROR] JAVA_HOME_24 is not set.
+REM 対応するJAVA_HOME変数名を構築
+set "JAVA_HOME_VAR=JAVA_HOME_%JAVA_VER%"
+
+REM 環境変数の値を取得
+call set "JAVA_PATH=%%%JAVA_HOME_VAR%%%"
+
+echo ========================================
+echo   Local Runner Server for Java %JAVA_VER%
+echo ========================================
+echo %JAVA_HOME_VAR%: %JAVA_PATH%
+
+if "%JAVA_PATH%"=="" (
+    echo [ERROR] %JAVA_HOME_VAR% is not set.
     pause
     exit /b 1
 )
 
-"%JAVA_HOME_24%\bin\java" -version
-echo.
+"%JAVA_PATH%\bin\java" -version
+
+set "JAVA_HOME=%JAVA_PATH%"
 
 echo Starting server...
 node "%SERVER_PATH%"
