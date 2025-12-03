@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 > nul
 
-set "SERVER_PATH=C:\Users\20051\Projects\WebStorm\AtCoder_Scripts\EasyTestv2\local-runner-server.js"
+set "SERVER_PATH=./local-runner-server.js"
 
 REM デフォルトは24、引数があればそれを使用
 if "%~1"=="" (
