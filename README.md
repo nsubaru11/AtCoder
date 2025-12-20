@@ -6,6 +6,8 @@
 - Resolved: ABC000 [A ~ G]
 - Update: JDK17->24.0.2 ABC000 [A ~ G]
 
+## notes
+
 - site: https://atcoder.jp/
 - profile: https://atcoder.jp/users/nsubaru
 - template entry points: `TemplateCode.java` / `TemplateCode17.java` sit at the repo root for quick starts
