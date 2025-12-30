@@ -39,7 +39,7 @@ public final class ${NAME} {
 	}
 
 	// region < Utility Methods >
-	private static boolean isValidRange(int i, int j, int h, int w) {
+	private static boolean isValidRange(final int i, final int j, final int h, final int w) {
 		return 0 <= i && i < h && 0 <= j && j < w;
 	}
 
