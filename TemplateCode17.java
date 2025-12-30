@@ -15,11 +15,11 @@ import static java.util.Arrays.*;
 
 public final class ${NAME} {
 
-	// region initialization
-	// ------------------------ 定数 ------------------------
+	// region < Constants & Globals >
 	private static final boolean DEBUG;
 	private static final int MOD;
-	private static final int[] dij;
+	private static final int[] di;
+	private static final int[] dj;
 	private static final FastScanner sc;
 	private static final FastPrinter out;
 
@@ -27,19 +27,71 @@ public final class ${NAME} {
 		DEBUG = true;
 		MOD = 998244353;
 		// MOD = 1_000_000_007;
-		dij = new int[]{0, -1, 0, 1, -1, -1, 1, 1, -1, 0, 1, 0, -1, 1, 1, -1};
+		di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
+		dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
 		sc = new FastScanner(System.in);
 		out = new FastPrinter(System.out);
 	}
 	// endregion
 
-	// ------------------------ メインロジック ------------------------
 	private static void solve() {
 
 	}
 
-	// region main() and debug() methods
-	// ------------------------ main() 関数 ------------------------
+	// region < Utility Methods >
+	private static boolean isValidRange(int i, int j, int h, int w) {
+		return 0 <= i && i < h && 0 <= j && j < w;
+	}
+
+	private static long modPow(long a, long b, final long mod) {
+		long ans = 1;
+		for (a %= mod; b > 0; a = a * a % mod, b >>= 1) {
+			if ((b & 1) == 1) ans = ans * a % mod;
+		}
+		return ans;
+	}
+
+	private static long floorLong(final long a, final long b) {
+		return a < 0 ? (a - b + 1) / b : a / b;
+	}
+
+	private static int floorInt(final int a, final int b) {
+		return a < 0 ? (a - b + 1) / b : a / b;
+	}
+
+	private static long ceilLong(final long a, final long b) {
+		return a < 0 ? a / b : (a + b - 1) / b;
+	}
+
+	private static long ceilInt(final int a, final int b) {
+		return a < 0 ? a / b : (a + b - 1) / b;
+	}
+
+	private static long LCM(final long x, final long y) {
+		return x == 0 || y == 0 ? 0 : x * (y / GCD(x, y));
+	}
+
+	public static long GCD(long a, long b) {
+		a = abs(a);
+		b = abs(b);
+		if (a == 0) return b;
+		if (b == 0) return a;
+		int commonShift = Long.numberOfTrailingZeros(a | b);
+		a >>= Long.numberOfTrailingZeros(a);
+		while (b != 0) {
+			b >>= Long.numberOfTrailingZeros(b);
+			if (a > b) {
+				long tmp = a;
+				a = b;
+				b = tmp;
+			}
+			b -= a;
+		}
+		return a << commonShift;
+	}
+	// endregion
+
+	// region < I/O & Debug >
 	public static void main(final String[] args) {
 		try {
 			solve();
@@ -51,16 +103,13 @@ public final class ${NAME} {
 		}
 	}
 
-	// ------------------------ デバッグ用 ------------------------
 	private static void debug(final Object... args) {
 		if (DEBUG) {
 			out.flush();
 			System.err.println(deepToString(args));
 		}
 	}
-	// endregion
 
-	// ------------------------ 高速入出力クラス ------------------------
 	@SuppressWarnings("unused")
 	private static final class FastScanner implements AutoCloseable {
 		private static final int DEFAULT_BUFFER_SIZE = 65536;
@@ -1957,4 +2006,5 @@ public final class ${NAME} {
 			return this;
 		}
 	}
+	// endregion
 }
