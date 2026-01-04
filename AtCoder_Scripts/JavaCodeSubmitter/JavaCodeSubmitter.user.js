@@ -13,8 +13,8 @@
 // @match        https://paiza.jp/*
 // @grant        unsafeWindow
 // @run-at       document-end
-// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/JavaCodeSubmitter/index.js
-// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/JavaCodeSubmitter/index.js
+// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/JavaCodeSubmitter/JavaCodeSubmitter.user.js
+// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/JavaCodeSubmitter/JavaCodeSubmitter.user.js
 // ==/UserScript==
 
 (function () {
