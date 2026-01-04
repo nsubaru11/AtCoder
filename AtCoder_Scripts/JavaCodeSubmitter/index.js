@@ -1,27 +1,26 @@
 // ==UserScript==
 // @name         Java Code Submitter
 // @namespace    https://github.com/nsubaru11/AtCoder
-// @version      1.0.0
-// @description  Enhances Java submission workflow:
-// @description  - Force class name to Main
-// @description  - Replace DEBUG=true → false
-// @description  - Auto-fold Main class after paste
-// @description  - Add customizable submit shortcuts
+// @version      1.0.3
+// @description  Java submission helper (Main/DEBUG/fold/shortcuts)
 // @author       nsubaru11
 // @license      MIT
-// @homepageURL  https://github.com/nsubaru11/AtCoder/tree/main/AtCoder_Scripts/UniversalSmartSubmitter
+// @homepageURL  https://github.com/nsubaru11/AtCoder/tree/main/AtCoder_Scripts/JavaCodeSubmitter
 // @supportURL   https://github.com/nsubaru11/AtCoder/issues
 // @match        https://onlinejudge.u-aizu.ac.jp/*
 // @match        https://atcoder.jp/contests/*
 // @match        https://judge.yosupo.jp/problem/*
+// @match        https://paiza.jp/*
 // @grant        unsafeWindow
 // @run-at       document-end
-// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/UniversalSmartSubmitter/index.meta.js
-// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/UniversalSmartSubmitter/index.user.js
+// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/JavaCodeSubmitter/index.js
+// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/JavaCodeSubmitter/index.js
 // ==/UserScript==
 
 (function () {
 	'use strict';
+
+	const g = (typeof unsafeWindow !== 'undefined' && unsafeWindow) ? unsafeWindow : window;
 
 	// --------------- Utilities ---------------
 	const DEFAULT_SETTINGS = {
@@ -32,12 +31,12 @@
 		// 貼り付け後に Main クラスを自動折りたたみするか
 		foldMainOnPaste: true,
 		// デバッグログを有効化するか
-		logEnabled: true,
+		logEnabled: false,
 	};
 
 	function loadSettings() {
 		try {
-			const ls = (unsafeWindow || window).localStorage;
+			const ls = g.localStorage;
 			if (!ls) return DEFAULT_SETTINGS;
 			const raw = ls.getItem('smartSubmitterSettings');
 			if (!raw) return DEFAULT_SETTINGS;
@@ -50,88 +49,247 @@
 
 	const SETTINGS = loadSettings();
 
-	const LOG_PREFIX = '[Smart Submitter]';
+	const LOG_PREFIX = '[Java Code Submitter]';
 	const log = (...args) => {
 		if (!SETTINGS.logEnabled) return;
-		console.log(LOG_PREFIX, ...args);
+		try {
+			const fn = (console && (console.debug || console.log)) ? (console.debug || console.log) : null;
+			if (fn) fn.call(console, LOG_PREFIX, ...args);
+		} catch {
+			// noop
+		}
 	};
-	// public / final の有無を許容してクラス宣言にマッチ
-	const CLASS_DECL_REGEX = /(?<!\/\/.*)(?<!\/\*[\s\S]*?)((?:public\s+)?(?:final\s+)?class\s+)([A-Za-z_][A-Za-z0-9_]*)/;
-	const DEBUG_REGEX_REPLACE = /(DEBUG\s*=\s*)true(\s*;)/g;
+	const isEnterKey = (e) => e.key === 'Enter' || e.keyCode === 13;
+	const clickElementRobust = (el) => {
+		if (!el) return;
+		try {
+			el.click();
+			return;
+		} catch {
+			// fallback
+		}
+		try {
+			el.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, view: window}));
+		} catch {
+			// noop
+		}
+	};
+
+	const escapeRegExp = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 	/**
-	 * main メソッドを含むクラス、あるいはもっとも「それらしい」クラスを探す
-	 * @param {string} text
-	 * @returns {{prefix: string, name: string, index: number} | null}
+	 * Java コードからコメント/文字列/文字リテラルをマスクする。
+	 * - 返り値の長さは入力と同じ (index をそのまま使える)
+	 * - マスク部分は基本的に空白にするが、改行は保持する
 	 */
-	function findMainClassInfo(text) {
-		const CLASS_ALL_REGEX = new RegExp(CLASS_DECL_REGEX.source, 'g');
-		const matches = [];
-		let m;
-		while ((m = CLASS_ALL_REGEX.exec(text)) !== null) {
-			matches.push({
-				prefix: m[1],
-				name: m[2],
-				index: m.index,
-			});
+	function maskJava(text) {
+		const out = [];
+		let inLineComment = false;
+		let inBlockComment = false;
+		let inString = false;
+		let inChar = false;
+		let isEscape = false;
+
+		for (let i = 0; i < text.length; i++) {
+			const c = text[i];
+			const n = i + 1 < text.length ? text[i + 1] : '';
+
+			if (inLineComment) {
+				if (c === '\n') {
+					inLineComment = false;
+					out.push('\n');
+				} else {
+					out.push(' ');
+				}
+				continue;
+			}
+			if (inBlockComment) {
+				if (c === '*' && n === '/') {
+					out.push(' ', ' ');
+					i++;
+					inBlockComment = false;
+					continue;
+				}
+				out.push((c === '\n') ? '\n' : ' ');
+				continue;
+			}
+
+			if (inString) {
+				if (isEscape) {
+					isEscape = false;
+					out.push(' ');
+					continue;
+				}
+				if (c === '\\') {
+					isEscape = true;
+					out.push(' ');
+					continue;
+				}
+				if (c === '"') {
+					inString = false;
+					out.push(' ');
+					continue;
+				}
+				out.push((c === '\n') ? '\n' : ' ');
+				continue;
+			}
+			if (inChar) {
+				if (isEscape) {
+					isEscape = false;
+					out.push(' ');
+					continue;
+				}
+				if (c === '\\') {
+					isEscape = true;
+					out.push(' ');
+					continue;
+				}
+				if (c === "'") {
+					inChar = false;
+					out.push(' ');
+					continue;
+				}
+				out.push((c === '\n') ? '\n' : ' ');
+				continue;
+			}
+
+			// code
+			if (c === '/' && n === '/') {
+				out.push(' ', ' ');
+				i++;
+				inLineComment = true;
+				continue;
+			}
+			if (c === '/' && n === '*') {
+				out.push(' ', ' ');
+				i++;
+				inBlockComment = true;
+				continue;
+			}
+			if (c === '"') {
+				inString = true;
+				out.push(' ');
+				continue;
+			}
+			if (c === "'") {
+				inChar = true;
+				out.push(' ');
+				continue;
+			}
+
+			out.push(c);
 		}
-		if (!matches.length) return null;
+		return out.join('');
+	}
 
-		const MAIN_REGEX = /public\s+static\s+void\s+main\s*\(/;
-		let mainCandidate = null;
+	function findMatchingBrace(maskedText, openBraceIdx) {
+		let depth = 1;
+		for (let i = openBraceIdx + 1; i < maskedText.length; i++) {
+			const c = maskedText[i];
+			if (c === '{') depth++;
+			else if (c === '}') {
+				depth--;
+				if (depth === 0) return i;
+			}
+		}
+		return -1;
+	}
 
-		for (let i = 0; i < matches.length; i++) {
-			const current = matches[i];
-			const start = current.index;
-			const end = (i + 1 < matches.length) ? matches[i + 1].index : text.length;
-			const body = text.slice(start, end);
-			if (MAIN_REGEX.test(body)) {
-				// main() を含むクラスを優先。public が付いていれば即採用
-				mainCandidate = current;
-				if (/^\s*public\s+/i.test(current.prefix)) break;
+	function isPublicClass(maskedText, classKeywordIndex) {
+		const lineStart = maskedText.lastIndexOf('\n', classKeywordIndex) + 1;
+		const head = maskedText.slice(lineStart, classKeywordIndex);
+		return /\bpublic\b/.test(head);
+	}
+
+	/**
+	 * main メソッドを含むクラスを探す (文字列リテラル内の括弧を無視する強化版)
+	 */
+	function findMainClassInfo(text, maskedText) {
+		const masked = maskedText || maskJava(text);
+
+		// String... args 等にも対応
+		const MAIN_REGEX = /(?:\bpublic\s+static|\bstatic\s+public)\s+void\s+main\s*\(\s*String\s*(?:\[\]|\.\.\.)/;
+		const mainMatch = MAIN_REGEX.exec(masked);
+		const mainIndex = mainMatch ? mainMatch.index : -1;
+
+		const CLASS_REGEX = /\bclass\s+([A-Za-z_][A-Za-z0-9_]*)\b/g;
+		const candidates = [];
+		let m;
+		while ((m = CLASS_REGEX.exec(masked)) !== null) {
+			const name = m[1];
+			const classStart = m.index;
+			const nameStart = classStart + m[0].lastIndexOf(name);
+			const nameEnd = nameStart + name.length;
+			const openBraceIdx = masked.indexOf('{', nameEnd);
+			if (openBraceIdx === -1) continue;
+			const closeBraceIdx = findMatchingBrace(masked, openBraceIdx);
+			const isPublic = isPublicClass(masked, classStart);
+			const info = {name, nameStart, nameEnd, classStart, openBraceIdx, closeBraceIdx, isPublic};
+			candidates.push(info);
+			if (mainIndex !== -1 && closeBraceIdx !== -1 && mainIndex > classStart && mainIndex < closeBraceIdx) {
+				return info;
 			}
 		}
 
-		if (mainCandidate) return mainCandidate;
-
-		// main() が見つからなければ、public class を優先し、なければ先頭クラス
-		const publicMatch = matches.find(c => /public\s+/i.test(c.prefix));
-		return publicMatch || matches[0];
+		if (!candidates.length) return null;
+		return candidates.find(c => c.isPublic) || candidates[0];
 	}
 
 	/**
 	 * ペーストされたコードを自動修正する
-	 * @param {string} text - ペーストされたテキスト
-	 * @returns {{modified: string, didModify: boolean}} - 修正後のテキストと、修正したかどうかのフラグ
 	 */
 	function modifyPastedCode(text) {
-		let modified = text;
+		let modified = (typeof text === 'string') ? text.replace(/\r\n?/g, '\n') : '';
 		let classReplaced = false;
 		let debugReplaced = false;
+		const masked = maskJava(modified);
+		const replacements = [];
 
-		// 1. クラス名を Main に置換（必要であれば）
+		const applyReplacements = () => {
+			if (!replacements.length) return;
+			replacements.sort((a, b) => b.start - a.start);
+			for (const r of replacements) {
+				modified = modified.slice(0, r.start) + r.text + modified.slice(r.end);
+			}
+		};
+
+		// 1. クラス名置換 (コメント/文字列/文字リテラル内は触らない)
 		if (SETTINGS.renameClass) {
-			const info = findMainClassInfo(modified);
-			if (info) {
-				const target = info.prefix + info.name;
-				const before = modified.slice(0, info.index);
-				const after = modified.slice(info.index + target.length);
-				modified = before + info.prefix + 'Main' + after;
+			const info = findMainClassInfo(modified, masked);
+			if (info && info.name && info.name !== 'Main') {
+				const oldName = info.name;
+				const newName = 'Main';
+				replacements.push({start: info.nameStart, end: info.nameEnd, text: newName});
+
+				const refRegex = new RegExp(`\\b${escapeRegExp(oldName)}\\b`, 'g');
+				refRegex.lastIndex = info.nameEnd;
+				let rm;
+				while ((rm = refRegex.exec(masked)) !== null) {
+					replacements.push({start: rm.index, end: rm.index + oldName.length, text: newName});
+				}
 				classReplaced = true;
 			}
 		}
 
-		// 2. DEBUG = true を false に置換（必要であれば）
+		// 2. DEBUG フラグ (コメント/文字列/文字リテラル内は触らない)
 		if (SETTINGS.fixDebug) {
-			let modifiedDebug = modified.replace(DEBUG_REGEX_REPLACE, '$1false$2');
-			if (modified !== modifiedDebug) {
-				modified = modifiedDebug;
-				debugReplaced = true;
+			const DEBUG_REGEX = /\bDEBUG\s*=\s*true\s*;/g;
+			let dm;
+			while ((dm = DEBUG_REGEX.exec(masked)) !== null) {
+				const seg = modified.slice(dm.index, dm.index + dm[0].length);
+				const replacedSeg = seg.replace(/\btrue\b/, 'false');
+				if (seg !== replacedSeg) {
+					replacements.push({start: dm.index, end: dm.index + dm[0].length, text: replacedSeg});
+					debugReplaced = true;
+				}
 			}
 		}
 
-		if (classReplaced) log('Class name replaced to Main');
-		if (debugReplaced) log('DEBUG flag set to false');
+		applyReplacements();
+
+		// ログ出力は控えめに
+		if (classReplaced) log('Class renamed to Main');
+		if (debugReplaced) log('DEBUG flag disabled');
 
 		return {modified, didModify: classReplaced || debugReplaced};
 	}
@@ -139,7 +297,7 @@
 	// --------------- Editor Adapters ---------------
 	class EditorAdapter {
 		constructor(globalObj) {
-			this.g = globalObj || unsafeWindow || window;
+			this.g = globalObj || g;
 			this.initialized = false;
 		}
 
@@ -157,7 +315,7 @@
 		}
 
 		getEditorDiv() {
-			return document.getElementById('editor');
+			return document.getElementById('editor') || document.getElementById('editor-div');
 		}
 
 		getEditor() {
@@ -176,48 +334,36 @@
 			if (!editor) return false;
 			if (this.initialized) return true;
 
-			// 言語が Java のときのみ有効化
 			const session = editor.getSession && editor.getSession();
-			const modeId =
-				(session && (session.$modeId || (session.getMode && session.getMode().$id))) || '';
-			if (modeId && !/java/i.test(modeId)) {
-				return false;
-			}
+			const modeId = (session && (session.$modeId || (session.getMode && session.getMode().$id))) || '';
+			if (modeId && !/java/i.test(modeId)) return false;
 
 			editor.on('paste', (e) => {
 				if (e && typeof e.text === 'string') {
 					const {modified, didModify} = modifyPastedCode(e.text);
 					if (didModify) {
 						e.text = modified;
-						if (SETTINGS.foldMainOnPaste) {
-							setTimeout(() => this.foldMain(), 100);
-						}
+						if (SETTINGS.foldMainOnPaste) setTimeout(() => this.foldMain(), 100);
 					}
 				}
 			});
 			this.initialized = true;
-			log('ACE Editor paste listener set up');
+			log('ACE Adapter initialized');
 			return true;
 		}
 
 		foldMain() {
 			const ace = this.getAce();
 			const editor = this.getEditor();
-			if (!ace || !editor) {
-				log('ACE editor not found');
-				return;
-			}
+			if (!ace || !editor) return;
 			const session = editor.getSession();
 			const lines = session.getValue().split('\n');
 			const mainLine = lines.findIndex(l => /class\s+Main\s*(\{|extends|implements)/.test(l));
-			if (mainLine === -1) {
-				log('Main class not found in ACE editor');
-				return;
-			}
+			if (mainLine === -1) return;
+
 			const existingFold = (session.getAllFolds() || []).find(fold => fold.start.row === mainLine);
 			if (existingFold) {
 				session.expandFold(existingFold);
-				log('Main class unfolded');
 				return;
 			}
 			const widget = session.getFoldWidget(mainLine);
@@ -225,11 +371,12 @@
 				const range = session.getFoldWidgetRange(mainLine);
 				if (range) {
 					session.addFold('...', range);
-					log('Main class folded');
 					return;
 				}
 			}
+			// マニュアルフォールド
 			let brace = 0, endLine = -1;
+			// ここも厳密には文字列考慮が必要だが、フォールディングなので簡易版のままでOK
 			for (let i = mainLine; i < lines.length; i++) {
 				brace += (lines[i].match(/\{/g) || []).length;
 				brace -= (lines[i].match(/}/g) || []).length;
@@ -242,7 +389,6 @@
 				const Range = ace.require('ace/range').Range;
 				const foldRange = new Range(mainLine, lines[mainLine].length, endLine, 0);
 				session.addFold('...', foldRange);
-				log('Main class folded (manual range)');
 			}
 		}
 	}
@@ -266,7 +412,6 @@
 
 			const model = editor.getModel && editor.getModel();
 			if (!model) return false;
-			// 言語が Java のモデルに対してのみ有効化
 			if (model.getLanguageId && model.getLanguageId() !== 'java') return false;
 
 			try {
@@ -275,13 +420,10 @@
 					const {modified, didModify} = modifyPastedCode(pastedText);
 					if (didModify) {
 						editor.executeEdits('uss-paste', [{range: e.range, text: modified}]);
-						if (SETTINGS.foldMainOnPaste) {
-							setTimeout(() => this.foldMain(), 100);
-						}
+						if (SETTINGS.foldMainOnPaste) setTimeout(() => this.foldMain(), 100);
 					}
 				});
 			} catch (err) {
-				log('Monaco onDidPaste not available, using onDidChangeContent');
 				model.onDidChangeContent((e) => {
 					if (e.isFlush) return;
 					if (e.changes.length === 1) {
@@ -290,17 +432,14 @@
 							const {modified, didModify} = modifyPastedCode(text);
 							if (didModify) {
 								editor.executeEdits('uss-change', [{range, text: modified}]);
-								log('Monaco Editor: Code modified (fallback)');
-								if (SETTINGS.foldMainOnPaste) {
-									setTimeout(() => this.foldMain(), 100);
-								}
+								if (SETTINGS.foldMainOnPaste) setTimeout(() => this.foldMain(), 100);
 							}
 						}
 					}
 				});
 			}
 			this.initialized = true;
-			log('Monaco Editor paste listener set up');
+			log('Monaco Adapter initialized');
 			return true;
 		}
 
@@ -317,21 +456,57 @@
 					break;
 				}
 			}
-			if (mainLine === -1) {
-				log('Main class not found (Monaco)');
-				return;
-			}
+			if (mainLine === -1) return;
 			editor.setPosition({lineNumber: mainLine, column: 1});
 			editor.focus();
 			const action = editor.getAction && editor.getAction('editor.toggleFold');
-			if (action && action.run) {
-				action.run();
-				log('Main class fold toggled');
-			}
+			if (action && action.run) action.run();
 		}
 	}
 
-	// --------------- Site Model ---------------
+	class TextAreaAdapter extends EditorAdapter {
+		getTextArea() {
+			const tas = Array.from(document.querySelectorAll('textarea'));
+			if (!tas.length) return null;
+			const filtered = tas.filter(t => {
+				const style = window.getComputedStyle ? window.getComputedStyle(t) : null;
+				if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+				return true;
+			});
+			return filtered[0] || tas[0];
+		}
+
+		setup() {
+			const ta = this.getTextArea();
+			if (!ta) return false;
+			if (this.initialized) return true;
+			ta.addEventListener('paste', (e) => {
+				const text = (e && e.clipboardData) ? e.clipboardData.getData('text') : '';
+				if (typeof text !== 'string' || !text) return;
+				const {modified, didModify} = modifyPastedCode(text);
+				if (!didModify) return;
+				e.preventDefault();
+				const start = ta.selectionStart || 0;
+				const end = ta.selectionEnd || 0;
+				const before = ta.value.slice(0, start);
+				const after = ta.value.slice(end);
+				ta.value = before + modified + after;
+				const pos = start + modified.length;
+				try {
+					ta.selectionStart = ta.selectionEnd = pos;
+				} catch {
+				}
+				try {
+					ta.dispatchEvent(new Event('input', {bubbles: true}));
+				} catch {
+				}
+			});
+			this.initialized = true;
+			return true;
+		}
+	}
+
+	// --------------- Orchestrator ---------------
 	class Site {
 		constructor(hostSubstr, shortcutFn, submitButtonGetter, editorAdapter) {
 			this.hostSubstr = hostSubstr;
@@ -353,10 +528,9 @@
 		}
 	}
 
-	// --------------- Orchestrator ---------------
 	class SmartSubmitter {
 		constructor(globalObj) {
-			this.g = globalObj || unsafeWindow || window;
+			this.g = globalObj || g;
 			this.sites = [];
 			this.active = null;
 			this._keybound = false;
@@ -381,31 +555,42 @@
 				if (trySetup()) observer.disconnect();
 			});
 			observer.observe(document.body, {childList: true, subtree: true});
-			// エディタ生成が遅いケースに備えて待ち時間を延長
 			setTimeout(() => observer.disconnect(), 30000);
 		}
 
 		registerKeybindings() {
 			if (!this.active || this._keybound) return;
 			this._keybound = true;
+			const isInEditor = (target) => {
+				try {
+					return !!(target && target.closest && target.closest('.ace_editor, .monaco-editor, #editor, #editor-div'));
+				} catch {
+					return false;
+				}
+			};
+			const isProbablyEditable = (target) => {
+				if (!target) return false;
+				const tag = String(target.tagName || '').toUpperCase();
+				if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+				return !!target.isContentEditable;
+			};
 			document.addEventListener('keydown', (event) => {
+				// エディタ以外の入力欄での暴発を抑止
+				if (isProbablyEditable(event.target) && !isInEditor(event.target)) return;
 				if (this.active.shortcut(event)) {
 					const btn = this.active.findSubmitButton();
 					if (btn) {
 						event.preventDefault();
 						event.stopPropagation();
-						btn.click();
+						clickElementRobust(btn);
 						log('Submit button clicked');
-					} else {
-						log('Submit button not found');
 					}
-				} else if (event.ctrlKey && event.shiftKey && event.key === 'M') {
+				} else if (event.ctrlKey && event.shiftKey && (event.key === 'M' || event.key === 'm')) {
 					event.preventDefault();
 					event.stopPropagation();
 					this.active.editor && this.active.editor.foldMain();
 				}
 			}, true);
-			log('Keybindings registered (submit + Ctrl+Shift+M)');
 		}
 
 		start() {
@@ -415,31 +600,28 @@
 		}
 	}
 
-	// --------------- Boot ---------------
-	// ★ 修正：すべてのクラス定義の *後* に起動コードを配置
-	const g = unsafeWindow || window;
 	const submitter = new SmartSubmitter(g);
 
-	// AOJ (ACE)
+	// AOJ
 	submitter.registerSite(new Site(
 		'onlinejudge.u-aizu.ac.jp',
-		(e) => e.ctrlKey && !e.shiftKey && e.key === 'Enter',
+		(e) => e.ctrlKey && !e.shiftKey && isEnterKey(e),
 		() => document.querySelector('.editorFooter .submitBtn') || document.getElementById('submit_button'),
 		new AceEditorAdapter(g)
 	));
 
-	// AtCoder (ACE)
+	// AtCoder
 	submitter.registerSite(new Site(
 		'atcoder.jp',
-		(e) => e.ctrlKey && e.shiftKey && e.key === 'Enter',
+		(e) => e.ctrlKey && e.shiftKey && isEnterKey(e),
 		() => document.getElementById('submit'),
 		new AceEditorAdapter(g)
 	));
 
-	// Library Checker (Monaco)
+	// Library Checker
 	submitter.registerSite(new Site(
 		'judge.yosupo.jp',
-		(e) => e.ctrlKey && e.shiftKey && e.altKey && e.key === 'Enter',
+		(e) => e.ctrlKey && e.shiftKey && e.altKey && isEnterKey(e),
 		() => {
 			const forms = document.querySelectorAll('form');
 			for (const form of forms) {
@@ -452,6 +634,33 @@
 			return null;
 		},
 		new MonacoEditorAdapter(g)
+	));
+
+	// paiza
+	submitter.registerSite(new Site(
+		'paiza.jp',
+		(e) => {
+			if (!e.ctrlKey || e.shiftKey) return false;
+			// シンプルに Ctrl + Enter を採用（Altチェックなどの複雑な条件を削除）
+			return isEnterKey(e);
+		},
+		() => {
+			const a = document.getElementById('handin');
+			if (a) return a;
+			const clickable = Array.from(document.querySelectorAll('a,button,input[type="button"],input[type="submit"]'));
+			for (const el of clickable) {
+				const oc = String(el.getAttribute('onclick') || '');
+				if (oc.includes('hand_in_code')) return el;
+			}
+			for (const el of clickable) {
+				const text = String(el.textContent || el.value || '').trim();
+				if (!text) continue;
+				if (text.includes('コードを提出する')) return el;
+				if (text === '提出' || text.includes('提出する')) return el;
+			}
+			return null;
+		},
+		new AceEditorAdapter(g)
 	));
 
 	submitter.start();
