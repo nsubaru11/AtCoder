@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Perf Graph
 // @namespace    https://github.com/nsubaru11/AtCoder
-// @version      1.1.0
+// @version      1.1.1
 // @description  レーティンググラフにパフォーマンスのグラフを重ねて表示します
 // @author       nzm_ort (original), nsubaru11 (modified)
 // @license      MIT
