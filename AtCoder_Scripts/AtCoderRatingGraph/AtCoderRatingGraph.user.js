@@ -22,15 +22,9 @@
 // ヒューリスティックコンテストかどうかを判定
 const isHeuristic = new URLSearchParams(window.location.search).get('contestType') === 'heuristic';
 
-// ★修正: 固定インデックス [14] ではなく、中身を見て対象のスクリプト（グラフ描画用データ定義）を特定して削除する
-// これにより AtCoder の仕様変更でスクリプトの順番が変わっても壊れにくくなる
-$('script').each(function () {
-	if ($(this).html().includes('rating_history')) {
-		$(this).remove();
-	}
-});
-
-// ページ再構築（元の実装を維持: 既存のグラフ描画JSを無効化するためにHTMLを書き換える荒技）
+// スクリプト削除とページ再構築（元の実装を維持）
+let scriptsArray = $('script');
+scriptsArray[14].remove();
 let copyPage = $("html").clone().html();
 $("html").remove();
 document.write(copyPage);
@@ -52,7 +46,7 @@ font-size: 14px;\
 '
 	});
 	insertButton.textContent = "パフォーマンス ON/OFF切り替え";
-	if (element) element.appendChild(insertButton);
+	element.appendChild(insertButton);
 
 	// recent/all切替ボタン
 	const recentButton = Object.assign(document.createElement('button'), {
@@ -69,7 +63,7 @@ font-size: 14px;\
 	// デフォルトをrecentモードに設定
 	window.isRecentMode = true;
 	recentButton.textContent = "all";
-	if (element) element.appendChild(recentButton);
+	element.appendChild(recentButton);
 }
 
 // const
@@ -80,14 +74,9 @@ const OFFSET_X = 50;
 const OFFSET_Y = 5;
 const DEFAULT_WIDTH = 640;
 let canvas_status = document.getElementById("ratingStatus");
-// キャンバスが見つからない場合のエラー回避
-if (!canvas_status) throw new Error("ratingStatus canvas not found");
-
 const STATUS_WIDTH = canvas_status.width - OFFSET_X - 10;
 const STATUS_HEIGHT = canvas_status.height - OFFSET_Y - 5;
 let canvas_graph = document.getElementById("ratingGraph");
-if (!canvas_graph) throw new Error("ratingGraph canvas not found");
-
 const PANEL_WIDTH = canvas_graph.width - OFFSET_X - 10;
 const PANEL_HEIGHT = canvas_graph.height - OFFSET_Y - 30;
 
@@ -126,9 +115,7 @@ let border_status_shape;
 let rating_text, place_text, diff_text, date_text, contest_name_text, perf_text;
 let particles;
 let standings_url;
-// ユーザー名取得の安全性向上
-const usernameEl = document.getElementsByClassName("username")[0];
-const username = usernameEl ? usernameEl.textContent : "";
+const username = document.getElementsByClassName("username")[0].textContent;
 
 // キャンバスサイズなど設定
 function initStage(stage, canvas) {
@@ -652,11 +639,6 @@ function updateParticles() {
 
 // main関数
 async function main() {
-	if (!username) {
-		console.log("User not found (not a profile page?)");
-		return;
-	}
-
 	let json, page;
 
 	try {
