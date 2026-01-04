@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name        AtCoder Easy Test for Java
-// @namespace   https://atcoder.jp/
-// @version     1.0
+// @namespace    https://github.com/nsubaru11/AtCoder
+// @version     1.1
 // @description Make testing sample cases easy (Modified by nsubaru11)
 // @author      magurofly (original), nsubaru11 (modified)
 // @license     MIT
-// @supportURL  https://github.com/magurofly/atcoder-easy-test/
+// @homepageURL  https://github.com/nsubaru11/AtCoder/tree/main/AtCoder_Scripts/AtCoderEasyTestForJava
+// @supportURL   https://github.com/nsubaru11/AtCoder/issues
 // @match       https://atcoder.jp/contests/*/tasks/*
 // @match       https://atcoder.jp/contests/*/submit*
 // @match       https://yukicoder.me/problems/no/*
@@ -27,28 +28,65 @@
 // @grant       unsafeWindow
 // @grant       GM_getValue
 // @grant       GM_setValue
+// @run-at       document-end
+// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderEasyTestForJava/AtCoderEasyTestForJava.user.js
+// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderEasyTestForJava/AtCoderEasyTestForJava.user.js
 // ==/UserScript==
 
-(function () {
 
-	if (typeof GM_getValue !== "function") {
-		if (typeof GM === "object" && typeof GM.getValue === "function") {
-			GM_getValue = GM.getValue;
-			GM_setValue = GM.setValue;
-		} else {
-			const storage = JSON.parse(localStorage.AtCoderEasyTest || "{}");
-			GM_getValue = (key, defaultValue = null) => ((key in storage) ? storage[key] : defaultValue);
-			GM_setValue = (key, value) => {
-				storage[key] = value;
-				localStorage.AtCoderEasyTest = JSON.stringify(storage);
-			};
+(function () {
+	const STORAGE_KEY = "AtCoderEasyTest";
+
+	function safeJsonParse(text, fallback) {
+		if (typeof text !== "string") return fallback;
+		try {
+			return JSON.parse(text);
+		} catch (_e) {
+			return fallback;
+		}
+	}
+
+	// Greasemonkey 4 などの GM4 は GM.getValue/GM.setValue(非同期) で、GM_getValue/GM_setValue(同期) が存在しない。
+	// このスクリプトは同期的に設定値へアクセスする箇所があるため、GM_getValue が無い環境では
+	// ページ(localStorage)に安全フォールバックし、必要ならバックグラウンドで GM ストレージも更新する。
+	if (typeof GM_getValue !== "function" || typeof GM_setValue !== "function") {
+		const hasAsyncGM = typeof GM === "object" && typeof GM.getValue === "function" && typeof GM.setValue === "function";
+		let storage = safeJsonParse(localStorage[STORAGE_KEY] || "{}", {});
+		if (!storage || typeof storage !== "object") storage = {};
+		const persist = () => {
+			try {
+				localStorage[STORAGE_KEY] = JSON.stringify(storage);
+			} catch (_e) {
+				// ignore
+			}
+		};
+		GM_getValue = (key, defaultValue = null) => ((key in storage) ? storage[key] : defaultValue);
+		GM_setValue = (key, value) => {
+			storage[key] = value;
+			persist();
+			if (hasAsyncGM) {
+				Promise.resolve(GM.setValue(key, value)).catch(() => {
+					// ignore
+				});
+			}
+		};
+		// 初回のみ、GMストレージに既存設定があれば取り込む（同期初期化を壊さないため遅延ロード）
+		if (hasAsyncGM && !("config" in storage)) {
+			Promise.resolve(GM.getValue("config")).then(value => {
+				if (typeof value === "string" && value.length) {
+					storage.config = value;
+					persist();
+				}
+			}).catch(() => {
+				// ignore
+			});
 		}
 	}
 
 	if (typeof unsafeWindow !== "object") unsafeWindow = window;
 
 	function buildParams(data) {
-		return Object.entries(data).map(([key, value]) => encodeURIComponent(key) + "=" + encodeURIComponent(value)).join("&");
+		return new URLSearchParams(data).toString();
 	}
 
 	function sleep(ms) {
@@ -79,7 +117,11 @@
 	}
 
 	function uuid() {
-		return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/x/g, () => "0123456789abcdef"[Math.random() * 16 | 0]).replace(/y/g, () => "89ab"[Math.random() * 4 | 0]);
+		const hex = "0123456789abcdef";
+		const yChars = "89ab";
+		return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c =>
+			c === "x" ? hex[Math.random() * 16 | 0] : yChars[Math.random() * 4 | 0]
+		);
 	}
 
 	async function loadScript(src, ctx = null, env = {}) {
@@ -93,16 +135,25 @@
 		unsafeWindow["Function"](keys.join(), js).apply(ctx, values);
 	}
 
-	const eventListeners = {};
+	const eventListeners = new Map();
 	const events = {
 		on(name, listener) {
-			const listeners = (name in eventListeners ? eventListeners[name] : eventListeners[name] = []);
-			listeners.push(listener);
+			if (!eventListeners.has(name)) {
+				eventListeners.set(name, []);
+			}
+			eventListeners.get(name).push(listener);
+		},
+		off(name, listener) {
+			const listeners = eventListeners.get(name);
+			if (listeners) {
+				const idx = listeners.indexOf(listener);
+				if (idx !== -1) listeners.splice(idx, 1);
+			}
 		},
 		trig(name) {
-			if (name in eventListeners) {
-				for (const listener of eventListeners[name])
-					listener();
+			const listeners = eventListeners.get(name);
+			if (listeners) {
+				for (const listener of listeners) listener();
 			}
 		},
 	};
@@ -176,11 +227,21 @@
 	}
 
 	function save() {
-		GM_setValue("config", toString());
+		try {
+			GM_setValue("config", toString());
+		} catch (_e) {
+			// ignore
+		}
 	}
 
 	function load() {
-		data = JSON.parse(GM_getValue("config") || "{}");
+		const raw = GM_getValue("config");
+		if (raw && typeof raw === "object") {
+			data = raw;
+			return;
+		}
+		const parsed = safeJsonParse(typeof raw === "string" ? raw : null, {});
+		data = (parsed && typeof parsed === "object") ? parsed : {};
 	}
 
 	function reset() {
@@ -269,10 +330,25 @@
 		return root;
 	});
 	const config = {
+		peekString(key, defaultValue = "") {
+			if (!(key in data)) return defaultValue;
+			const v = data[key];
+			return (typeof v === "string") ? v : String(v ?? "");
+		},
+		peek(key, defaultValue = null) {
+			if (!(key in data)) return defaultValue;
+			try {
+				return JSON.parse(data[key]);
+			} catch (_e) {
+				return defaultValue;
+			}
+		},
 		getString(key, defaultValue = "") {
-			if (!(key in data))
+			if (!(key in data)) {
 				config.setString(key, defaultValue);
-			return data[key];
+				return defaultValue;
+			}
+			return (typeof data[key] === "string") ? data[key] : String(data[key] ?? "");
 		},
 		setString(key, value) {
 			data[key] = value;
@@ -282,12 +358,20 @@
 			return key in data;
 		},
 		get(key, defaultValue = null) {
-			if (!(key in data))
+			if (!(key in data)) {
 				config.set(key, defaultValue);
-			return JSON.parse(data[key]);
+				return defaultValue;
+			}
+			try {
+				return JSON.parse(data[key]);
+			} catch (_e) {
+				config.set(key, defaultValue);
+				return defaultValue;
+			}
 		},
 		set(key, value) {
-			config.setString(key, JSON.stringify(value));
+			const json = JSON.stringify(value);
+			config.setString(key, json === undefined ? "null" : json);
 		},
 		save,
 		load,
@@ -320,6 +404,26 @@
 		},
 	};
 
+	config.registerFlag("log.debug", false, "Enable debug logs in console");
+	const log = (() => {
+		const prefix = "[AtCoder Easy Test]";
+		const isDebug = () => config.peek("log.debug", false) === true;
+		return {
+			debug(...args) {
+				if (isDebug()) console.debug(prefix, ...args);
+			},
+			info(...args) {
+				if (isDebug()) console.info(prefix, ...args);
+			},
+			warn(...args) {
+				console.warn(prefix, ...args);
+			},
+			error(...args) {
+				console.error(prefix, ...args);
+			},
+		};
+	})();
+
 	config.registerCount("codeSaver.limit", 10, "Max number to save codes");
 	const codeSaver = {
 		get() {
@@ -334,7 +438,7 @@
 				}
 			} catch (e) {
 				data.push({
-					path: unsafeWindow.localStorage.AtCoderEasyTset$lastPage,
+					path: unsafeWindow.localStorage.AtCoderEasyTest$lastPage || unsafeWindow.localStorage.AtCoderEasyTset$lastPage,
 					code: json,
 				});
 			}
@@ -345,7 +449,7 @@
 		},
 		save(savePath, code) {
 			const data = codeSaver.get();
-			const idx = data.findIndex(({path}) => path == savePath);
+			const idx = data.findIndex(({path}) => path === savePath);
 			// 既存エントリがあれば 1 件だけ削除（元コードは idx+1 を渡しており余分に削除する可能性があった）
 			if (idx !== -1) data.splice(idx, 1);
 			data.push({path: savePath, code});
@@ -356,7 +460,7 @@
 		restore(savedPath) {
 			const data = codeSaver.get();
 			const idx = data.findIndex(({path}) => path === savedPath);
-			if (idx == -1 || !(data[idx] instanceof Object))
+			if (idx === -1 || !(data[idx] instanceof Object))
 				return Promise.reject(`No saved code found for ${location.pathname}`);
 			return Promise.resolve(data[idx].code);
 		}
@@ -371,7 +475,6 @@
 			]),
 			newElement("tbody"),
 		]);
-		root.tBodies;
 		for (const savedCode of codeSaver.get()) {
 			root.tBodies[0].appendChild(newElement("tr", {}, [
 				newElement("td", {textContent: savedCode.path}),
@@ -388,27 +491,34 @@
 	});
 
 	function similarLangs(targetLang, candidateLangs) {
-		const [targetName, targetDetail] = targetLang.split(" ", 2);
-		const selectedLangs = candidateLangs.filter(candidateLang => {
-			const [name, _] = candidateLang.split(" ", 2);
-			return name == targetName;
-		}).map(candidateLang => {
-			const [_, detail] = candidateLang.split(" ", 2);
-			return [candidateLang, similarity(detail, targetDetail)];
-		});
-		return selectedLangs.sort((a, b) => a[1] - b[1]).map(([lang, _]) => lang);
+		const [targetName, targetDetail = ""] = targetLang.split(" ", 2);
+		const selectedLangs = [];
+		for (const candidateLang of candidateLangs) {
+			const spaceIdx = candidateLang.indexOf(" ");
+			const name = spaceIdx === -1 ? candidateLang : candidateLang.slice(0, spaceIdx);
+			if (name === targetName) {
+				const detail = spaceIdx === -1 ? "" : candidateLang.slice(spaceIdx + 1);
+				selectedLangs.push([candidateLang, similarity(detail, targetDetail)]);
+			}
+		}
+		selectedLangs.sort((a, b) => a[1] - b[1]);
+		return selectedLangs.map(([lang]) => lang);
 	}
 
 	function similarity(s, t) {
 		const n = s.length, m = t.length;
-		let dp = new Array(m + 1).fill(0);
+		// Float64Arrayを使用してメモリ効率と速度を改善
+		let dp = new Float64Array(m + 1);
+		let dp2 = new Float64Array(m + 1);
 		for (let i = 0; i < n; i++) {
-			const dp2 = new Array(m + 1).fill(0);
+			dp2.fill(0);
+			const si = s.charCodeAt(i);
 			for (let j = 0; j < m; j++) {
-				const cost = (s.charCodeAt(i) - t.charCodeAt(j)) ** 2;
+				const cost = (si - t.charCodeAt(j)) ** 2;
 				dp2[j + 1] = Math.min(dp[j] + cost, dp[j + 1] + cost * 0.25, dp2[j] + cost * 0.25);
 			}
-			dp = dp2;
+			// 配列をスワップして再利用
+			[dp, dp2] = [dp2, dp];
 		}
 		return dp[m];
 	}
@@ -531,13 +641,17 @@
 				throw new Error(error);
 			}
 			await sleep(100);
-			for (; ;) {
+			// 最大試行回数を設定してタイムアウト防止
+			const maxAttempts = 300; // 約5分のタイムアウト
+			for (let attempt = 0; attempt < maxAttempts; attempt++) {
 				const data = await fetch(AtCoderCustomTestResultAPI, {
 					method: "GET",
 					credentials: "include",
 				}).then(r => r.json());
-				if (!("Result" in data))
+				if (!("Result" in data)) {
+					await sleep(1000);
 					continue;
+				}
 				const result = data.Result;
 				if ("Interval" in data) {
 					await sleep(data.Interval);
@@ -557,6 +671,12 @@
 					error: data.Stderr,
 				};
 			}
+			// タイムアウト時はエラーを返す
+			return {
+				status: "TLE",
+				input,
+				error: "Custom test timed out",
+			};
 		}
 	}
 
@@ -1014,6 +1134,7 @@ def __run():
 		const language = languageId.map(lang => langMap[lang]);
 		const isTestCasesHere = /^\/contests\/[^\/]+\/tasks\//.test(location.pathname);
 		const taskSelector = doc.querySelector("#select-task");
+		let warnedTestCasesNotLoaded = false;
 
 		function getTaskURI() {
 			if (taskSelector)
@@ -1022,27 +1143,47 @@ def __run():
 		}
 
 		const testcasesCache = {};
+		let activeTestcaseFetchController = null;
 		if (taskSelector) {
-			const doFetchTestCases = async () => {
-				console.log(`Fetching test cases...: ${getTaskURI()}`);
+			const doFetchTestCases = () => {
 				const taskURI = getTaskURI();
-				const load = !(taskURI in testcasesCache) || testcasesCache[taskURI].state == "error";
-				if (!load)
+				const cached = testcasesCache[taskURI];
+				if (cached && (cached.state === "loaded" || cached.state === "loading"))
 					return;
-				try {
-					testcasesCache[taskURI] = {state: "loading"};
-					const testcases = await fetchTestCases(taskURI);
-					testcasesCache[taskURI] = {testcases, state: "loaded"};
-				} catch (e) {
-					testcasesCache[taskURI] = {state: "error"};
+
+				if (activeTestcaseFetchController) {
+					activeTestcaseFetchController.abort();
+					activeTestcaseFetchController = null;
 				}
+				const controller = new AbortController();
+				activeTestcaseFetchController = controller;
+				log.debug("Fetching test cases:", taskURI);
+
+				const promise = fetchTestCases(taskURI, controller.signal).then(testcases => {
+					testcasesCache[taskURI] = {testcases, state: "loaded"};
+				}).catch(e => {
+					if (e && e.name === "AbortError") {
+						testcasesCache[taskURI] = {state: "error", error: "aborted"};
+						return;
+					}
+					testcasesCache[taskURI] = {state: "error", error: e};
+					log.warn("Failed to fetch test cases:", taskURI, e);
+				}).finally(() => {
+					if (activeTestcaseFetchController === controller) {
+						activeTestcaseFetchController = null;
+					}
+				});
+				testcasesCache[taskURI] = {state: "loading", promise, controller};
 			};
 			unsafeWindow.$("#select-task").change(doFetchTestCases);
 			doFetchTestCases();
 		}
 
-		async function fetchTestCases(taskUrl) {
-			const html = await fetch(taskUrl).then(res => res.text());
+		async function fetchTestCases(taskUrl, signal = undefined) {
+			const res = await fetch(taskUrl, {signal, credentials: "include"});
+			if (!res.ok)
+				throw new Error(`Failed to fetch task page: ${res.status} ${res.statusText}`);
+			const html = await res.text();
 			const taskDoc = new DOMParser().parseFromString(html, "text/html");
 			return getTestCases(taskDoc);
 		}
@@ -1146,7 +1287,10 @@ def __run():
 					testcasesCache[taskURI] = {testcases, state: "loaded"};
 					return testcases;
 				} else {
-					console.error("AtCoder Easy Test v2: Test cases are still not loaded");
+					if (!warnedTestCasesNotLoaded) {
+						warnedTestCasesNotLoaded = true;
+						log.warn("Test cases are not loaded yet. Please wait a moment or re-open the task page.");
+					}
 					return [];
 				}
 			},
@@ -1762,8 +1906,7 @@ def __run():
 			const includeHeader = async (source) => {
 				const pattern = /^#\s*include\s*[<"]atcoder\/([^>"]+)[>"]/gm;
 				const loaded = [];
-				let match;
-				while (match = pattern.exec(source)) {
+				for (const match of source.matchAll(pattern)) {
 					const file = "atcoder/" + match[1];
 					if (files.has(file))
 						continue;
@@ -1996,7 +2139,7 @@ def __run():
 					}
 					const key = language + " " + compiler.name;
 					runners[key] = toRunner(compiler);
-					console.log("wandbox", key, runners[key]);
+					log.debug("wandbox", key, runners[key]);
 				}
 			});
 		}
@@ -2041,7 +2184,7 @@ def __run():
 			if (!apiURL || !/^https?:\/\//.test(apiURL)) return;
 
 			// 設定で無効化されている場合は何もしない
-			if (!config.get("codeRunner.precompile.enable", false)) return;
+			if (!config.get("codeRunner.precompile.enable", true)) return;
 
 			const currentSite = await site;
 			const sourceCode = currentSite.sourceCode;
@@ -2060,9 +2203,9 @@ def __run():
 			}).catch(() => {
 			});
 
-			console.log("[LocalRunner] Precompile triggered");
+			log.debug("[LocalRunner] Precompile triggered");
 		} catch (e) {
-			console.error("[LocalRunner] Precompile error:", e);
+			log.error("[LocalRunner] Precompile error:", e);
 		} finally {
 			isPrecompiling = false;
 		}
@@ -2070,7 +2213,7 @@ def __run():
 
 	function schedulePrecompile() {
 		// プリコンパイル機能が無効なら何もしない
-		if (!config.get("codeRunner.precompile.enable", false)) return;
+		if (!config.get("codeRunner.precompile.enable", true)) return;
 		if (precompileTimeout) clearTimeout(precompileTimeout);
 		precompileTimeout = setTimeout(triggerPrecompile, 500);
 	}
@@ -2088,23 +2231,23 @@ def __run():
 						if (editorElement) {
 							const editor = unsafeWindow["ace"].edit(editorElement);
 							editor.getSession().on("change", schedulePrecompile);
-							console.log("[LocalRunner] Editor monitoring started");
+							log.debug("[LocalRunner] Editor monitoring started");
 							// 最初の一回だけ軽くプリコンパイル（有効な場合のみ）
 							schedulePrecompile();
 						}
 					} catch (e) {
-						console.error("[LocalRunner] Failed to monitor editor:", e);
+						log.error("[LocalRunner] Failed to monitor editor:", e);
 					}
 				} else if (checkCount >= maxChecks) {
 					clearInterval(checkEditor);
-					console.warn("[LocalRunner] Editor detection timeout");
+					log.warn("[LocalRunner] Editor detection timeout");
 				}
 			}, 500);
 		}
 	});
 	// ========== 事前コンパイル機能 ここまで ==========
 
-	console.info("AtCoder Easy Test: codeRunner OK");
+	log.debug("codeRunner OK");
 	config.registerCount("codeRunner.maxRetry", 3, "Max count of retry when IE (Internal Error)");
 	var codeRunner = {
 		// 指定した環境でコードを実行する
@@ -2215,7 +2358,7 @@ def __run():
 			},
 			/** 下メニューにタブを追加する */
 			addTab(tabId, tabLabel, paneContent, options = {}) {
-				console.log(`AtCoder Easy Test: addTab: ${tabLabel} (${tabId})`, paneContent);
+				log.debug(`addTab: ${tabLabel} (${tabId})`, paneContent);
 				// タブを追加
 				const tab = document.createElement("a");
 				tab.textContent = tabLabel;
@@ -2285,7 +2428,7 @@ def __run():
 				bottomMenuKey.click();
 			},
 		};
-		console.info("AtCoder Easy Test: bottomMenu OK");
+		log.debug("bottomMenu OK");
 		return menuController;
 	}
 
@@ -2406,14 +2549,23 @@ def __run():
 			if (!force && now - version.lastCheck < config.get("version.checkInterval", aDay)) {
 				return this.current;
 			}
-			const packageJson = await fetch("https://raw.githubusercontent.com/magurofly/atcoder-easy-test/main/v2/package.json").then(r => r.json());
-			console.log(packageJson);
-			const latest = packageJson["version"];
-			this.latestProperty.value = latest;
-			config.set("version.latest", latest);
-			this.lastCheckProperty.value = now;
-			config.set("version.lastCheck", now);
-			return latest;
+			try {
+				const url = "https://raw.githubusercontent.com/magurofly/atcoder-easy-test/main/v2/package.json";
+				const res = await fetch(url, {credentials: "omit"});
+				if (!res.ok)
+					throw new Error(`Failed to fetch package.json: ${res.status} ${res.statusText}`);
+				const packageJson = await res.json();
+				const latest = packageJson["version"];
+				log.debug("checkUpdate latest:", latest);
+				this.latestProperty.value = latest;
+				config.set("version.latest", latest);
+				this.lastCheckProperty.value = now;
+				config.set("version.lastCheck", now);
+				return latest;
+			} catch (e) {
+				log.debug("checkUpdate failed:", e);
+				return this.current;
+			}
 		},
 	};
 	// 更新チェック
@@ -2421,7 +2573,7 @@ def __run():
 	config.registerCount("version.checkInterval", aDay, "Interval [ms] of checking for new version");
 	config.get("version.checkInterval", aDay);
 	setInterval(() => {
-		version.checkUpdate(false);
+		doneOrFail(version.checkUpdate(false));
 	}, 60e3);
 	settings.add("version", (win) => {
 		const root = newElement("div");
@@ -2685,7 +2837,7 @@ def __run():
 						button.textContent = `Update to v${version.latest}`;
 						return;
 					}
-					console.info(`AtCoder Easy Test: New version available: v${version}`);
+					log.debug(`New version available: v${version.latest}`);
 					button = newElement("a", {
 						href: "https://github.com/magurofly/atcoder-easy-test/raw/main/v2/atcoder-easy-test.user.js",
 						target: "_blank",
@@ -2720,7 +2872,7 @@ def __run():
 						if (!languageId)
 							throw new Error("AtCoder Easy Test: language not set");
 						const langs = await codeRunner.getEnvironment(languageId);
-						console.log(`AtCoder Easy Test: language = ${langs[1]} (${langs[0]})`);
+						log.debug("getEnvironment:", languageId, `(${langs.length} candidates)`);
 						// add <option>
 						for (const [languageId, label] of langs) {
 							const option = document.createElement("option");
@@ -2738,8 +2890,8 @@ def __run():
 						}
 						events.trig("enable");
 					} catch (error) {
-						console.log(`AtCoder Easy Test: language = ? (${languageId})`);
-						console.error(error);
+						log.debug("getEnvironment failed:", languageId);
+						log.error(error);
 						const option = document.createElement("option");
 						option.className = "fg-danger";
 						option.textContent = error;
