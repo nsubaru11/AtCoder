@@ -1,28 +1,36 @@
 // ==UserScript==
 // @name         AtCoder Perf Graph
-// @namespace    http://atcoder.jp/
+// @namespace    https://github.com/nsubaru11/AtCoder
 // @version      1.1.0
 // @description  レーティンググラフにパフォーマンスのグラフを重ねて表示します
 // @author       nzm_ort (original), nsubaru11 (modified)
+// @license      MIT
+// @homepageURL  https://github.com/nsubaru11/AtCoder/tree/main/AtCoder_Scripts/AtCoderRatingGraph
+// @supportURL   https://github.com/nsubaru11/AtCoder/issues
+// @match        https://atcoder.jp/users/*
 // @exclude      *://atcoder.jp/users/*?graph=rank
 // @exclude      *://atcoder.jp/users/*?graph=dist
 // @exclude      *://atcoder.jp/users/*/history*
 // @grant        none
 // @require      https://code.jquery.com/jquery-1.8.0.min.js
 // @run-at       document-end
-// @license MIT
-
-// @downloadURL https://update.greasyfork.org/scripts/476103/AtCoder%20Perf%20Graph.user.js
-// @updateURL https://update.greasyfork.org/scripts/476103/AtCoder%20Perf%20Graph.meta.js
+// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderRatingGraph/AtCoderRatingGraph.user.js
+// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderRatingGraph/AtCoderRatingGraph.user.js
 // ==/UserScript==
 "use strict";
 
 // ヒューリスティックコンテストかどうかを判定
 const isHeuristic = new URLSearchParams(window.location.search).get('contestType') === 'heuristic';
 
-// スクリプト削除とページ再構築（元の実装を維持）
-let scriptsArray = $('script');
-scriptsArray[14].remove();
+// ★修正: 固定インデックス [14] ではなく、中身を見て対象のスクリプト（グラフ描画用データ定義）を特定して削除する
+// これにより AtCoder の仕様変更でスクリプトの順番が変わっても壊れにくくなる
+$('script').each(function () {
+	if ($(this).html().includes('rating_history')) {
+		$(this).remove();
+	}
+});
+
+// ページ再構築（元の実装を維持: 既存のグラフ描画JSを無効化するためにHTMLを書き換える荒技）
 let copyPage = $("html").clone().html();
 $("html").remove();
 document.write(copyPage);
@@ -33,9 +41,7 @@ document.write(copyPage);
 
 	// パフォーマンスON/OFFボタン
 	const insertButton = Object.assign(document.createElement('button'), {
-		className: 'btn btn-default',
-		id: 'onoffButton',
-		style: '\
+		className: 'btn btn-default', id: 'onoffButton', style: '\
 margin-left:100px;\
 color: #0275d8;\
 background-color: #fff;\
@@ -46,13 +52,11 @@ font-size: 14px;\
 '
 	});
 	insertButton.textContent = "パフォーマンス ON/OFF切り替え";
-	element.appendChild(insertButton);
+	if (element) element.appendChild(insertButton);
 
 	// recent/all切替ボタン
 	const recentButton = Object.assign(document.createElement('button'), {
-		id: 'recentAllToggleButton',
-		className: 'btn btn-default',
-		style: '\
+		id: 'recentAllToggleButton', className: 'btn btn-default', style: '\
 margin-left:10px;\
 color: #0275d8;\
 background-color: #fff;\
@@ -65,7 +69,7 @@ font-size: 14px;\
 	// デフォルトをrecentモードに設定
 	window.isRecentMode = true;
 	recentButton.textContent = "all";
-	element.appendChild(recentButton);
+	if (element) element.appendChild(recentButton);
 }
 
 // const
@@ -76,9 +80,14 @@ const OFFSET_X = 50;
 const OFFSET_Y = 5;
 const DEFAULT_WIDTH = 640;
 let canvas_status = document.getElementById("ratingStatus");
+// キャンバスが見つからない場合のエラー回避
+if (!canvas_status) throw new Error("ratingStatus canvas not found");
+
 const STATUS_WIDTH = canvas_status.width - OFFSET_X - 10;
 const STATUS_HEIGHT = canvas_status.height - OFFSET_Y - 5;
 let canvas_graph = document.getElementById("ratingGraph");
+if (!canvas_graph) throw new Error("ratingGraph canvas not found");
+
 const PANEL_WIDTH = canvas_graph.width - OFFSET_X - 10;
 const PANEL_HEIGHT = canvas_graph.height - OFFSET_Y - 30;
 
@@ -90,16 +99,7 @@ const START_YEAR = 2010;
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const YEAR_SEC = 86400 * 365;
 const STEP_SIZE = 400;
-const COLORS = [
-	[0, "#808080", 0.15],
-	[400, "#804000", 0.15],
-	[800, "#008000", 0.15],
-	[1200, "#00C0C0", 0.2],
-	[1600, "#0000FF", 0.1],
-	[2000, "#C0C000", 0.25],
-	[2400, "#FF8000", 0.2],
-	[2800, "#FF0000", 0.1]
-];
+const COLORS = [[0, "#808080", 0.15], [400, "#804000", 0.15], [800, "#008000", 0.15], [1200, "#00C0C0", 0.2], [1600, "#0000FF", 0.1], [2000, "#C0C000", 0.25], [2400, "#FF8000", 0.2], [2800, "#FF0000", 0.1]];
 
 const STAR_MIN = 3200;
 const PARTICLE_MIN = 3;
@@ -126,7 +126,9 @@ let border_status_shape;
 let rating_text, place_text, diff_text, date_text, contest_name_text, perf_text;
 let particles;
 let standings_url;
-const username = document.getElementsByClassName("username")[0].textContent;
+// ユーザー名取得の安全性向上
+const usernameEl = document.getElementsByClassName("username")[0];
+const username = usernameEl ? usernameEl.textContent : "";
 
 // キャンバスサイズなど設定
 function initStage(stage, canvas) {
@@ -399,8 +401,7 @@ function initChart(click_num4) {
 
 	// 線を描画
 	for (let j = 0; j < 2; j++) {
-		if (j === 0) line_shape.graphics.s("#AAA").ss(2);
-		else line_shape.graphics.s("#000").ss(0.5);
+		if (j === 0) line_shape.graphics.s("#AAA").ss(2); else line_shape.graphics.s("#000").ss(0.5);
 
 		line_shape.graphics.mt(vertex_shapes[0].x, vertex_shapes[0].y);
 		for (let i = 0; i < n; i++) {
@@ -487,8 +488,7 @@ function initPerfChart(click_num2) {
 
 	// 線を描画
 	for (let index = 0; index < 2; index++) {
-		if (index === 0) perf_line_shape.graphics.s("#AAA").ss(2);
-		else perf_line_shape.graphics.s("#F00").ss(0.5);
+		if (index === 0) perf_line_shape.graphics.s("#AAA").ss(2); else perf_line_shape.graphics.s("#F00").ss(0.5);
 		perf_line_shape.graphics.mt(perf_vertex_shapes[0].x, perf_vertex_shapes[0].y);
 		for (let i = 0; i < perf_rating_history.length; i++) {
 			perf_line_shape.graphics.lt(perf_vertex_shapes[i].x, perf_vertex_shapes[i].y);
@@ -652,24 +652,22 @@ function updateParticles() {
 
 // main関数
 async function main() {
+	if (!username) {
+		console.log("User not found (not a profile page?)");
+		return;
+	}
+
 	let json, page;
 
 	try {
 		let parser = new DOMParser();
 
 		// ヒューリスティックコンテストの場合はURLを変更
-		const historyJsonUrl = isHeuristic
-			? `https://atcoder.jp/users/${username}/history/json?contestType=heuristic`
-			: `https://atcoder.jp/users/${username}/history/json`;
-		const historyPageUrl = isHeuristic
-			? `https://atcoder.jp/users/${username}/history?contestType=heuristic`
-			: `https://atcoder.jp/users/${username}/history`;
+		const historyJsonUrl = isHeuristic ? `https://atcoder.jp/users/${username}/history/json?contestType=heuristic` : `https://atcoder.jp/users/${username}/history/json`;
+		const historyPageUrl = isHeuristic ? `https://atcoder.jp/users/${username}/history?contestType=heuristic` : `https://atcoder.jp/users/${username}/history`;
 
 		// 並列でフェッチして高速化
-		const [jsonResponse, pageResponse] = await Promise.all([
-			fetch(historyJsonUrl),
-			fetch(historyPageUrl)
-		]);
+		const [jsonResponse, pageResponse] = await Promise.all([fetch(historyJsonUrl), fetch(historyPageUrl)]);
 
 		json = await jsonResponse.json();
 		const pageText = await pageResponse.text();
