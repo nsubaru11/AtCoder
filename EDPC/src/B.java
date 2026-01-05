@@ -7,7 +7,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class E {
+public final class B {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -30,26 +30,17 @@ public final class E {
 
 	private static void solve() {
 		int n = sc.nextInt();
-		int W = sc.nextInt();
-		int max = 1000 * n;
-		long[] dp = new long[max + 1];
-		long INF = Long.MAX_VALUE;
-		for (int i = 0; i < n; i++) {
-			int w = sc.nextInt();
-			int v = sc.nextInt();
-			for (int j = max; j > v; j--) {
-				if (dp[j - v] == 0 || dp[j - v] + w > W) continue;
-				dp[j] = min(dp[j] == 0 ? INF: dp[j], dp[j - v] + w);
+		int k = sc.nextInt();
+		int[] h = sc.nextInt(n);
+		int[] dp = new int[n];
+		fill(dp, Integer.MAX_VALUE);
+		dp[0] = 0;
+		for (int i = 1; i < n; i++) {
+			for (int j = 1; j <= min(k, i); j++) {
+				dp[i] = min(dp[i], dp[i - j] + abs(h[i] - h[i - j]));
 			}
-			dp[v] = min(dp[v] == 0 ? INF : dp[v], w);
 		}
-		long ans = 0;
-		for (int i = max; i >= 0; i--) {
-			if (dp[i] > W || dp[i] == 0) continue;
-			ans = i;
-			break;
-		}
-		out.println(ans);
+		out.println(dp[n - 1]);
 	}
 
 	// region < Utility Methods >
