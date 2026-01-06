@@ -38,8 +38,8 @@ public final class C {
 				int c = sc.nextInt();
 				arr.lShift(c);
 			} else {
-				int l = sc.nextInt();
-				int r = sc.nextInt();
+				int l = sc.nextInt() - 1;
+				int r = sc.nextInt() - 1;
 				out.println(arr.sum(l, r));
 			}
 		}
@@ -85,7 +85,7 @@ public final class C {
 		}
 
 		public long sum(final int l, final int r) {
-			return ps[offset + r] - ps[offset + l - 1];
+			return ps[offset + r + 1] - ps[offset + l];
 		}
 
 		public long sum() {
