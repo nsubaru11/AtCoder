@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        AtCoder Easy Test for Java
 // @namespace    https://github.com/nsubaru11/AtCoder
-// @version     1.1
+// @version     1.2
 // @description Make testing sample cases easy (Modified by nsubaru11)
 // @author      magurofly (original), nsubaru11 (modified)
 // @license     MIT
@@ -64,11 +64,7 @@
 		GM_setValue = (key, value) => {
 			storage[key] = value;
 			persist();
-			if (hasAsyncGM) {
-				Promise.resolve(GM.setValue(key, value)).catch(() => {
-					// ignore
-				});
-			}
+			if (hasAsyncGM) Promise.resolve(GM.setValue(key, value)).catch(() => {});
 		};
 		// 初回のみ、GMストレージに既存設定があれば取り込む（同期初期化を壊さないため遅延ロード）
 		if (hasAsyncGM && !("config" in storage)) {
@@ -138,9 +134,7 @@
 	const eventListeners = new Map();
 	const events = {
 		on(name, listener) {
-			if (!eventListeners.has(name)) {
-				eventListeners.set(name, []);
-			}
+			if (!eventListeners.has(name)) eventListeners.set(name, []);
 			eventListeners.get(name).push(listener);
 		},
 		off(name, listener) {
@@ -431,7 +425,7 @@
 			let json = unsafeWindow.localStorage.AtCoderEasyTest$lastCode;
 			let data = [];
 			try {
-				if (typeof json == "string") {
+				if (typeof json === "string") {
 					data.push(...JSON.parse(json));
 				} else {
 					data = [];
@@ -542,7 +536,7 @@
 			}
 			if (expectedOutput != null)
 				result.expectedOutput = expectedOutput;
-			if (result.status != "OK" || typeof expectedOutput != "string")
+			if (result.status !== "OK" || typeof expectedOutput !== "string")
 				return result;
 			let output = result.output || "";
 			if (options.trim) {
@@ -567,7 +561,7 @@
 				equals = (x, y) => {
 					const xs = x.split(/\s+/);
 					const ys = y.split(/\s+/);
-					if (xs.length != ys.length)
+					if (xs.length !== ys.length)
 						return false;
 					const len = xs.length;
 					for (let i = 0; i < len; i++) {
@@ -657,8 +651,8 @@
 					await sleep(data.Interval);
 					continue;
 				}
-				const status = (result.ExitCode == 0) ? "OK" : (result.TimeConsumption.toString().startsWith("-")) ? "CE" : "RE";
-				if (status == "CE" && "runGroupId" in options) {
+				const status = (result.ExitCode === 0) ? "OK" : (result.TimeConsumption.toString().startsWith("-")) ? "CE" : "RE";
+				if (status === "CE" && "runGroupId" in options) {
 					ce_groups.add(options.runGroupId);
 				}
 				return {
@@ -712,7 +706,7 @@
 					error: String(error),
 				};
 			}
-			while (status == "running") {
+			while (status === "running") {
 				const res = await fetch("https://api.paiza.io/runners/get_status?" + buildParams({
 					id,
 					api_key: "guest",
@@ -735,13 +729,13 @@
 				memory: +res.memory * 1e-3,
 				input,
 			};
-			if (res.build_result == "failure") {
+			if (res.build_result === "failure") {
 				result.status = "CE";
 				result.exitCode = res.build_exit_code;
 				result.output = res.build_stdout;
 				result.error = res.build_stderr;
 			} else {
-				result.status = (res.result == "timeout") ? "TLE" : (res.result == "failure") ? "RE" : "OK";
+				result.status = (res.result === "timeout") ? "TLE" : (res.result === "failure") ? "RE" : "OK";
 				result.exitCode = res.exit_code;
 				result.output = res.stdout;
 				result.error = res.stderr;
@@ -803,9 +797,9 @@ def __run():
 				stdout = pyodide.globals.get("__stdout").getvalue();
 				stderr = pyodide.globals.get("__stderr").getvalue();
 				const __code = pyodide.globals.get("__code");
-				if (typeof __code == "number") {
+				if (typeof __code === "number") {
 					exitCode = String(__code);
-					if (__code != 0)
+					if (__code !== 0)
 						status = "RE";
 				}
 			} catch (error) {
@@ -833,7 +827,7 @@ def __run():
 	}
 
 	async function init$5() {
-		if (location.host != "atcoder.jp")
+		if (location.host !== "atcoder.jp")
 			throw "Not AtCoder";
 		const doc = unsafeWindow.document;
 		// "言語名 その他の説明..." となっている
@@ -1202,13 +1196,10 @@ def __run():
 			for (const [selector, closestSelector] of selectors) {
 				let e = [...doc.querySelectorAll(selector)];
 				e = e.filter(e => {
-					if (e.closest(".io-style"))
-						return false; // practice2
-					if (e.querySelector("var"))
-						return false;
-					return true;
+					if (e.closest(".io-style")) return false;
+					return !e.querySelector("var");
 				});
-				if (e.length == 0)
+				if (e.length === 0)
 					continue;
 				return pairs(e).map(([input, output], index) => {
 					const container = input.closest(closestSelector) || input.parentElement;
@@ -1243,7 +1234,7 @@ def __run():
 			langMap,
 			get sourceCode() {
 				const $ = unsafeWindow.document.querySelector.bind(unsafeWindow.document);
-				if (typeof unsafeWindow["ace"] != "undefined") {
+				if (typeof unsafeWindow["ace"] !== "undefined") {
 					if (!$(".btn-toggle-editor").classList.contains("active")) {
 						return unsafeWindow["ace"].edit($("#editor")).getValue();
 					} else {
@@ -1255,7 +1246,7 @@ def __run():
 			},
 			set sourceCode(sourceCode) {
 				const $ = unsafeWindow.document.querySelector.bind(unsafeWindow.document);
-				if (typeof unsafeWindow["ace"] != "undefined") {
+				if (typeof unsafeWindow["ace"] !== "undefined") {
 					unsafeWindow["ace"].edit($("#editor")).setValue(sourceCode);
 					$("#plain-textarea").value = sourceCode;
 				} else {
@@ -1280,7 +1271,7 @@ def __run():
 			},
 			get testCases() {
 				const taskURI = getTaskURI();
-				if (taskURI in testcasesCache && testcasesCache[taskURI].state == "loaded")
+				if (taskURI in testcasesCache && testcasesCache[taskURI].state === "loaded")
 					return testcasesCache[taskURI].testcases;
 				if (isTestCasesHere) {
 					const testcases = getTestCases(doc);
@@ -1305,7 +1296,7 @@ def __run():
 	}
 
 	async function init$4() {
-		if (location.host != "yukicoder.me")
+		if (location.host !== "yukicoder.me")
 			throw "Not yukicoder";
 		const $ = unsafeWindow.$;
 		const doc = unsafeWindow.document;
@@ -1491,7 +1482,7 @@ def __run():
 	config.registerFlag("site.codeforces.showEditor", true, "Show Editor in Codeforces Problem Page");
 
 	async function init$3() {
-		if (location.host != "codeforces.com")
+		if (location.host !== "codeforces.com")
 			throw "not Codeforces";
 		const doc = unsafeWindow.document;
 		const eLang = doc.querySelector("select[name='programTypeId']");
@@ -1635,7 +1626,7 @@ def __run():
 						let inputText = "";
 						for (const node of inputs[i].childNodes) {
 							inputText += node.textContent;
-							if (node.nodeType == node.ELEMENT_NODE && (node.tagName == "DIV" || node.tagName == "BR")) {
+							if (node.nodeType === node.ELEMENT_NODE && (node.tagName === "DIV" || node.tagName === "BR")) {
 								inputText += "\n";
 							}
 						}
@@ -1697,7 +1688,7 @@ def __run():
 				language.value = langMap[this.value];
 			});
 			for (const row of form.children) {
-				if (row.tagName != "DIV")
+				if (row.tagName !== "DIV")
 					continue;
 				row.classList.add("form-group");
 				const control = row.querySelector("*[name]");
@@ -1758,7 +1749,7 @@ def __run():
 	}
 
 	async function init$1() {
-		if (location.host != "greasyfork.org" && !location.href.match(/433152-atcoder-easy-test-v2/))
+		if (location.host !== "greasyfork.org" && !location.href.match(/433152-atcoder-easy-test-v2/))
 			throw "Not about page";
 		const doc = unsafeWindow.document;
 		await loadScript("https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js");
@@ -1839,8 +1830,7 @@ def __run():
 		}
 
 		getOptions(sourceCode, input) {
-			if (typeof this.options == "function")
-				return this.options(sourceCode, input);
+			if (typeof this.options === "function") return this.options(sourceCode, input);
 			return this.options;
 		}
 
@@ -1882,17 +1872,12 @@ def __run():
 				error: String(res.program_error || ""),
 			};
 			// 正常終了以外の場合
-			if (res.status != 0) {
-				if (res.signal) {
-					result.exitCode += ` (${res.signal})`;
-				}
+			if (res.status !== 0) {
+				if (res.signal) result.exitCode += ` (${res.signal})`;
 				result.output = String(res.compiler_output || "") + String(result.output || "");
 				result.error = String(res.compiler_error || "") + String(result.error || "");
-				if (res.compiler_output || res.compiler_error) {
-					result.status = "CE";
-				} else {
-					result.status = "RE";
-				}
+				if (res.compiler_output || res.compiler_error) result.status = "CE";
+				else result.status = "RE";
 			}
 			return result;
 		}
@@ -1964,7 +1949,7 @@ def __run():
 
 	function toRunner(compiler) {
 		const optimizationOption = getOptimizationOption(compiler);
-		if (compiler.language == "C++") {
+		if (compiler.language === "C++") {
 			return new WandboxCppRunner(compiler.name, compiler.language + " " + compiler.name + " + ACL", {
 				"compiler-option-raw": "-I.",
 				options: optimizationOption,
@@ -1993,13 +1978,9 @@ def __run():
 				delete runners$1[key];
 			}
 			currentLocalRunners.length = 0;
-			if (!apiURL) {
-				// 未設定の場合は登録済みrunnerを削除し即return（例外を投げない）
-				return;
-			}
-			if (!pattern.test(apiURL)) {
-				throw "LocalRunner: invalid localRunnerURL";
-			}
+			// 未設定の場合は登録済みrunnerを削除し即return（例外を投げない）
+			if (!apiURL) return;
+			if (!pattern.test(apiURL)) throw "LocalRunner: invalid localRunnerURL";
 			try {
 				const res = await fetch(apiURL, {
 					method: "POST",
@@ -2019,7 +2000,6 @@ def __run():
 			} catch (e) {
 				// fetch失敗したらreturn（例外を投げない）
 				console.error("LocalRunner:", e);
-				return;
 			}
 		}
 
@@ -2066,7 +2046,7 @@ def __run():
 			};
 			switch (res.status) {
 				case "success": {
-					if (res.exitCode == 0) {
+					if (res.exitCode === 0) {
 						result.status = "OK";
 					} else {
 						result.status = "RE";
@@ -2147,7 +2127,7 @@ def __run():
 	}
 
 	site.then(site => {
-		if (site.name == "AtCoder") {
+		if (site.name === "AtCoder") {
 			// AtCoderRunner がない場合は、追加する
 			for (const [languageId, descriptor] of Object.entries(site.langMap)) {
 				const m = descriptor.match(/([^ ]+)(.*)/);
@@ -2264,9 +2244,9 @@ def __run():
 				try {
 					const result = await runners[runnerId].test(sourceCode, input, expectedOutput, options);
 					const lang = runnerId.split(" ")[0];
-					if (result.status == "IE") {
+					if (result.status === "IE") {
 						console.error(result);
-						const runnerIds = Object.keys(runners).filter(runnerId => runnerId.split(" ")[0] == lang);
+						const runnerIds = Object.keys(runners).filter(runnerId => runnerId.split(" ")[0] === lang);
 						const index = runnerIds.indexOf(runnerId);
 						runnerId = runnerIds[(index + 1) % runnerIds.length];
 						continue;
@@ -2283,23 +2263,29 @@ def __run():
 			await ensureWandboxCompilersLoaded(); // wandboxAPI がコンパイラ情報を取ってくるのを待つ
 			await localRunnerPromise; // LocalRunner がコンパイラ情報を取ってくるのを待つ
 			let langs = similarLangs(languageId, Object.keys(runners));
-			// Java 系のときだけ、LocalRunner（ローカル実行環境）を優先する
+			// Java 系のときだけ、実行環境の優先順位を調整する
+			// - Local Server が起動していれば LocalRunner を優先
+			// - そうでなければ AtCoder judge を優先
 			// languageId は "Java OpenJDK 17" のような形式
 			try {
 				const langName = String(languageId).split(" ", 1)[0];
 				if (langName === "Java") {
 					const local = [];
-					const remote = [];
+					const atcoder = [];
+					const other = [];
 					for (const id of langs) {
 						if (runners[id] instanceof LocalRunner) local.push(id);
-						else remote.push(id);
+						else if (runners[id] instanceof AtCoderRunner) atcoder.push(id);
+						else other.push(id);
 					}
-					langs = local.concat(remote);
+					// Local Server が起動している（local runners が登録されている）場合は LocalRunner を優先
+					// そうでなければ AtCoder judge を優先
+					langs = local.length > 0 ? local.concat(atcoder).concat(other) : atcoder.concat(other);
 				}
 			} catch (e) {
 				console.error("AtCoder Easy Test: getEnvironment(Java-local sort) failed:", e);
 			}
-			if (langs.length == 0)
+			if (langs.length === 0)
 				throw `Undefined language: ${languageId}`;
 			return langs.map(runnerId => [runnerId, runners[runnerId].label]);
 		},
@@ -2324,7 +2310,7 @@ def __run():
 			const onStart = (event) => {
 				const target = event.target;
 				const pageY = event.pageY;
-				if (target.id != "bottom-menu-tabs")
+				if (target.id !== "bottom-menu-tabs")
 					return;
 				resizeStart = {y: pageY, height: bottomMenuContents.getBoundingClientRect().height};
 			};
@@ -2389,7 +2375,7 @@ def __run():
 						bottomMenuTabs.removeChild(tabLi);
 						bottomMenuContents.removeChild(pane);
 						tabs.delete(tab);
-						if (selectedTab == tabId) {
+						if (selectedTab === tabId) {
 							selectedTab = null;
 							if (tabs.size > 0) {
 								menuController.selectTab(tabs.values().next().value.dataset.id);
@@ -2432,7 +2418,7 @@ def __run():
 		return menuController;
 	}
 
-	var hRowTemplate = "<div class=\"atcoder-easy-test-cases-row alert alert-dismissible\">\n  <button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"close\">\n    <span aria-hidden=\"true\">×</span>\n  </button>\n  <div class=\"progress\">\n    <div class=\"progress-bar\" style=\"width: 0%;\">0 / 0</div>\n  </div>\n  <div class=\"atcoder-easy-test-cases-row-date\" style=\"font-family: monospace; text-align: right; position: absolute; right: 1em;\"></div>\n</div>";
+	const hRowTemplate = "<div class=\"atcoder-easy-test-cases-row alert alert-dismissible\">\n  <button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"close\">\n    <span aria-hidden=\"true\">×</span>\n  </button>\n  <div class=\"progress\">\n    <div class=\"progress-bar\" style=\"width: 0;\">0 / 0</div>\n  </div>\n  <div class=\"atcoder-easy-test-cases-row-date\" style=\"font-family: monospace; text-align: right; position: absolute; right: 1em;\"></div>\n</div>";
 
 	class ResultRow {
 		_tabs;
@@ -2463,18 +2449,18 @@ def __run():
 				this._element.appendChild(button);
 				return pResult.then(result => {
 					button.textContent = result.status;
-					if (result.status == "AC") {
+					if (result.status === "AC") {
 						button.classList.add("label-success");
-					} else if (result.status != "OK") {
+					} else if (result.status !== "OK") {
 						button.classList.add("label-warning");
 					}
 					numFinished++;
-					if (result.status == "AC")
+					if (result.status === "AC")
 						numAccepted++;
 					progressBar.textContent = `${numFinished} / ${numCases}`;
 					progressBar.style.width = `${100 * numFinished / numCases}%`;
-					if (numFinished == numCases) {
-						if (numAccepted == numCases)
+					if (numFinished === numCases) {
+						if (numAccepted === numCases)
 							this._element.classList.add("alert-success");
 						else
 							this._element.classList.add("alert-warning");
@@ -2552,8 +2538,7 @@ def __run():
 			try {
 				const url = "https://raw.githubusercontent.com/magurofly/atcoder-easy-test/main/v2/package.json";
 				const res = await fetch(url, {credentials: "omit"});
-				if (!res.ok)
-					throw new Error(`Failed to fetch package.json: ${res.status} ${res.statusText}`);
+				if (!res.ok) throw new Error(`Failed to fetch package.json: ${res.status} ${res.statusText}`);
 				const packageJson = await res.json();
 				const latest = packageJson["version"];
 				log.debug("checkUpdate latest:", latest);
@@ -2632,7 +2617,7 @@ def __run():
 		const classes = element.dataset[name].split(/\s+/);
 		for (let className of classes) {
 			let flag = true;
-			if (className[0] == "!") {
+			if (className[0] === "!") {
 				className = className.slice(1);
 				flag = false;
 			}
@@ -2655,9 +2640,9 @@ def __run():
 
 		set result(result) {
 			this._result = result;
-			if (result.status == "AC") {
+			if (result.status === "AC") {
 				this.outputStyle.backgroundColor = "#dff0d8";
-			} else if (result.status != "OK") {
+			} else if (result.status !== "OK") {
 				this.outputStyle.backgroundColor = "#fcf8e3";
 			}
 			this.input = result.input;
@@ -2729,7 +2714,7 @@ def __run():
 		set exitCode(code) {
 			const element = this._get("exit-code");
 			element.textContent = code;
-			const isSuccess = code == "0";
+			const isSuccess = code === "0";
 			element.classList.toggle("bg-success", isSuccess);
 			element.classList.toggle("bg-danger", !isSuccess);
 		}
@@ -2792,9 +2777,9 @@ def __run():
 				const pResult = codeRunner.run(language, sourceCode, input, output, options);
 				pResult.then(result => {
 					content.result = result;
-					if (result.status == "AC") {
+					if (result.status === "AC") {
 						pTab.then(tab => tab.color = "#dff0d8");
-					} else if (result.status != "OK") {
+					} else if (result.status !== "OK") {
 						pTab.then(tab => tab.color = "#fcf8e3");
 					}
 				}).finally(() => {
@@ -2869,8 +2854,7 @@ def __run():
 					while (eLanguage.firstChild)
 						eLanguage.removeChild(eLanguage.firstChild);
 					try {
-						if (!languageId)
-							throw new Error("AtCoder Easy Test: language not set");
+						if (!languageId) throw new Error("AtCoder Easy Test: language not set");
 						const langs = await codeRunner.getEnvironment(languageId);
 						log.debug("getEnvironment:", languageId, `(${langs.length} candidates)`);
 						// add <option>
@@ -2884,7 +2868,7 @@ def __run():
 						const langSelection = config.get("langSelection", {});
 						if (languageId in langSelection) {
 							const prev = langSelection[languageId];
-							if (langs.some(([lang, _]) => lang == prev)) {
+							if (langs.some(([lang, _]) => lang === prev)) {
 								eLanguage.value = prev;
 							}
 						}
@@ -2921,10 +2905,8 @@ def __run():
 				const pairs = testcases.map(testcase => runTest(testcase.title, testcase.input, testcase.output, {runGroupId}));
 				resultList.addResult(pairs);
 				return Promise.all(pairs.map(([pResult, _]) => pResult.then(result => {
-					if (result.status == "AC")
-						return Promise.resolve(result);
-					else
-						return Promise.reject(result);
+					if (result.status === "AC") return Promise.resolve(result);
+					else return Promise.reject(result);
 				})));
 			}
 
@@ -2983,7 +2965,7 @@ def __run():
 			restoreButton.addEventListener("click", async () => {
 				try {
 					const lastCode = await codeSaver.restore(site$1.taskURI);
-					if (site$1.sourceCode.length == 0 || confirm("Your current code will be replaced. Are you sure?")) {
+					if (site$1.sourceCode.length === 0 || confirm("Your current code will be replaced. Are you sure?")) {
 						site$1.sourceCode = lastCode;
 					}
 				} catch (reason) {
@@ -2998,11 +2980,11 @@ def __run():
 		config.registerFlag("ui.useKeyboardShortcut", true, "Use Keyboard Shortcuts");
 		unsafeWindow.addEventListener("keydown", (event) => {
 			if (config.get("ui.useKeyboardShortcut", true)) {
-				if (event.key == "Enter" && event.ctrlKey) {
+				if (event.key === "Enter" && event.ctrlKey) {
 					events.trig("testAndSubmit");
-				} else if (event.key == "Enter" && event.altKey) {
+				} else if (event.key === "Enter" && event.altKey) {
 					events.trig("testAllSamples");
-				} else if (event.key == "Escape" && event.altKey) {
+				} else if (event.key === "Escape" && event.altKey) {
 					pBottomMenu.then(bottomMenu => bottomMenu.toggle());
 				}
 			}
