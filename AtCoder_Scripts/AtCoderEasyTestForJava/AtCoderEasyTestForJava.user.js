@@ -2260,7 +2260,7 @@ def __run():
 		// 環境の名前の一覧を取得する
 		// @return runnerIdとラベルのペアの配列
 		async getEnvironment(languageId) {
-			await ensureWandboxCompilersLoaded(); // wandboxAPI がコンパイラ情報を取ってくるのを待つ
+			ensureWandboxCompilersLoaded(); // wandboxAPI がコンパイラ情報を取ってくるのを待つ
 			await localRunnerPromise; // LocalRunner がコンパイラ情報を取ってくるのを待つ
 			let langs = similarLangs(languageId, Object.keys(runners));
 			// Java 系のときだけ、実行環境の優先順位を調整する
