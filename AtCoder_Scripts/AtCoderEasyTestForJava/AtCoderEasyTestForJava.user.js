@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        AtCoder Easy Test for Java
 // @namespace    https://github.com/nsubaru11/AtCoder
-// @version     1.2
+// @version     1.3
 // @description Make testing sample cases easy (Modified by nsubaru11)
 // @author      magurofly (original), nsubaru11 (modified)
 // @license     MIT
@@ -2262,6 +2262,8 @@ def __run():
 		async getEnvironment(languageId) {
 			ensureWandboxCompilersLoaded(); // wandboxAPI がコンパイラ情報を取ってくるのを待つ
 			await localRunnerPromise; // LocalRunner がコンパイラ情報を取ってくるのを待つ
+			// リロード時・言語変更時にローカルサーバーの起動状態を再チェック
+			await LocalRunner.update();
 			let langs = similarLangs(languageId, Object.keys(runners));
 			// Java 系のときだけ、実行環境の優先順位を調整する
 			// - Local Server が起動していれば LocalRunner を優先
