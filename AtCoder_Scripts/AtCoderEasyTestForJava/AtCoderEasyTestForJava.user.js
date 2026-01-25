@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        AtCoder Easy Test for Java
 // @namespace    https://github.com/nsubaru11/AtCoder
-// @version     1.3
+// @version     1.4
 // @description Make testing sample cases easy (Modified by nsubaru11)
 // @author      magurofly (original), nsubaru11 (modified)
 // @license     MIT
@@ -2887,6 +2887,21 @@ def __run():
 				}
 
 				site$1.language.addListener(() => setLanguage());
+
+				// --- LocalServer定期チェック機能 ---
+				setInterval(async () => {
+					// 現在の言語IDを取得
+					const currentLangId = site$1.language.value;
+					if (!currentLangId) return;
+					await LocalRunner.update();
+					const currentSelection = eLanguage.value;
+					await setLanguage();
+					// もしLocalRunnerが見つかり、かつ現在LocalRunnerが選択されていない場合
+					// JavaのLocalRunnerが含まれているかチェックして自動選択するロジック
+					// (getEnvironment内ですでにLocalRunnerが優先ソートされる仕組みがあるため、
+					//  再描画後の先頭要素がLocalRunnerなら、それが自動的に候補に入ります)
+				}, 5000); // 5000ms = 5秒ごとにチェック
+
 				eAllowableError.disabled = !eAllowableErrorCheck.checked;
 				eAllowableErrorCheck.addEventListener("change", event => {
 					eAllowableError.disabled = !eAllowableErrorCheck.checked;
