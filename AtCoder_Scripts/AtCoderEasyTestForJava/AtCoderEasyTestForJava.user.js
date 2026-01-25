@@ -2894,13 +2894,19 @@ def __run():
 					const currentLangId = site$1.language.value;
 					if (!currentLangId) return;
 					await LocalRunner.update();
-					const currentSelection = eLanguage.value;
 					await setLanguage();
-					// もしLocalRunnerが見つかり、かつ現在LocalRunnerが選択されていない場合
-					// JavaのLocalRunnerが含まれているかチェックして自動選択するロジック
-					// (getEnvironment内ですでにLocalRunnerが優先ソートされる仕組みがあるため、
-					//  再描画後の先頭要素がLocalRunnerなら、それが自動的に候補に入ります)
-				}, 5000); // 5000ms = 5秒ごとにチェック
+					if (eLanguage.options.length > 0) {
+						const firstOption = eLanguage.options[0];
+						if (eLanguage.value !== firstOption.value) {
+							eLanguage.value = firstOption.value;
+							if (unsafeWindow["jQuery"]) {
+								unsafeWindow["jQuery"](eLanguage).trigger("change");
+							} else {
+								eLanguage.dispatchEvent(new Event("change"));
+							}
+						}
+					}
+				}, 5000);
 
 				eAllowableError.disabled = !eAllowableErrorCheck.checked;
 				eAllowableErrorCheck.addEventListener("change", event => {
