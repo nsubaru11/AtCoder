@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Perf Graph
 // @namespace    https://github.com/nsubaru11/AtCoder
-// @version      1.1.1
+// @version      1.1.2
 // @description  レーティンググラフにパフォーマンスのグラフを重ねて表示します
 // @author       nzm_ort (original), nsubaru11 (modified)
 // @license      MIT
@@ -12,7 +12,6 @@
 // @exclude      *://atcoder.jp/users/*?graph=dist
 // @exclude      *://atcoder.jp/users/*/history*
 // @grant        none
-// @require      https://code.jquery.com/jquery-1.8.0.min.js
 // @run-at       document-end
 // @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderRatingGraph/AtCoderRatingGraph.user.js
 // @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderRatingGraph/AtCoderRatingGraph.user.js
@@ -21,13 +20,6 @@
 
 // ヒューリスティックコンテストかどうかを判定
 const isHeuristic = new URLSearchParams(window.location.search).get('contestType') === 'heuristic';
-
-// スクリプト削除とページ再構築（元の実装を維持）
-let scriptsArray = $('script');
-scriptsArray[14].remove();
-let copyPage = $("html").clone().html();
-$("html").remove();
-document.write(copyPage);
 
 // 各値設定（ボタン追加）
 {
@@ -73,12 +65,13 @@ const MARGIN_VAL_Y_HIGH = 300;
 const OFFSET_X = 50;
 const OFFSET_Y = 5;
 const DEFAULT_WIDTH = 640;
-let canvas_status = document.getElementById("ratingStatus");
-const STATUS_WIDTH = canvas_status.width - OFFSET_X - 10;
-const STATUS_HEIGHT = canvas_status.height - OFFSET_Y - 5;
-let canvas_graph = document.getElementById("ratingGraph");
-const PANEL_WIDTH = canvas_graph.width - OFFSET_X - 10;
-const PANEL_HEIGHT = canvas_graph.height - OFFSET_Y - 30;
+const GRAPH_READY_TIMEOUT_MS = 10000;
+let canvas_status = null;
+let canvas_graph = null;
+let STATUS_WIDTH = 0;
+let STATUS_HEIGHT = 0;
+let PANEL_WIDTH = 0;
+let PANEL_HEIGHT = 0;
 
 // highest吹き出しサイズ
 const HIGHEST_WIDTH = 115;
@@ -96,7 +89,7 @@ const PARTICLE_MAX = 20;
 const LIFE_MAX = 30;
 const EPS = 1e-9;
 
-let cj = createjs;
+let cj = null;
 let stage_graph, stage_status;
 // graph
 let panel_shape, border_shape;
@@ -117,23 +110,76 @@ let particles;
 let standings_url;
 const username = document.getElementsByClassName("username")[0].textContent;
 
+function waitForPageLoad() {
+	if (document.readyState === "complete") return Promise.resolve();
+	return new Promise((resolve) => {
+		window.addEventListener("load", resolve, {once: true});
+	});
+}
+
+function waitForDependencies() {
+	return new Promise((resolve, reject) => {
+		const start = Date.now();
+		const timer = setInterval(() => {
+			const hasHistory = Array.isArray(window.rating_history);
+			const hasCreateJs = typeof window.createjs !== "undefined";
+			const hasCanvases = document.getElementById("ratingGraph") && document.getElementById("ratingStatus");
+			if (hasHistory && hasCreateJs && hasCanvases) {
+				clearInterval(timer);
+				resolve();
+				return;
+			}
+			if (Date.now() - start > GRAPH_READY_TIMEOUT_MS) {
+				clearInterval(timer);
+				reject(new Error("rating graph dependencies not ready"));
+			}
+		}, 50);
+	});
+}
+
+function refreshCanvasRefs() {
+	canvas_status = document.getElementById("ratingStatus");
+	canvas_graph = document.getElementById("ratingGraph");
+}
+
+function replaceCanvas(id) {
+	const oldCanvas = document.getElementById(id);
+	if (!oldCanvas || !oldCanvas.parentNode) return null;
+	const newCanvas = oldCanvas.cloneNode(false);
+	oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
+	return newCanvas;
+}
+
+function prepareCanvases() {
+	if (window.__perf_graph_canvas_ready) {
+		refreshCanvasRefs();
+		return;
+	}
+	replaceCanvas("ratingGraph");
+	replaceCanvas("ratingStatus");
+	refreshCanvasRefs();
+	window.__perf_graph_canvas_ready = true;
+}
+
 // キャンバスサイズなど設定
 function initStage(stage, canvas) {
-	let width = canvas.getAttribute('width');
-	let height = canvas.getAttribute('height');
+	const rect = canvas.getBoundingClientRect();
+	const attrWidth = Number(canvas.getAttribute('width')) || canvas.width || DEFAULT_WIDTH;
+	const attrHeight = Number(canvas.getAttribute('height')) || canvas.height || 0;
+	const cssWidth = Math.round(rect.width || canvas.clientWidth || attrWidth);
+	const cssHeight = Math.round(rect.height || canvas.clientHeight || attrHeight);
+	const ratio = window.devicePixelRatio || 1;
 
-	if (window.devicePixelRatio) {
-		canvas.setAttribute('width', Math.round(width * 1));
-		canvas.setAttribute('height', Math.round(height * 1));
-		stage.scaleX = stage.scaleY = 1;
-	}
+	canvas.width = Math.round(cssWidth * ratio);
+	canvas.height = Math.round(cssHeight * ratio);
+	stage.scaleX = stage.scaleY = ratio;
 
-	canvas.style.maxWidth = width + "px";
-	canvas.style.maxHeight = height + "px";
-	canvas.style.minWidth = width + "px";
-	canvas.style.minHeight = height + "px";
-	canvas.style.width = canvas.style.height = "100%";
+	canvas.style.width = cssWidth + "px";
+	canvas.style.height = cssHeight + "px";
+	canvas.style.maxWidth = cssWidth + "px";
+	canvas.style.maxHeight = cssHeight + "px";
 	stage.enableMouseOver();
+	return {cssWidth: cssWidth, cssHeight: cssHeight};
 }
 
 // 図形の追加
@@ -164,10 +210,19 @@ function init(click_num) {
 	if (n === 0) return;
 
 	// stage
-	stage_graph = new cj.Stage("ratingGraph");
-	stage_status = new cj.Stage("ratingStatus");
-	initStage(stage_graph, canvas_graph);
-	initStage(stage_status, canvas_status);
+	if (!canvas_graph || !canvas_status) {
+		refreshCanvasRefs();
+	}
+	if (!canvas_graph || !canvas_status) return;
+
+	stage_graph = new cj.Stage(canvas_graph);
+	stage_status = new cj.Stage(canvas_status);
+	const graphSize = initStage(stage_graph, canvas_graph);
+	const statusSize = initStage(stage_status, canvas_status);
+	PANEL_WIDTH = graphSize.cssWidth - OFFSET_X - 10;
+	PANEL_HEIGHT = graphSize.cssHeight - OFFSET_Y - 30;
+	STATUS_WIDTH = statusSize.cssWidth - OFFSET_X - 10;
+	STATUS_HEIGHT = statusSize.cssHeight - OFFSET_Y - 5;
 
 	// グラフサイズ計算
 	x_min = Infinity;
@@ -734,4 +789,25 @@ async function main() {
 	}
 }
 
-main();
+async function bootstrap() {
+	if (window.__perf_graph_bootstrap) return;
+	window.__perf_graph_bootstrap = true;
+
+	await waitForPageLoad();
+	try {
+		await waitForDependencies();
+	} catch (reason) {
+		console.log("グラフ初期化に必要な要素が見つかりません:", reason);
+		return;
+	}
+
+	cj = window.createjs;
+	prepareCanvases();
+	if (cj && cj.Ticker) {
+		cj.Ticker.removeAllEventListeners("tick");
+	}
+
+	await main();
+}
+
+bootstrap();
