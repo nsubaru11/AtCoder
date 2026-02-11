@@ -1,12 +1,12 @@
-import sun.misc.Unsafe;
+import sun.misc.*;
 
 import java.io.*;
-import java.lang.reflect.Array;
-import java.util.*;
+import java.lang.reflect.*;
 import java.math.*;
-import java.util.stream.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.lang.reflect.Field;
+import java.util.stream.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -24,6 +24,15 @@ public final class C {
 			}
 		}
 		out.println(set.getByIndex(n - 1));
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	@SuppressWarnings("unused")
@@ -515,15 +524,6 @@ public final class C {
 			private int rightSize() {
 				return right == null ? 0 : right.size;
 			}
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 

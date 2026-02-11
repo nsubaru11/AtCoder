@@ -1,10 +1,11 @@
-import sun.misc.Unsafe;
+import sun.misc.*;
 
 import java.io.*;
-import java.util.*;
+import java.lang.reflect.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.lang.reflect.Field;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -20,7 +21,7 @@ public class A {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner(64);
-			 final FastPrinter out = new FastPrinter(64)) {
+		     final FastPrinter out = new FastPrinter(64)) {
 			solve(sc, out);
 		} catch (Exception e) {
 			e.printStackTrace();

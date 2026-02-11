@@ -1,13 +1,11 @@
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.math.BigInteger;
+import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.function.*;
 
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static java.util.Arrays.setAll;
-import static java.util.Arrays.sort;
+import static java.lang.Math.*;
+import static java.util.Arrays.*;
 
 public class C {
 
@@ -37,6 +35,7 @@ public class C {
 		if (x < 0 || n <= x || y < 0 || n <= y) return;
 		set.add((long) x * n + y);
 	}
+
 	/**
 	 * 整数と長整数に対して通常の二分探索、上限探索(Upper Bound)、下限探索(Lower Bound)を行うための抽象クラスです。
 	 * 探索に失敗した際の戻り値は-(挿入位置(境界値) - 1)となっています。
@@ -115,13 +114,6 @@ public class C {
 		}
 
 		/**
-		 * 内部的に利用される探索種別を示す列挙型
-		 */
-		private enum SearchType {
-			NORMAL, UPPER_BOUND, LOWER_BOUND
-		}
-
-		/**
 		 * 整数範囲での汎用二分探索メソッド
 		 */
 		private final int binarySearch(int l, int r, SearchType type) {
@@ -189,6 +181,13 @@ public class C {
 		 * 問題に応じた実装を必要とします。条件を超過する際は1, ちょうど合致する際は0、そうでない場合は-1を返すことが望ましい。
 		 */
 		abstract protected int comparator(long n);
+
+		/**
+		 * 内部的に利用される探索種別を示す列挙型
+		 */
+		private enum SearchType {
+			NORMAL, UPPER_BOUND, LOWER_BOUND
+		}
 	}
 
 	/**

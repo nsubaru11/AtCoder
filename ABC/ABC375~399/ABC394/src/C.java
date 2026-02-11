@@ -1,17 +1,12 @@
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.Serial;
-import java.math.BigInteger;
+import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.IntFunction;
-import java.util.function.Supplier;
-import java.util.stream.IntStream;
+import java.util.ArrayList;
+import java.util.function.*;
+import java.util.stream.*;
 
 import static java.lang.Math.*;
-import static java.util.Arrays.setAll;
-import static java.util.Arrays.sort;
+import static java.util.Arrays.*;
 
 public class C {
 

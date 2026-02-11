@@ -1,9 +1,7 @@
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.math.BigDecimal;
-import java.math.BigInteger;
+import java.io.*;
+import java.math.*;
 import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -32,7 +30,7 @@ public class D {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);

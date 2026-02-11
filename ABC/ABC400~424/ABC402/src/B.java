@@ -1,20 +1,12 @@
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.Serial;
-import java.math.BigDecimal;
-import java.math.BigInteger;
+import java.io.*;
+import java.math.*;
 import java.util.*;
 import java.util.ArrayList;
-import java.util.function.Function;
-import java.util.function.IntFunction;
-import java.util.function.LongFunction;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.function.*;
+import java.util.stream.*;
 
 import static java.lang.Math.*;
-import static java.lang.String.format;
+import static java.lang.String.*;
 import static java.util.Arrays.*;
 
 public class B {
@@ -35,7 +27,7 @@ public class B {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);

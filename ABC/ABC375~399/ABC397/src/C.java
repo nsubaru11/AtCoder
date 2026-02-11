@@ -1,8 +1,9 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.util.stream.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.math.BigInteger;
+import java.util.stream.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -11,9 +12,9 @@ public class C {
 
 	private static void solve(final FastScanner sc, final FastPrinter out) {
 		int n = sc.nextInt();
-		int[] a  = sc.nextInt(n);
-		int[] b  = new int[n];
-		int[] c  = new int[n];
+		int[] a = sc.nextInt(n);
+		int[] b = new int[n];
+		int[] c = new int[n];
 		HashSet<Integer> hs = new HashSet<>();
 		b[0] = 1;
 		hs.add(a[0]);
@@ -45,7 +46,7 @@ public class C {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			System.err.println(e.getMessage());

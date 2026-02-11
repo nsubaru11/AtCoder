@@ -2,6 +2,7 @@ import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
 import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -16,6 +17,8 @@ public final class D {
 	private static final int[] dj;
 	private static final FastScanner sc;
 	private static final FastPrinter out;
+	private static long[] pow10;
+	// endregion
 
 	static {
 		DEBUG = true;
@@ -26,9 +29,6 @@ public final class D {
 		sc = new FastScanner(System.in);
 		out = new FastPrinter(System.out);
 	}
-	// endregion
-
-	private static long[] pow10;
 
 	private static void solve() {
 		int t = sc.nextInt();

@@ -1,17 +1,11 @@
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
-import java.math.BigDecimal;
-import java.math.BigInteger;
+import java.io.*;
+import java.lang.invoke.*;
+import java.math.*;
 import java.util.*;
 import java.util.ArrayList;
 import java.util.function.*;
 
-import static java.lang.Math.max;
-import static java.lang.Math.round;
+import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
 public final class Solve2 {

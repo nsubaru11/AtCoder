@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -57,7 +58,7 @@ public class D {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			final FastPrinter out = new FastPrinter(System.out)) {
+		     final FastPrinter out = new FastPrinter(System.out)) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);

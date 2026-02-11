@@ -1,10 +1,13 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Long.*;
 import static java.lang.Math.*;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.util.Arrays.*;
 
 public class C {
@@ -23,6 +26,15 @@ public class C {
 			uf.union(u, v);
 		}
 		out.println(cnt);
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+		}
 	}
 
 	/**
@@ -131,15 +143,6 @@ public class C {
 				groups.computeIfAbsent(find(i), k -> new ArrayList<>()).add(i);
 			}
 			return groups;
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			System.err.println(e.getMessage());
 		}
 	}
 

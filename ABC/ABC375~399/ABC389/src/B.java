@@ -1,8 +1,9 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.math.BigInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.*;
+import java.util.function.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -10,7 +11,7 @@ import static java.util.Arrays.*;
 public class B {
 
 	private static final FastScanner sc = new FastScanner();
-//	private static final FastPrinter out = new FastPrinter();
+	//	private static final FastPrinter out = new FastPrinter();
 
 	public static void main(String[] args) {
 		long x = sc.nextLong();
@@ -149,7 +150,7 @@ public class B {
 		/**
 		 * nの階乗をmodで割った余りを計算します。modは素数であることを要求します。
 		 *
-		 * @param n int
+		 * @param n   int
 		 * @param mod long
 		 * @return n! % mod
 		 */
@@ -224,8 +225,8 @@ public class B {
 		/**
 		 * nCrをmodで割った余りを求めます。
 		 *
-		 * @param n 二項係数を求めるのに用いる値
-		 * @param r 二項係数を求めるのに用いる値
+		 * @param n   二項係数を求めるのに用いる値
+		 * @param r   二項係数を求めるのに用いる値
 		 * @param mod 法とする整数
 		 * @return nCr % mod
 		 */
@@ -379,9 +380,9 @@ public class B {
 	 */
 	@SuppressWarnings("unused")
 	private static class UnionFind {
-		private int cnt;
 		private final List<List<Integer>> groups;
 		private final int[] root, rank, size, path;
+		private int cnt;
 
 		public UnionFind(int n) {
 			cnt = n;
@@ -563,13 +564,6 @@ public class B {
 		}
 
 		/**
-		 * 内部的に利用される探索種別を示す列挙型
-		 */
-		private enum SearchType {
-			NORMAL, UPPER_BOUND, LOWER_BOUND
-		}
-
-		/**
 		 * 整数範囲での汎用二分探索メソッド
 		 */
 		private final int binarySearch(int l, int r, SearchType type) {
@@ -637,6 +631,13 @@ public class B {
 		 * 問題に応じた実装を必要とします。条件を超過する際は1, ちょうど合致する際は0、そうでない場合は-1を返すことが望ましい。
 		 */
 		abstract protected int comparator(long n);
+
+		/**
+		 * 内部的に利用される探索種別を示す列挙型
+		 */
+		private enum SearchType {
+			NORMAL, UPPER_BOUND, LOWER_BOUND
+		}
 	}
 
 	/**

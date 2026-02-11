@@ -1,8 +1,9 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.util.stream.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.math.BigInteger;
+import java.util.stream.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -26,21 +27,21 @@ public class D {
 		out.println(ans);
 	}
 
-	private static final class  Pair {
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner(300000);
+		     final FastPrinter out = new FastPrinter(64)) {
+			solve(sc, out);
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+		}
+	}
+
+	private static final class Pair {
 		long cnt, sum;
 
 		public Pair(long cnt, long sum) {
 			this.cnt = cnt;
 			this.sum = sum;
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner(300000);
-			 final FastPrinter out = new FastPrinter(64)) {
-			solve(sc, out);
-		} catch (Exception e) {
-			System.err.println(e.getMessage());
 		}
 	}
 

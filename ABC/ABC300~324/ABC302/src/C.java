@@ -50,6 +50,27 @@ public final class C {
 		out.println(flag);
 	}
 
+	// region main() and debug() methods
+	// ------------------------ main() 関数 ------------------------
+	public static void main(final String[] args) {
+		try {
+			solve();
+		} catch (final Exception e) {
+			e.printStackTrace();
+		} finally {
+			sc.close();
+			out.close();
+		}
+	}
+
+	// ------------------------ デバッグ用 ------------------------
+	private static void debug(final Object... args) {
+		if (DEBUG) {
+			out.flush();
+			System.err.println(deepToString(args));
+		}
+	}
+
 	/**
 	 * 2つの配列間のレーベンシュタイン距離（編集距離）を計算するためのユーティリティクラスです。
 	 * <p>このクラスは文字列、文字配列、整数配列に対応した編集距離計算メソッドを提供します。</p>
@@ -592,27 +613,6 @@ public final class C {
 			while (i < j) swap(a, i++, --j);
 		}
 
-	}
-
-	// region main() and debug() methods
-	// ------------------------ main() 関数 ------------------------
-	public static void main(final String[] args) {
-		try {
-			solve();
-		} catch (final Exception e) {
-			e.printStackTrace();
-		} finally {
-			sc.close();
-			out.close();
-		}
-	}
-
-	// ------------------------ デバッグ用 ------------------------
-	private static void debug(final Object... args) {
-		if (DEBUG) {
-			out.flush();
-			System.err.println(deepToString(args));
-		}
 	}
 	// endregion
 

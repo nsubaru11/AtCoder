@@ -1,10 +1,13 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
-import static java.lang.Long.*;
+import static java.lang.Long.compare;
 import static java.lang.Math.*;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.util.Arrays.*;
 
 public class D {
@@ -23,7 +26,7 @@ public class D {
 				if (n / p[k].i * p[k].j + (n % p[k].i) < n / p[i].i * p[i].j + (n % p[i].j)) {
 					k = i;
 				}
-				if (n / p[k].i * p[k].j + (n % p[k].i) == n / p[i].i * p[i].j +( n % p[i].j)) {
+				if (n / p[k].i * p[k].j + (n % p[k].i) == n / p[i].i * p[i].j + (n % p[i].j)) {
 					k = n / p[k].i > n / p[i].i ? k : i;
 				}
 			}
@@ -33,6 +36,15 @@ public class D {
 			n = temp;
 		}
 		out.println(ans);
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	private static final class Pair implements Comparable<Pair> {
@@ -59,15 +71,6 @@ public class D {
 
 		public String toString() {
 			return i + " " + j;
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
 		}
 	}
 

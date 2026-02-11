@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -11,6 +12,7 @@ public class F {
 	private static int n, m;
 	private static int[] a;
 	private static long ans;
+
 	private static void solve(final FastScanner sc, final FastPrinter out) {
 		n = sc.nextInt();
 		m = sc.nextInt();
@@ -31,9 +33,10 @@ public class F {
 		if (i < n - 1) search(idx + n, score);
 		if (j < n - 1) search(idx + 1, score);
 	}
+
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);

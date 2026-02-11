@@ -2,6 +2,7 @@ import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
 import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -34,6 +35,27 @@ public final class E {
 		char[] s = sc.nextChars(n);
 		char[] t = sc.nextChars(m);
 		char[] st = new char[n + m];
+	}
+
+	// region main() and debug() methods
+	// ------------------------ main() 関数 ------------------------
+	public static void main(final String[] args) {
+		try {
+			solve();
+		} catch (final Exception e) {
+			e.printStackTrace();
+		} finally {
+			sc.close();
+			out.close();
+		}
+	}
+
+	// ------------------------ デバッグ用 ------------------------
+	private static void debug(final Object... args) {
+		if (DEBUG) {
+			out.flush();
+			System.err.println(deepToString(args));
+		}
 	}
 
 	/**
@@ -86,27 +108,6 @@ public final class E {
 				l = i;
 			}
 			return z;
-		}
-	}
-
-	// region main() and debug() methods
-	// ------------------------ main() 関数 ------------------------
-	public static void main(final String[] args) {
-		try {
-			solve();
-		} catch (final Exception e) {
-			e.printStackTrace();
-		} finally {
-			sc.close();
-			out.close();
-		}
-	}
-
-	// ------------------------ デバッグ用 ------------------------
-	private static void debug(final Object... args) {
-		if (DEBUG) {
-			out.flush();
-			System.err.println(deepToString(args));
 		}
 	}
 	// endregion

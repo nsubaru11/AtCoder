@@ -1,8 +1,9 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.util.stream.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.math.BigInteger;
+import java.util.stream.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -13,7 +14,7 @@ public class B {
 		int q = sc.nextInt();
 		RingBuffer rb = new RingBuffer(201);
 		rb.setLength(100);
-		while(q-- > 0) {
+		while (q-- > 0) {
 			int n = sc.nextInt();
 			if (n == 1) {
 				int x = sc.nextInt();
@@ -26,7 +27,7 @@ public class B {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception ignored) {
 		}

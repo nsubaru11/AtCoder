@@ -1,8 +1,9 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.util.stream.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.math.BigInteger;
+import java.util.stream.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -35,7 +36,7 @@ public class E {
 		while (!stack.isEmpty()) {
 			int u = stack.pop();
 			if (memo[u] == k) {
-				for (Edge edge: tree.get(u)) {
+				for (Edge edge : tree.get(u)) {
 					if (memo[edge.v] == 0) {
 						stack.push(edge.v);
 						memo[edge.v] = 1;
@@ -71,26 +72,28 @@ public class E {
 			}
 		}
 		int cnt = 0;
-		for (int m: memo) {
+		for (int m : memo) {
 			if (m == k)
 				cnt++;
 		}
 		out.println(cnt != n ? "No" : "Yes");
 	}
 
-	private static class Edge {
-		int u, v;
-		Edge(int u, int v) {
-			this.u = u;
-			this.v = v;
-		}
-	}
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
+		}
+	}
+
+	private static class Edge {
+		int u, v;
+
+		Edge(int u, int v) {
+			this.u = u;
+			this.v = v;
 		}
 	}
 

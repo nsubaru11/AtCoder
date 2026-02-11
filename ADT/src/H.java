@@ -3,6 +3,7 @@ import java.lang.invoke.*;
 import java.math.*;
 import java.nio.*;
 import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -45,7 +46,8 @@ public final class H {
 			int a = abc[i][0], b = abc[i][1], c = abc[i][2];
 			for (int j = 0; j <= suma; j++) {
 				for (int k = 0; k <= sumb; k++) {
-					if ((dp[i - 1][j][k] != 0 && dp[i - 1][j][k] < dp[i][j][k]) || dp[i][j][k] == 0) dp[i][j][k] = dp[i - 1][j][k];
+					if ((dp[i - 1][j][k] != 0 && dp[i - 1][j][k] < dp[i][j][k]) || dp[i][j][k] == 0)
+						dp[i][j][k] = dp[i - 1][j][k];
 					if (dp[i - 1][j][k] == 0) continue;
 					if (j * mb == k * ma) continue;
 					if (j + a > suma || k + b > sumb) continue;

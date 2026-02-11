@@ -1,11 +1,11 @@
-import sun.misc.Unsafe;
+import sun.misc.*;
 
 import java.io.*;
-import java.util.*;
+import java.lang.reflect.*;
 import java.math.*;
-import java.util.stream.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.lang.reflect.Field;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -26,6 +26,15 @@ public final class D2 {
 		int max = Integer.MIN_VALUE;
 		for (int v : set) max = max(max, uf.size(v));
 		out.println(n - max);
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -143,15 +152,6 @@ public final class D2 {
 				groups.computeIfAbsent(find(i), k -> new ArrayList<>()).add(i);
 			}
 			return groups;
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 

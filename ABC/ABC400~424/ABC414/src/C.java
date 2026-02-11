@@ -1,10 +1,9 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
-import static java.lang.Long.*;
-import static java.lang.Long.MAX_VALUE;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
@@ -76,7 +75,7 @@ public class C {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);

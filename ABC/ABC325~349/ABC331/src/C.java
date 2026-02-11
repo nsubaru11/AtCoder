@@ -1,11 +1,11 @@
-import sun.misc.Unsafe;
+import sun.misc.*;
 
 import java.io.*;
-import java.util.*;
+import java.lang.reflect.*;
 import java.math.*;
-import java.util.stream.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.lang.reflect.Field;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -30,6 +30,15 @@ public final class C {
 			b[i] = a[n - 1] - a[j];
 		}
 		out.println(b, ' ');
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -333,15 +342,6 @@ public final class C {
 					return String.format(messageFormat, args);
 				}
 			}
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 

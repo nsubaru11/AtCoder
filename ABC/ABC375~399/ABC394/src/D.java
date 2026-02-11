@@ -1,12 +1,12 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.math.BigInteger;
-import java.util.stream.IntStream;
+import java.util.stream.*;
 
 import static java.lang.Math.*;
-import static java.util.Arrays.setAll;
-import static java.util.Arrays.sort;
+import static java.util.Arrays.*;
 
 public class D {
 
@@ -15,7 +15,7 @@ public class D {
 
 	public static void main(String[] args) {
 		ArrayDeque<Character> stack = new ArrayDeque<>();
-		for (char c: sc.nextChars()) {
+		for (char c : sc.nextChars()) {
 			if (!stack.isEmpty()) {
 				if (c == ')' || c == ']' || c == '>') {
 					switch (c) {
@@ -28,11 +28,11 @@ public class D {
 								out.flush();
 								return;
 							}
-						case  ']':
+						case ']':
 							if (stack.peek() == '[') {
 								stack.pop();
 								break;
-							}  else {
+							} else {
 								out.println("No");
 								out.flush();
 								return;

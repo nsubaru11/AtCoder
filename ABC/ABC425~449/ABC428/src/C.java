@@ -2,6 +2,7 @@ import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
 import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -47,7 +48,7 @@ public final class C {
 				}
 			} else {
 				if (list.size() == size) size = -1;
-				if (list.get(list.size() -1)) {
+				if (list.get(list.size() - 1)) {
 					cnt1--;
 				} else {
 					cnt2--;

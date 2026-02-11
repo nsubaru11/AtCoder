@@ -2,6 +2,7 @@ import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
 import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -39,7 +40,7 @@ public final class E {
 			int v = sc.nextInt();
 			for (int j = max; j > v; j--) {
 				if (dp[j - v] == 0 || dp[j - v] + w > W) continue;
-				dp[j] = min(dp[j] == 0 ? INF: dp[j], dp[j - v] + w);
+				dp[j] = min(dp[j] == 0 ? INF : dp[j], dp[j - v] + w);
 			}
 			dp[v] = min(dp[v] == 0 ? INF : dp[v], w);
 		}

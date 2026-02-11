@@ -50,6 +50,27 @@ public final class D {
 		out.println(ans);
 	}
 
+	// region main() and debug() methods
+	// ------------------------ main() 関数 ------------------------
+	public static void main(final String[] args) {
+		try {
+			solve();
+		} catch (final Exception e) {
+			e.printStackTrace();
+		} finally {
+			sc.close();
+			out.close();
+		}
+	}
+
+	// ------------------------ デバッグ用 ------------------------
+	private static void debug(final Object... args) {
+		if (DEBUG) {
+			out.flush();
+			System.err.println(deepToString(args));
+		}
+	}
+
 	/**
 	 * 柔軟な二分探索アルゴリズムを提供するためのユーティリティクラスです。
 	 * <p>利用者はカスタムの比較ロジックを {@code CompareFunction} インターフェースによって実装する必要があります。</p>
@@ -340,27 +361,6 @@ public final class D {
 					return String.format(messageFormat, args);
 				}
 			}
-		}
-	}
-
-	// region main() and debug() methods
-	// ------------------------ main() 関数 ------------------------
-	public static void main(final String[] args) {
-		try {
-			solve();
-		} catch (final Exception e) {
-			e.printStackTrace();
-		} finally {
-			sc.close();
-			out.close();
-		}
-	}
-
-	// ------------------------ デバッグ用 ------------------------
-	private static void debug(final Object... args) {
-		if (DEBUG) {
-			out.flush();
-			System.err.println(deepToString(args));
 		}
 	}
 	// endregion

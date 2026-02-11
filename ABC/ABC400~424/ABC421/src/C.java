@@ -1,12 +1,12 @@
-import sun.misc.Unsafe;
+import sun.misc.*;
 
 import java.io.*;
-import java.lang.reflect.Array;
-import java.util.*;
+import java.lang.reflect.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 import java.util.stream.*;
-import java.lang.reflect.Field;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -64,6 +64,15 @@ public class C {
 		}
 
 		out.println(min(ans_a, ans_b));
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	@SuppressWarnings("unused")
@@ -470,15 +479,6 @@ public class C {
 				return right == null ? 0 : right.size;
 			}
 
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 

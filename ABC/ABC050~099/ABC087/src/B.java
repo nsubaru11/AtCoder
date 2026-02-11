@@ -1,9 +1,7 @@
 import java.io.*;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
-import java.util.*;
+import java.lang.invoke.*;
 import java.math.*;
-import java.util.stream.*;
+import java.util.*;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -31,7 +29,7 @@ public final class B {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			e.printStackTrace();

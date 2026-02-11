@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -11,10 +12,10 @@ public class D {
 	private static void solve(final FastScanner sc, final FastPrinter out) {
 		int n = sc.nextInt();
 		int q = sc.nextInt();
-		int[] nest  = new int[n];
+		int[] nest = new int[n];
 		int[] labelToIndex = new int[n];
 		int[] indexToLabel = new int[n];
-		int[] pigeon  = new int[n];
+		int[] pigeon = new int[n];
 		for (int i = 0; i < n; i++) {
 			nest[i] = pigeon[i] = i;
 		}
@@ -39,7 +40,7 @@ public class D {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);

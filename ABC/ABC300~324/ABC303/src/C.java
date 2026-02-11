@@ -75,8 +75,6 @@ public final class C {
 		out.println(true);
 	}
 
-	private record Pair(int i, int j, int cnt) {}
-
 	// region main() and debug() methods
 	// ------------------------ main() 関数 ------------------------
 	public static void main(final String[] args) {
@@ -96,6 +94,9 @@ public final class C {
 			out.flush();
 			System.err.println(deepToString(args));
 		}
+	}
+
+	private record Pair(int i, int j, int cnt) {
 	}
 	// endregion
 

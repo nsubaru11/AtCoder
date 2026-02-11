@@ -1,8 +1,8 @@
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.math.BigInteger;
+import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.function.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -107,13 +107,6 @@ public class D {
 		}
 
 		/**
-		 * 内部的に利用される探索種別を示す列挙型
-		 */
-		private enum SearchType {
-			NORMAL, UPPER_BOUND, LOWER_BOUND
-		}
-
-		/**
 		 * 整数範囲での汎用二分探索メソッド
 		 */
 		private final int binarySearch(int l, int r, SearchType type) {
@@ -181,6 +174,13 @@ public class D {
 		 * 問題に応じた実装を必要とします。条件を超過する際は1, ちょうど合致する際は0、そうでない場合は-1を返すことが望ましい。
 		 */
 		abstract protected int comparator(long n);
+
+		/**
+		 * 内部的に利用される探索種別を示す列挙型
+		 */
+		private enum SearchType {
+			NORMAL, UPPER_BOUND, LOWER_BOUND
+		}
 	}
 
 	/**

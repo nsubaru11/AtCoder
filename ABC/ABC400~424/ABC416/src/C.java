@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -16,8 +17,8 @@ public class C {
 		ArrayList<String> ans = new ArrayList<>((int) pow(n, k));
 		comb(0, n, k, new StringBuilder(), s, ans);
 		Collections.sort(ans);
-//		out.print(ans);
-//		out.println();
+		//		out.print(ans);
+		//		out.println();
 		out.println(ans.get(x));
 	}
 
@@ -35,7 +36,7 @@ public class C {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);

@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -18,6 +19,15 @@ public class E {
 
 			}
 			out.println(ans);
+		}
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -44,15 +54,6 @@ public class E {
 
 		public String toString() {
 			return value + " " + index;
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
 		}
 	}
 

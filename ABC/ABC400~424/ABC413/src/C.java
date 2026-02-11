@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -14,27 +15,36 @@ public class C {
 		while (q-- > 0) {
 			int t = sc.nextInt();
 			switch (t) {
-			case 1:
-				pairs.add(new Pair(sc.nextInt(), sc.nextInt()));
-				break;
-			case 2:
-				int k = sc.nextInt();
-				long sum = 0;
-				while (k > 0) {
-					if (pairs.peekFirst().c <= k) {
-						Pair p = pairs.pollFirst();
-						sum += (long) p.c * p.x;
-						k -= p.c;
-					} else {
-						final Pair p = pairs.peekFirst();
-						p.c -= k;
-						sum += (long) p.x * k;
-						k = 0;
+				case 1:
+					pairs.add(new Pair(sc.nextInt(), sc.nextInt()));
+					break;
+				case 2:
+					int k = sc.nextInt();
+					long sum = 0;
+					while (k > 0) {
+						if (pairs.peekFirst().c <= k) {
+							Pair p = pairs.pollFirst();
+							sum += (long) p.c * p.x;
+							k -= p.c;
+						} else {
+							final Pair p = pairs.peekFirst();
+							p.c -= k;
+							sum += (long) p.x * k;
+							k = 0;
+						}
 					}
-				}
-				out.println(sum);
-				break;
+					out.println(sum);
+					break;
 			}
+		}
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -63,15 +73,6 @@ public class C {
 
 		public String toString() {
 			return c + " " + x;
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
 		}
 	}
 

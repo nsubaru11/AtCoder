@@ -1,8 +1,8 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.math.BigInteger;
-import java.util.function.LongFunction;
-import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.function.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -10,7 +10,7 @@ import static java.util.Arrays.*;
 public class C {
 
 	private static final FastScanner sc = new FastScanner();
-	private static final FastPrinter out = new FastPrinter((int)1e6);
+	private static final FastPrinter out = new FastPrinter((int) 1e6);
 
 	public static void main(String[] args) {
 		int q = sc.nextInt();
@@ -71,7 +71,7 @@ public class C {
 
 		public long get(int index) {
 			if (index >= len || index < -len)
-				throw new IndexOutOfBoundsException("Index " + index + " out of bounds for length "+ len);
+				throw new IndexOutOfBoundsException("Index " + index + " out of bounds for length " + len);
 			if (index < 0) index += len;
 			index = mod(index + head, size);
 			return list[index];
@@ -108,7 +108,7 @@ public class C {
 
 		public Deque set(int index, long e) {
 			if (index > len || index < -len)
-				throw new IndexOutOfBoundsException("Index " + index + " out of bounds for length "+ len);
+				throw new IndexOutOfBoundsException("Index " + index + " out of bounds for length " + len);
 			if (index == len) {
 				addLast(e);
 			} else {
@@ -121,7 +121,7 @@ public class C {
 
 		public Deque setLength(int len) {
 			if (len > size)
-				throw new IndexOutOfBoundsException("Index " + len + " out of bounds for length "+ size);
+				throw new IndexOutOfBoundsException("Index " + len + " out of bounds for length " + size);
 			if (this.len < len) {
 				while (this.len < len) {
 					this.addLast(0);
@@ -137,9 +137,9 @@ public class C {
 
 		public Deque setLength(int strt, int end) {
 			if (strt < 0 || size <= strt)
-				throw new IndexOutOfBoundsException("Index " + strt + " out of bounds for length "+ size);
+				throw new IndexOutOfBoundsException("Index " + strt + " out of bounds for length " + size);
 			if (end < 0 || size < end)
-				throw new IndexOutOfBoundsException("Index " + end + " out of bounds for length "+ size);
+				throw new IndexOutOfBoundsException("Index " + end + " out of bounds for length " + size);
 			if (mod(head + strt, size) >= tail) {
 				end -= strt;
 				setLength(end);
@@ -228,9 +228,9 @@ public class C {
 	 */
 	@SuppressWarnings("unused")
 	private static class UnionFind {
-		private int cnt;
 		private final List<List<Integer>> groups;
 		private final int[] root, rank, size, path;
+		private int cnt;
 
 		public UnionFind(int n) {
 			cnt = n;
@@ -412,13 +412,6 @@ public class C {
 		}
 
 		/**
-		 * 内部的に利用される探索種別を示す列挙型
-		 */
-		private enum SearchType {
-			NORMAL, UPPER_BOUND, LOWER_BOUND
-		}
-
-		/**
 		 * 整数範囲での汎用二分探索メソッド
 		 */
 		private final int binarySearch(int l, int r, SearchType type) {
@@ -486,6 +479,13 @@ public class C {
 		 * 問題に応じた実装を必要とします。条件を超過する際は1, ちょうど合致する際は0、そうでない場合は-1を返すことが望ましい。
 		 */
 		abstract protected int comparator(long n);
+
+		/**
+		 * 内部的に利用される探索種別を示す列挙型
+		 */
+		private enum SearchType {
+			NORMAL, UPPER_BOUND, LOWER_BOUND
+		}
 	}
 
 	/**

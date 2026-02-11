@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -27,6 +28,15 @@ public class F {
 			out.print(chars[i]);
 		}
 		out.println();
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+		}
 	}
 
 	/**
@@ -146,15 +156,6 @@ public class F {
 		 */
 		public int getEvenPalindromeLengthAt(int center) {
 			return radii[center << 1 + 1];
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			System.err.println(e.getMessage());
 		}
 	}
 

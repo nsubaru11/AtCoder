@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -33,9 +34,9 @@ public class D {
 		for (int i = 0, j = 0; i < m; i++) {
 			while (j < l && cnt_t > cnt_a) { // aokiが移動回数少ないとき
 				if (sa[i].c == 'U' || sa[i].c == 'D') {
-//					if (check(rt, ct, rt + sa[i].k, ct, ra, ca, n, m)) {
-//
-//					}
+					//					if (check(rt, ct, rt + sa[i].k, ct, ra, ca, n, m)) {
+					//
+					//					}
 				} else {
 
 				}
@@ -65,15 +66,16 @@ public class D {
 		return false;
 	}
 
-	private record Pair(char c, long k) {}
-
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	private record Pair(char c, long k) {
 	}
 
 	@SuppressWarnings("unused")

@@ -1,8 +1,9 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.math.BigInteger;
-import java.util.stream.IntStream;
+import java.util.stream.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -13,7 +14,7 @@ public class B {
 	private static final FastPrinter out = new FastPrinter(512);
 
 	public static void main(String[] args) {
-		int n  = sc.nextInt();
+		int n = sc.nextInt();
 		String[] s = new String[51];
 		fill(s, "");
 		for (int i = 0; i < n; i++) {

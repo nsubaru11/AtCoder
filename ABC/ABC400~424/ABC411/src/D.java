@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -15,7 +16,7 @@ public class D {
 		for (int i = 0; i < n; i++) {
 			query.add(new ArrayDeque<>());
 		}
-		List<QueryData>  list = new ArrayList<>(q);
+		List<QueryData> list = new ArrayList<>(q);
 		for (int i = 0; i < q; i++) {
 			int type = sc.nextInt();
 			int p = sc.nextInt() - 1;
@@ -24,7 +25,7 @@ public class D {
 			list.add(new QueryData(type, p, s));
 			query.get(p).add(i);
 		}
-		while (--q >= 0 && list.get(q).t != 3);
+		while (--q >= 0 && list.get(q).t != 3) ;
 		List<Integer> qlist = new ArrayList<>();
 		while (q >= 0) {
 			QueryData data = list.get(q);
@@ -32,7 +33,7 @@ public class D {
 			int p = data.p;
 			boolean flag = true;
 			if (t == 1) {
-				while (--q >= 0 && list.get(q).t != 3);
+				while (--q >= 0 && list.get(q).t != 3) ;
 				flag = q < 0;
 			} else if (t == 2) {
 				qlist.add(q);
@@ -63,15 +64,18 @@ public class D {
 		}
 	}
 
-	private record QueryData(int t, int p, String s){};
-
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	;
+
+	private record QueryData(int t, int p, String s) {
 	}
 
 	@SuppressWarnings("unused")

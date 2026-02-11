@@ -3,6 +3,7 @@ import java.lang.invoke.*;
 import java.math.*;
 import java.nio.*;
 import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -38,7 +39,7 @@ public final class C {
 		memo[a - 1][b - 1] = 1;
 		while (k-- > 0) {
 			int x = sc.nextInt() - 1;
-			int y =sc.nextInt() - 1;
+			int y = sc.nextInt() - 1;
 			memo[x][y] = 0;
 		}
 		out.println(dfs(0, 0, a, b, memo));

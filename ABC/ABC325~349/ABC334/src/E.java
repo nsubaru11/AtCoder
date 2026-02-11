@@ -1,11 +1,11 @@
-import sun.misc.Unsafe;
+import sun.misc.*;
 
 import java.io.*;
-import java.util.*;
+import java.lang.reflect.*;
 import java.math.*;
-import java.util.stream.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.lang.reflect.Field;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -45,6 +45,32 @@ public final class E {
 		red = (int) modPow(red, mod - 2, mod);
 		int ans = (int) ((((long) delta * red % mod) + cnt) % mod);
 		out.println(ans);
+	}
+
+	/**
+	 * a ^ b % mod を求めます。
+	 *
+	 * @param a   底
+	 * @param b   指数
+	 * @param mod 割る値(素数)
+	 * @return a ^ b % mod
+	 */
+	public static long modPow(long a, long b, long mod) {
+		long ans = 1;
+		b %= mod - 1;
+		for (; b > 0; a = a * a % mod, b >>= 1) {
+			if ((b & 1) == 1) ans = ans * a % mod;
+		}
+		return ans;
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -162,32 +188,6 @@ public final class E {
 				groups.computeIfAbsent(find(i), k -> new ArrayList<>()).add(i);
 			}
 			return groups;
-		}
-	}
-
-	/**
-	 * a ^ b % mod を求めます。
-	 *
-	 * @param a   底
-	 * @param b   指数
-	 * @param mod 割る値(素数)
-	 * @return a ^ b % mod
-	 */
-	public static long modPow(long a, long b, long mod) {
-		long ans = 1;
-		b %= mod - 1;
-		for (; b > 0; a = a * a % mod, b >>= 1) {
-			if ((b & 1) == 1) ans = ans * a % mod;
-		}
-		return ans;
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 

@@ -1,9 +1,7 @@
 import java.io.*;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
-import java.util.*;
+import java.lang.invoke.*;
 import java.math.*;
-import java.util.stream.*;
+import java.util.*;
 import java.util.function.*;
 
 import static java.lang.Math.*;

@@ -1,12 +1,12 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.math.BigInteger;
-import java.util.stream.IntStream;
+import java.util.stream.*;
 
 import static java.lang.Math.*;
-import static java.util.Arrays.setAll;
-import static java.util.Arrays.sort;
+import static java.util.Arrays.*;
 
 public class A {
 
@@ -14,7 +14,7 @@ public class A {
 	private static final FastPrinter out = new FastPrinter(128);
 
 	public static void main(String[] args) {
-		for (char c: sc.nextChars()) {
+		for (char c : sc.nextChars()) {
 			if (c == '2') out.print('2');
 		}
 		out.println();

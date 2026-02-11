@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -14,7 +15,7 @@ public class B {
 		for (int x = n; x >= 0; x--) {
 			int cnt = 0;
 			for (int i = 0; i < n; i++) {
-				if (a[i] >= x){
+				if (a[i] >= x) {
 					cnt++;
 				}
 			}
@@ -27,7 +28,7 @@ public class B {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);

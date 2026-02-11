@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -12,7 +13,7 @@ public class B {
 		HashMap<Integer, Integer> hm = sc.nextIntMultisetHM(7);
 		int two = 0;
 		int three = 0;
-		for (int i: hm.values()) {
+		for (int i : hm.values()) {
 			if (i == 2) two++;
 			else if (i >= 3) three++;
 		}
@@ -21,7 +22,7 @@ public class B {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter(64)) {
+		     final FastPrinter out = new FastPrinter(64)) {
 			solve(sc, out);
 		} catch (Exception e) {
 			System.err.println(e.getMessage());

@@ -1,7 +1,8 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.math.BigInteger;
-import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.function.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -9,7 +10,7 @@ import static java.util.Arrays.*;
 public class D {
 
 	private static final FastScanner sc = new FastScanner();
-//	private static final FastPrinter out = new FastPrinter();
+	//	private static final FastPrinter out = new FastPrinter();
 
 	public static void main(String[] args) {
 		int h = sc.nextInt();
@@ -39,7 +40,7 @@ public class D {
 				if (t.tate) { // true tate t
 					if (c[t.i] == 'y') {
 						c[t.i] = '#';
-					}  else if (c[t.i] == 't') {
+					} else if (c[t.i] == 't') {
 						continue;
 					} else {
 						c[t.i] = 't';
@@ -53,13 +54,13 @@ public class D {
 				} else {
 					if (c[t.i] == 't') {
 						c[t.i] = '#';
-					}  else if (c[t.i] == 'y') {
+					} else if (c[t.i] == 'y') {
 						continue;
 					} else {
 						c[t.i] = 'y';
 					}
 					if (t.i + w < h * w) {
-						dq.add(new Tuple(t.i + w,t.cnt + 1, true));
+						dq.add(new Tuple(t.i + w, t.cnt + 1, true));
 					}
 					if (t.i - w >= 0) {
 						dq.add(new Tuple(t.i - w, t.cnt + 1, true));
@@ -73,6 +74,7 @@ public class D {
 	private static class Tuple {
 		int i, cnt;
 		boolean tate; // trueなら前回縦移動、falseなら前回横移動
+
 		Tuple(int i, int cnt, boolean flag) {
 			this.i = i;
 			this.cnt = cnt;
@@ -85,9 +87,9 @@ public class D {
 	 */
 	@SuppressWarnings("unused")
 	private static class UnionFind {
-		private int cnt;
 		private final List<List<Integer>> groups;
 		private final int[] root, rank, size, path;
+		private int cnt;
 
 		public UnionFind(int n) {
 			cnt = n;
@@ -270,13 +272,6 @@ public class D {
 		}
 
 		/**
-		 * 内部的に利用される探索種別を示す列挙型
-		 */
-		private enum SearchType {
-			NORMAL, UPPER_BOUND, LOWER_BOUND
-		}
-
-		/**
 		 * 整数範囲での汎用二分探索メソッド
 		 */
 		private final int binarySearch(int l, int r, SearchType type) {
@@ -344,6 +339,13 @@ public class D {
 		 * 問題に応じた実装を必要とします。条件を超過する際は1, ちょうど合致する際は0、そうでない場合は-1を返すことが望ましい。
 		 */
 		abstract protected int comparator(long n);
+
+		/**
+		 * 内部的に利用される探索種別を示す列挙型
+		 */
+		private enum SearchType {
+			NORMAL, UPPER_BOUND, LOWER_BOUND
+		}
 	}
 
 	/**

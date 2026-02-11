@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -18,8 +19,12 @@ public class E {
 			for (int j = i + 1; j < n; j++) {
 				int x1 = xy[i][0], y1 = xy[i][1], x2 = xy[j][0], y2 = xy[j][1];
 				if (x1 > x2 || (x1 == x2 && y1 > y2)) {
-					int t = x1; x1 = x2; x2 = t;
-					t = y1; y1 = y2; y2 = t;
+					int t = x1;
+					x1 = x2;
+					x2 = t;
+					t = y1;
+					y1 = y2;
+					y2 = t;
 				}
 				int dx = x2 - x1, dy = y2 - y1;
 				int gcd = gcd(dx, dy < 0 ? -dy : dy);
@@ -44,7 +49,7 @@ public class E {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);

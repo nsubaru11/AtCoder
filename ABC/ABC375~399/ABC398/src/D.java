@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -19,6 +20,15 @@ public class D {
 
 		}
 		out.println();
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+		}
 	}
 
 	private static final class Pair implements Comparable<Pair> {
@@ -45,15 +55,6 @@ public class D {
 
 		public String toString() {
 			return r + " " + c;
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			System.err.println(e.getMessage());
 		}
 	}
 

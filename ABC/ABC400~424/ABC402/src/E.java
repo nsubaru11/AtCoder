@@ -1,6 +1,7 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -21,6 +22,7 @@ public class E {
 		out.println(max);
 		String s;
 	}
+
 	private static BigDecimal dfs(Data data, int cnt) {
 		int remainCost = data.remainCost;
 		int isAC = data.isAC;
@@ -38,7 +40,7 @@ public class E {
 			int s = scp[i][0];
 			int c = scp[i][1];
 			int p = scp[i][2];
-			BigDecimal k = dfs(new Data(remainCost - c, isAC | (1 << i),score + s, prob * p), cnt + 1);
+			BigDecimal k = dfs(new Data(remainCost - c, isAC | (1 << i), score + s, prob * p), cnt + 1);
 			BigDecimal l = dfs(new Data(remainCost - c, isAC, score, prob * (100 - p)), cnt + 1);
 			max = max.max(k.add(l));
 		}
@@ -47,15 +49,16 @@ public class E {
 		return max;
 	}
 
-	private record Data(int remainCost, int isAC, long score, long prob) {}
-
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	private record Data(int remainCost, int isAC, long score, long prob) {
 	}
 
 	@SuppressWarnings("unused")

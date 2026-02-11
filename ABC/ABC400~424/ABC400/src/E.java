@@ -2,7 +2,7 @@ import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
 import java.util.*;
-import java.util.stream.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
@@ -45,7 +45,7 @@ public final class E {
 		while (q-- > 0) {
 			long a = sc.nextLong();
 			int c = Collections.binarySearch(num400, a);
-			if (c < 0) c = ~c  - 1;
+			if (c < 0) c = ~c - 1;
 			out.println(num400.get(c));
 		}
 	}

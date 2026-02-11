@@ -1,7 +1,8 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.math.BigInteger;
-import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.function.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -9,14 +10,14 @@ import static java.util.Arrays.*;
 public class E {
 
 	private static final FastScanner sc = new FastScanner();
-//	private static final FastPrinter out = new FastPrinter();
+	//	private static final FastPrinter out = new FastPrinter();
 
 	public static void main(String[] args) {
 		int[] A = sc.nextInt(9);
 		int[] B = sc.nextInt(9);
 		long sum = 0;
-		for (int a: A) {
-			for (int b: B) {
+		for (int a : A) {
+			for (int b : B) {
 				sum += (long) a * b;
 			}
 		}
@@ -28,9 +29,9 @@ public class E {
 	 */
 	@SuppressWarnings("unused")
 	private static class UnionFind {
-		private int cnt;
 		private final List<List<Integer>> groups;
 		private final int[] root, rank, size, path;
+		private int cnt;
 
 		public UnionFind(int n) {
 			cnt = n;
@@ -212,13 +213,6 @@ public class E {
 		}
 
 		/**
-		 * 内部的に利用される探索種別を示す列挙型
-		 */
-		private enum SearchType {
-			NORMAL, UPPER_BOUND, LOWER_BOUND
-		}
-
-		/**
 		 * 整数範囲での汎用二分探索メソッド
 		 */
 		private final int binarySearch(int l, int r, SearchType type) {
@@ -286,6 +280,13 @@ public class E {
 		 * 問題に応じた実装を必要とします。条件を超過する際は1, ちょうど合致する際は0、そうでない場合は-1を返すことが望ましい。
 		 */
 		abstract protected int comparator(long n);
+
+		/**
+		 * 内部的に利用される探索種別を示す列挙型
+		 */
+		private enum SearchType {
+			NORMAL, UPPER_BOUND, LOWER_BOUND
+		}
 	}
 
 	/**

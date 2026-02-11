@@ -1,8 +1,9 @@
 import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.util.stream.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.math.BigInteger;
+import java.util.stream.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -10,18 +11,18 @@ import static java.util.Arrays.*;
 public class A {
 
 	private static void solve(final FastScanner sc, final FastPrinter out) {
-//		int n = sc.nextInt();
-//		int c = sc.nextInt();
-//		int t = sc.nextInt();
-//		int cnt = 1;
-//		for (int i = 1; i < n; i++) {
-//			int t1 = sc.nextInt();
-//			if (t + c <= t1) {
-//				t = t1;
-//				cnt++;
-//			}
-//		}
-//		out.println(cnt);
+		//		int n = sc.nextInt();
+		//		int c = sc.nextInt();
+		//		int t = sc.nextInt();
+		//		int cnt = 1;
+		//		for (int i = 1; i < n; i++) {
+		//			int t1 = sc.nextInt();
+		//			if (t + c <= t1) {
+		//				t = t1;
+		//				cnt++;
+		//			}
+		//		}
+		//		out.println(cnt);
 		int target = 7;
 		int[] intArray = {1, 2, 4, 7, 7, 8, 20};
 		AbstractBinarySearch binarySearch = new AbstractBinarySearch() {
@@ -40,7 +41,7 @@ public class A {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
+		     final FastPrinter out = new FastPrinter()) {
 			solve(sc, out);
 		} catch (Exception e) {
 			System.err.println(e.getMessage());

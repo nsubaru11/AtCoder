@@ -1,11 +1,11 @@
-import sun.misc.Unsafe;
+import sun.misc.*;
 
 import java.io.*;
-import java.util.*;
+import java.lang.reflect.*;
 import java.math.*;
-import java.util.stream.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
-import java.lang.reflect.Field;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
@@ -26,7 +26,7 @@ public final class E {
 		}
 		int k = (1 << m) - 1;
 		char[] s = sc.nextChars(m);
-		for (int i = 0 ; i < m; i++) {
+		for (int i = 0; i < m; i++) {
 			if (s[i] == '1') k &= i + 1;
 		}
 		int x = 32 - Integer.numberOfLeadingZeros(k - 1);
@@ -35,7 +35,7 @@ public final class E {
 
 	public static void main(String[] args) {
 		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter(true)) {
+		     final FastPrinter out = new FastPrinter(true)) {
 			solve(sc, out);
 		} catch (Exception e) {
 			e.printStackTrace();

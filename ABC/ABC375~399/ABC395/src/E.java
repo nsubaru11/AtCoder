@@ -1,10 +1,14 @@
 import java.io.*;
-import java.util.*;
 import java.math.*;
+import java.util.*;
+import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Long.*;
+import static java.lang.Long.compare;
 import static java.lang.Math.*;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.util.Arrays.*;
 
 public class E {
@@ -22,6 +26,15 @@ public class E {
 			dijkstra.addEdge(u, v);
 		}
 		out.println(dijkstra.getShortestPathWeight(0, n - 1));
+	}
+
+	public static void main(String[] args) {
+		try (final FastScanner sc = new FastScanner();
+		     final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	private static final class Dijkstra {
@@ -86,15 +99,6 @@ public class E {
 			public int compareTo(Vertex o) {
 				return compare(cost, o.cost);
 			}
-		}
-	}
-
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-			 final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
 		}
 	}
 

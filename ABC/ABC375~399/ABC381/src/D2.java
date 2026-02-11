@@ -1,13 +1,11 @@
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.math.BigInteger;
+import java.io.*;
+import java.math.*;
 import java.util.*;
-import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.function.*;
 
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static java.util.Arrays.setAll;
-import static java.util.Arrays.sort;
+import static java.lang.Math.*;
+import static java.util.Arrays.*;
 
 public class D2 {
 
@@ -21,7 +19,7 @@ public class D2 {
 		int cnt = 0;
 		int pre = -1;
 		int cur = 0;
-		for (int i = 0; i < n;) {
+		for (int i = 0; i < n; ) {
 			while (i < n && pre != cur) {
 				pre = cur;
 				cur = sc.nextInt();
@@ -52,9 +50,9 @@ public class D2 {
 	 */
 	@SuppressWarnings("unused")
 	private static class UnionFind {
-		private int cnt;
 		private final List<List<Integer>> groups;
 		private final int[] root, rank, size, path;
+		private int cnt;
 
 		public UnionFind(int n) {
 			cnt = n;
@@ -236,13 +234,6 @@ public class D2 {
 		}
 
 		/**
-		 * 内部的に利用される探索種別を示す列挙型
-		 */
-		private enum SearchType {
-			NORMAL, UPPER_BOUND, LOWER_BOUND
-		}
-
-		/**
 		 * 整数範囲での汎用二分探索メソッド
 		 */
 		private final int binarySearch(int l, int r, SearchType type) {
@@ -310,6 +301,13 @@ public class D2 {
 		 * 問題に応じた実装を必要とします。条件を超過する際は1, ちょうど合致する際は0、そうでない場合は-1を返すことが望ましい。
 		 */
 		abstract protected int comparator(long n);
+
+		/**
+		 * 内部的に利用される探索種別を示す列挙型
+		 */
+		private enum SearchType {
+			NORMAL, UPPER_BOUND, LOWER_BOUND
+		}
 	}
 
 	/**
