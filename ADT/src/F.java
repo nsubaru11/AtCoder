@@ -1,7 +1,3 @@
-#if (${PACKAGE_NAME} && ${PACKAGE_NAME} != "")package ${PACKAGE_NAME};
-#end
-#parse("File Header.java")
-
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
@@ -12,7 +8,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class ${NAME} {
+public final class F {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -34,7 +30,21 @@ public final class ${NAME} {
 	// endregion
 
 	private static void solve() {
-
+		int n = sc.nextInt();
+		int k = sc.nextInt();
+		TreeSet<Integer> set = sc.nextIntTS(k);
+		int tk = 0, ao = 0;
+		while (n > 0) {
+			Integer a = set.floor(n);
+			if (a == null) break;
+			tk += a;
+			n -= a;
+			a = set.floor(n);
+			if (a == null) break;
+			ao += a;
+			n -= a;
+		}
+		out.println(tk);
 	}
 
 	// region < Utility Methods >

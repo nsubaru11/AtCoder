@@ -1,96 +1,331 @@
-#if (${PACKAGE_NAME} && ${PACKAGE_NAME} != "")package ${PACKAGE_NAME};
-#end
-#parse("File Header.java")
-
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
-import java.nio.*;
 import java.util.*;
 import java.util.function.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class ${NAME} {
-
-	// region < Constants & Globals >
-	private static final boolean DEBUG;
-	private static final int MOD;
-	private static final int[] di;
-	private static final int[] dj;
+public final class Solve7 {
+	// ------------------------ 定数 ------------------------
+	private static final boolean DEBUG = true;
+	private static final int MOD = 998244353;
+	// private static final int MOD = 1_000_000_007;
+	private static final int[][] dij = {{1, 0}, {0, -1}, {0, 1}, {-1, 0}}; // 下、左、右、上
+	// private static final int[][] dij = {{-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}};
 	private static final FastScanner sc;
 	private static final FastPrinter out;
 
+	private static final int L = 1, U = 3, R = 2, D = 0;
+
+	private static final int n, k, t;
+	private static final int[] wall, point;
+	private static final long startTime, timeLimit;
+
 	static {
-		DEBUG = true;
-		MOD = 998244353;
-		// MOD = 1_000_000_007;
-		di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
-		dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
+		// init
+		startTime = System.currentTimeMillis();
+		timeLimit = 1900;
 		sc = new FastScanner();
 		out = new FastPrinter();
-	}
-	// endregion
-
-	private static void solve() {
-
-	}
-
-	// region < Utility Methods >
-	private static boolean isValidRange(final int i, final int j, final int h, final int w) {
-		return 0 <= i && i < h && 0 <= j && j < w;
-	}
-
-	private static long modPow(long a, long b, final long mod) {
-		long ans = 1;
-		for (a %= mod; b > 0; a = a * a % mod, b >>= 1) {
-			if ((b & 1) == 1) ans = ans * a % mod;
+		n = sc.nextInt();
+		k = sc.nextInt();
+		t = sc.nextInt();
+		wall = new int[n * n];
+		point = new int[k];
+		for (int i = 0; i < n; i++) {
+			wall[i] |= 1 << U;
+			wall[n * (n - 1) + i] |= 1 << D;
+			wall[i * n] |= 1 << L;
+			wall[(i + 1) * n - 1] |= 1 << R;
 		}
-		return ans;
-	}
-
-	private static long floorLong(final long a, final long b) {
-		return a < 0 ? (a - b + 1) / b : a / b;
-	}
-
-	private static int floorInt(final int a, final int b) {
-		return a < 0 ? (a - b + 1) / b : a / b;
-	}
-
-	private static long ceilLong(final long a, final long b) {
-		return a < 0 ? a / b : (a + b - 1) / b;
-	}
-
-	private static long ceilInt(final int a, final int b) {
-		return a < 0 ? a / b : (a + b - 1) / b;
-	}
-
-	private static long LCM(final long x, final long y) {
-		return x == 0 || y == 0 ? 0 : x * (y / GCD(x, y));
-	}
-
-	public static long GCD(long a, long b) {
-		a = abs(a);
-		b = abs(b);
-		if (a == 0) return b;
-		if (b == 0) return a;
-		int commonShift = Long.numberOfTrailingZeros(a | b);
-		a >>= Long.numberOfTrailingZeros(a);
-		while (b != 0) {
-			b >>= Long.numberOfTrailingZeros(b);
-			if (a > b) {
-				long tmp = a;
-				a = b;
-				b = tmp;
+		for (int i = 0; i < n; i++) {
+			for (int j = 0; j < n - 1; j++) {
+				char v = sc.nextChar();
+				if (v == '0') continue;
+				wall[i * n + j] |= 1 << R;
+				wall[i * n + j + 1] |= 1 << L;
 			}
-			b -= a;
 		}
-		return a << commonShift;
+		for (int i = 0; i < n - 1; i++) {
+			for (int j = 0; j < n; j++) {
+				char h = sc.nextChar();
+				if (h == '0') continue;
+				wall[i * n + j] |= 1 << D;
+				wall[(i + 1) * n + j] |= 1 << U;
+			}
+		}
+		for (int i = 0; i < k; i++) {
+			int x = sc.nextInt();
+			int y = sc.nextInt();
+			point[i] = x * n + y;
+		}
 	}
-	// endregion
 
-	// region < I/O & Debug >
+	// ------------------------ メインロジック ------------------------
+	private static void solve() {
+		Solution sol1 = solveMethod1();
+		Solution sol2 = solveMethod2Greedy();
+		Solution sol3 = solveMethod3PenaltyDijkstra();
+
+		Solution best = sol1;
+		if (sol2.score < best.score) best = sol2;
+		if (sol3.score < best.score) best = sol3;
+
+		best.output();
+	}
+
+	// 解法1: 色1個 + ステップ数を状態に
+	private static Solution solveMethod1() {
+		ArrayList<Integer> path = new ArrayList<>(t);
+		path.add(point[0]);
+
+		int[] dest = new int[n * n];
+		for (int k2 = 0; k2 < k - 1; k2++) {
+			ArrayDeque<Integer> dq = new ArrayDeque<>();
+			int from = point[k2], to = point[k2 + 1];
+			Arrays.fill(dest, -1);
+			dest[from] = from;
+			dq.add(from);
+
+			while (!dq.isEmpty()) {
+				from = dq.poll();
+				if (from == to) break;
+
+				for (int d = 0; d < 4; d++) {
+					if ((wall[from] >> d & 1) == 1) continue;
+					int next = from + dij[d][0] * n + dij[d][1];
+					if (dest[next] >= 0) continue;
+					dest[next] = from;
+					dq.add(next);
+				}
+			}
+
+			ArrayList<Integer> segment = new ArrayList<>();
+			int p = to;
+			while (dest[p] != p) {
+				segment.add(p);
+				p = dest[p];
+			}
+			for (int i = segment.size() - 1; i >= 0; i--) {
+				path.add(segment.get(i));
+			}
+		}
+
+		return new Solution(1, path.size(), path, null);
+	}
+
+	// 解法2: 貪欲に最短経路を選択
+	private static Solution solveMethod2Greedy() {
+		ArrayList<Integer> path = new ArrayList<>(t);
+		HashMap<Integer, Integer> color = new HashMap<>();
+		path.add(point[0]);
+		color.put(point[0], 0);
+
+		int[] dest = new int[n * n];
+		for (int k2 = 0; k2 < k - 1; k2++) {
+			ArrayDeque<Integer> dq = new ArrayDeque<>();
+			int from = point[k2], to = point[k2 + 1];
+			Arrays.fill(dest, -1);
+			dest[from] = from;
+			dq.add(from);
+
+			while (!dq.isEmpty()) {
+				from = dq.poll();
+				if (from == to) break;
+
+				for (int d = 0; d < 4; d++) {
+					if ((wall[from] >> d & 1) == 1) continue;
+					int next = from + dij[d][0] * n + dij[d][1];
+					if (dest[next] >= 0) continue;
+					dest[next] = from;
+					dq.add(next);
+				}
+			}
+
+			ArrayList<Integer> segment = new ArrayList<>();
+			int p = to;
+			while (dest[p] != p) {
+				segment.add(p);
+				p = dest[p];
+			}
+			for (int i = segment.size() - 1; i >= 0; i--) {
+				int pos = segment.get(i);
+				path.add(pos);
+				color.putIfAbsent(pos, color.size());
+			}
+		}
+
+		return new Solution(color.size(), k, path, color);
+	}
+
+	// 解法3: ペナルティ付きダイクストラ
+	private static Solution solveMethod3PenaltyDijkstra() {
+		Dijkstra dijkstra = new Dijkstra(n * n, n * n * 4);
+		for (int ij = 0; ij < n * n; ij++) {
+			for (int d = 0; d < 4; d++) {
+				if ((wall[ij] >> d & 1) == 1) continue;
+				dijkstra.addEdge(ij, ij + dij[d][0] * n + dij[d][1]);
+			}
+		}
+
+		// スタート地点を中心からの距離でソート
+		int centerI = n / 2, centerJ = n / 2;
+		Integer[] sortedStarts = new Integer[k];
+		for (int i = 0; i < k; i++) sortedStarts[i] = i;
+		Arrays.sort(sortedStarts, (a, b) -> {
+			int distA = Math.abs(point[a] / n - centerI) + Math.abs(point[a] % n - centerJ);
+			int distB = Math.abs(point[b] / n - centerI) + Math.abs(point[b] % n - centerJ);
+			return Integer.compare(distA, distB);
+		});
+
+		ArrayDeque<Integer> bestRoot = null;
+		HashMap<Integer, Integer> bestColor = null;
+		int bestScore = Integer.MAX_VALUE;
+
+		// フェーズ1: 粗い探索（0-30%）
+		long phase1End = startTime + (long) (timeLimit * 0.3);
+		int[] coarsePenalties = {n / 2, n, 2 * n, 3 * n, 5 * n, 10 * n, 20 * n};
+		int bestPenalty = n;
+
+		for (int penalty : coarsePenalties) {
+			if (System.currentTimeMillis() > phase1End) break;
+
+			dijkstra.setPenalty(penalty);
+
+			for (int idx = 0; idx < Math.min(3, k); idx++) {
+				ArrayDeque<Integer> rootI = buildPath(dijkstra, sortedStarts[idx]);
+				if (rootI == null || rootI.size() - 1 > t) continue;
+
+				HashMap<Integer, Integer> colorI = new HashMap<>();
+				for (int cell : rootI) {
+					colorI.putIfAbsent(cell, colorI.size());
+				}
+
+				int score = colorI.size() + k;
+				if (score < bestScore) {
+					bestScore = score;
+					bestRoot = new ArrayDeque<>(rootI);
+					bestColor = new HashMap<>(colorI);
+					bestPenalty = penalty;
+				}
+			}
+		}
+
+		// フェーズ2: 細かい探索（30-80%）
+		long phase2End = startTime + (long) (timeLimit * 0.8);
+		int searchRadius = Math.max(bestPenalty / 2, n);
+		int minP = Math.max(1, bestPenalty - searchRadius);
+		int maxP = bestPenalty + searchRadius;
+		int step = Math.max(1, searchRadius / 20);
+
+		for (int p = minP; p <= maxP; p += step) {
+			if (System.currentTimeMillis() > phase2End) break;
+
+			dijkstra.setPenalty(p);
+
+			int numStarts = (System.currentTimeMillis() - startTime < timeLimit * 0.5) ? k : Math.max(k / 2, 1);
+
+			for (int idx = 0; idx < numStarts; idx++) {
+				if (System.currentTimeMillis() > phase2End) break;
+
+				ArrayDeque<Integer> rootI = buildPath(dijkstra, sortedStarts[idx]);
+				if (rootI == null || rootI.size() - 1 > t) continue;
+
+				HashMap<Integer, Integer> colorI = new HashMap<>();
+				for (int cell : rootI) {
+					colorI.putIfAbsent(cell, colorI.size());
+				}
+
+				int score = colorI.size() + k;
+				if (score < bestScore) {
+					bestScore = score;
+					bestRoot = new ArrayDeque<>(rootI);
+					bestColor = new HashMap<>(colorI);
+				}
+			}
+		}
+
+		// フェーズ3: ファインチューニング（80-100%）
+		Random rand = new Random(System.currentTimeMillis());
+		int fineRadius = Math.max(step, n / 4);
+
+		while (System.currentTimeMillis() - startTime < timeLimit) {
+			int p;
+			if (rand.nextDouble() < 0.8) {
+				p = bestPenalty + rand.nextInt(2 * fineRadius + 1) - fineRadius;
+				p = Math.max(1, p);
+			} else {
+				p = rand.nextInt(20 * n) + 1;
+			}
+
+			dijkstra.setPenalty(p);
+			int startIdx = rand.nextInt(k);
+
+			ArrayDeque<Integer> rootI = buildPath(dijkstra, sortedStarts[startIdx]);
+			if (rootI == null || rootI.size() - 1 > t) continue;
+
+			HashMap<Integer, Integer> colorI = new HashMap<>();
+			for (int cell : rootI) {
+				colorI.putIfAbsent(cell, colorI.size());
+			}
+
+			int score = colorI.size() + k;
+			if (score < bestScore) {
+				bestScore = score;
+				bestRoot = new ArrayDeque<>(rootI);
+				bestColor = new HashMap<>(colorI);
+			}
+		}
+
+		if (bestRoot == null) return solveMethod2Greedy();
+
+		return new Solution(bestColor.size(), k, new ArrayList<>(bestRoot), bestColor);
+	}
+
+	// 指定したスタート地点から経路を構築
+	private static ArrayDeque<Integer> buildPath(Dijkstra dijkstra, int start) {
+		ArrayDeque<Integer> rootI = new ArrayDeque<>();
+		rootI.add(point[start]);
+		boolean[] visited = new boolean[n * n];
+		visited[point[start]] = true;
+
+		// Forward
+		for (int j = start; j < k - 1; j++) {
+			int[] path = dijkstra.solve(point[j], point[j + 1], visited);
+			if (path[point[j + 1]] == -1) return null;
+
+			ArrayList<Integer> reversePath = new ArrayList<>();
+			int p = point[j + 1];
+			while (path[p] != p) {
+				reversePath.add(p);
+				p = path[p];
+			}
+			for (int r = reversePath.size() - 1; r >= 0; r--) {
+				int pos = reversePath.get(r);
+				rootI.add(pos);
+				visited[pos] = true;
+			}
+		}
+
+		// Backward
+		for (int j = start - 1; j >= 0; j--) {
+			int[] path = dijkstra.solve(point[j], point[j + 1], visited);
+			if (path[point[j + 1]] == -1) return null;
+
+			int p = point[j + 1];
+			while (path[p] != p) {
+				p = path[p];
+				rootI.addFirst(p);
+				visited[p] = true;
+			}
+		}
+
+		return rootI;
+	}
+
+	// ------------------------ main() 関数 ------------------------
 	public static void main(final String[] args) {
 		try {
 			solve();
@@ -102,6 +337,8 @@ public final class ${NAME} {
 		}
 	}
 
+	// ------------------------ デバッグ用 ------------------------
+	@SuppressWarnings("unused")
 	private static void debug(final Object... args) {
 		if (DEBUG) {
 			out.flush();
@@ -109,6 +346,389 @@ public final class ${NAME} {
 		}
 	}
 
+	// Solutionクラス
+	private static class Solution {
+		int colorCount;
+		int stateCount;
+		ArrayList<Integer> path;
+		HashMap<Integer, Integer> color;
+		int score;
+
+		Solution(int colorCount, int stateCount, ArrayList<Integer> path, HashMap<Integer, Integer> color) {
+			this.colorCount = colorCount;
+			this.stateCount = stateCount;
+			this.path = path;
+			this.color = color;
+			this.score = colorCount + stateCount;
+		}
+
+		void output() {
+			if (color == null) {
+				// 解法1
+				out.print(1, path.size(), path.size() - 1).println();
+				for (int i = 0; i < n; i++) {
+					out.print('0').printRepeat(" 0", n - 1).println();
+				}
+				for (int p = 0; p < path.size() - 1; p++) {
+					int cur = path.get(p);
+					int nij = path.get(p + 1);
+					char d = getDirection(cur, nij);
+					out.print(0, p, 0, p + 1, d).println();
+				}
+			} else {
+				// 解法2, 3
+				out.print(colorCount, stateCount, path.size() - 1).println();
+				for (int i = 0, ij = 0; i < n; i++) {
+					out.print(color.getOrDefault(ij++, 0));
+					for (int j = 1; j < n; j++) {
+						out.print("", color.getOrDefault(ij++, 0));
+					}
+					out.println();
+				}
+				for (int p = 0, state = 0; p < path.size() - 1; p++) {
+					int cur = path.get(p);
+					int nij = path.get(p + 1);
+					int curColor = color.get(cur);
+					char d = getDirection(cur, nij);
+					int nextState = (state + 1 < k && nij == point[state + 1]) ? state + 1 : state;
+					out.print(curColor, state, curColor, nextState, d).println();
+					state = nextState;
+				}
+			}
+		}
+
+		char getDirection(int cur, int next) {
+			if (cur - 1 == next) return 'L';
+			if (cur - n == next) return 'U';
+			if (cur + 1 == next) return 'R';
+			return 'D';
+		}
+	}
+
+	@SuppressWarnings("unused")
+	private static final class Dijkstra {
+		// -------------- フィールド --------------
+		private static final long INF = Long.MAX_VALUE;
+		private final IndexedPriorityQueue ans;
+		private final int[] dest, next, first;
+		private final int v;
+		private int e;
+		private int penalty = 100;
+
+		// -------------- コンストラクタ --------------
+
+		/**
+		 * コンストラクタ
+		 *
+		 * @param v 頂点数
+		 * @param e 辺数の最大値
+		 */
+		public Dijkstra(final int v, final int e) {
+			this(v, e, false);
+		}
+
+		/**
+		 * コンストラクタ
+		 *
+		 * @param v     頂点数
+		 * @param e     辺数の最大値
+		 * @param isMax true の場合は最長経路を求める（最大値優先）、false の場合は最短経路を求める（最小値優先）
+		 */
+		public Dijkstra(final int v, final int e, final boolean isMax) {
+			dest = new int[e];
+			next = new int[e];
+			first = new int[v];
+			fill(first, -1);
+			this.e = 0;
+			this.v = v;
+			ans = new IndexedPriorityQueue(v, isMax);
+		}
+
+		// -------------- グラフ構築 --------------
+
+		/**
+		 * 有向辺を追加する
+		 *
+		 * @param i 辺の始点（0-indexed）
+		 * @param j 辺の終点（0-indexed）
+		 */
+		public void addEdge(final int i, final int j) {
+			dest[e] = j;
+			next[e] = first[i];
+			first[i] = e;
+			e++;
+		}
+
+		public void setPenalty(final int penalty) {
+			this.penalty = penalty;
+		}
+
+		// -------------- 最短経路探索 --------------
+
+		/**
+		 * 始点 i から終点 j への最短経路の重みを返す
+		 *
+		 * @param i 始点
+		 * @param j 終点
+		 * @return 始点から終点への最短経路の重み（経路が存在しない場合は INF）
+		 */
+		public int[] solve(final int i, final int j, final boolean[] visited) {
+			int[] path = new int[v];
+			fill(path, -1);
+			path[i] = i;
+			ans.clear();
+			ans.push(i, 0);
+			while (!ans.isEmpty()) {
+				long c = ans.peek();
+				int from = ans.pollNode();
+				for (int e = first[from]; e != -1; e = next[e]) {
+					int to = dest[e];
+					long cost = 1;
+					if (!visited[to]) cost += penalty;
+					if (ans.relax(to, c + cost)) {
+						path[to] = from;
+					}
+				}
+			}
+			return path;
+		}
+
+		// -------------- 内部クラス：IndexedPriorityQueue --------------
+
+		/**
+		 * Dijkstra法特化インデックス付き優先度キュー
+		 * <p>
+		 * 遅延ヒープ構築により効率的な探索を実現する内部クラス。
+		 */
+		private static final class IndexedPriorityQueue {
+			// -------------- フィールド --------------
+			private final boolean isDescendingOrder;
+			private final long[] cost;
+			private final int[] heap, position;
+			private int size, unsortedCount;
+
+			// -------------- コンストラクタ --------------
+
+			/**
+			 * コンストラクタ
+			 *
+			 * @param n                 頂点数
+			 * @param isDescendingOrder true の場合は最大値優先（降順）、false の場合は最小値優先（昇順）
+			 */
+			public IndexedPriorityQueue(final int n, final boolean isDescendingOrder) {
+				this.isDescendingOrder = isDescendingOrder;
+				cost = new long[n];
+				heap = new int[n];
+				position = new int[n];
+				fill(position, -2);
+				size = 0;
+				unsortedCount = 0;
+			}
+
+			// -------------- 公開メソッド --------------
+
+			/**
+			 * 要素を追加する
+			 *
+			 * @param node 追加するノード
+			 * @param c    追加するノードのコスト
+			 */
+			public void push(final int node, long c) {
+				if (position[node] != -2) throw new IllegalArgumentException();
+				if (isDescendingOrder) c = -c;
+				cost[node] = c;
+				heap[size] = node;
+				position[node] = size;
+				size++;
+				unsortedCount++;
+			}
+
+			/**
+			 * relax操作（Dijkstra法などで使用）
+			 *
+			 * @param node ノード
+			 * @param cost 新しいコスト
+			 * @return 更新が行われた場合はtrue
+			 */
+			public boolean relax(final int node, long cost) {
+				if (position[node] == -1) return false;
+				if (position[node] == -2) {
+					push(node, cost);
+					return true;
+				}
+				if (isDescendingOrder) cost = -cost;
+				if (this.cost[node] > cost) {
+					this.cost[node] = cost;
+					siftUp(node, position[node]);
+					return true;
+				}
+				return false;
+			}
+
+			/**
+			 * ヒープの先頭要素のコストを取得する
+			 *
+			 * @return ヒープの先頭要素のコスト（昇順時は最小、降順時は最大）
+			 */
+			public long peek() {
+				if (isEmpty()) throw new NoSuchElementException();
+				if (unsortedCount > 0) ensureHeapProperty();
+				return isDescendingOrder ? -cost[heap[0]] : cost[heap[0]];
+			}
+
+			/**
+			 * ヒープの先頭ノードを削除し、そのノードを返す
+			 *
+			 * @return 削除されたノード（昇順時は最小コスト、降順時は最大コストのノード）
+			 */
+			public int pollNode() {
+				if (isEmpty()) throw new NoSuchElementException();
+				if (unsortedCount > 0) ensureHeapProperty();
+				int node = heap[0];
+				position[node] = -1;
+				size--;
+				if (size > 0) {
+					int lastNode = heap[size];
+					siftDown(lastNode, 0);
+				}
+				return node;
+			}
+
+			/**
+			 * 指定したノードのコストを取得する（存在しない場合はデフォルト値を返す）
+			 *
+			 * @param node         対象ノード
+			 * @param defaultValue デフォルト値
+			 * @return コストまたはデフォルト値
+			 */
+			public long getCostOrDefault(final int node, final long defaultValue) {
+				return position[node] == -2 ? defaultValue : isDescendingOrder ? -cost[node] : cost[node];
+			}
+
+			/**
+			 * ヒープをクリアする
+			 */
+			public void clear() {
+				size = 0;
+				unsortedCount = 0;
+				fill(position, -2);
+			}
+
+			/**
+			 * ヒープが空かどうかを判定する
+			 *
+			 * @return 空の場合はtrue
+			 */
+			public boolean isEmpty() {
+				return size == 0;
+			}
+
+			// -------------- ヒープ構築（遅延評価） --------------
+
+			/**
+			 * 遅延評価された未ソート要素をヒープ化し、ヒーププロパティを復元する。
+			 * <p>
+			 * このメソッドは、未ソート要素が存在する場合に最適なアルゴリズムを自動選択して実行します。
+			 * <p><b>分岐点の決定：</b>
+			 * 両アルゴリズムの最大比較回数を計算し、コストが小さい方を実行する。
+			 * (heapifyCost < incrementalCost なら heapify を選択)
+			 */
+			private void ensureHeapProperty() {
+				int log2N = 31 - Integer.numberOfLeadingZeros(size);
+				int heapifyCost = size * 2 - 2 * log2N;
+				int incrementalCost = unsortedCount <= 100 ? getIncrementalCostStrict() : getIncrementalCostApprox();
+				if (heapifyCost < incrementalCost) {
+					heapify();
+				} else {
+					for (int i = size - unsortedCount; i < size; i++) siftUp(heap[i], i);
+				}
+				unsortedCount = 0;
+			}
+
+			/**
+			 * インクリメンタル構築の最大比較回数を厳密に計算する。
+			 *
+			 * @return 最大比較回数の合計
+			 */
+			private int getIncrementalCostStrict() {
+				int totalCost = 0;
+				int sortedSize = size - unsortedCount;
+				for (int i = 1; i <= unsortedCount; i++) {
+					int currentHeapSize = sortedSize + i;
+					int depth = 31 - Integer.numberOfLeadingZeros(currentHeapSize);
+					totalCost += depth;
+				}
+				return totalCost;
+			}
+
+			/**
+			 * インクリメンタル構築の最大比較回数を高速に近似計算する。
+			 * <p>コスト ≈ k * floor(log₂(平均ヒープサイズ))
+			 *
+			 * @return 最大比較回数の近似値
+			 */
+			private int getIncrementalCostApprox() {
+				int sortedSize = size - unsortedCount;
+				int avgHeapSize = sortedSize + (unsortedCount >> 1);
+				if (avgHeapSize == 0) return 0;
+				int depthOfAvgSize = 31 - Integer.numberOfLeadingZeros(avgHeapSize);
+				return unsortedCount * depthOfAvgSize;
+			}
+
+			/**
+			 * Bottom-up heapify (Floyd's algorithm)
+			 */
+			private void heapify() {
+				for (int i = (size >> 1) - 1; i >= 0; i--) siftDown(heap[i], i);
+			}
+
+			// -------------- ヒープ操作（基本） --------------
+
+			/**
+			 * siftUp操作
+			 *
+			 * @param node 移動させるノード
+			 * @param i    ノードの現在位置
+			 */
+			private void siftUp(final int node, int i) {
+				long c = cost[node];
+				while (i > 0) {
+					int j = (i - 1) >> 1;
+					int parent = heap[j];
+					if (c >= cost[parent]) break;
+					heap[i] = parent;
+					position[parent] = i;
+					i = j;
+				}
+				heap[i] = node;
+				position[node] = i;
+			}
+
+			/**
+			 * siftDown操作
+			 *
+			 * @param node 移動させるノード
+			 * @param i    ノードの現在位置
+			 */
+			private void siftDown(final int node, int i) {
+				long c = cost[node];
+				int half = size >> 1;
+				while (i < half) {
+					int child = (i << 1) + 1;
+					child += child + 1 < size && cost[heap[child]] > cost[heap[child + 1]] ? 1 : 0;
+					int childNode = heap[child];
+					if (c <= cost[childNode]) break;
+					heap[i] = childNode;
+					position[childNode] = i;
+					i = child;
+				}
+				heap[i] = node;
+				position[node] = i;
+			}
+		}
+	}
+
+	// ------------------------ 高速入出力クラス ------------------------
 	@SuppressWarnings("unused")
 	private static final class FastScanner implements AutoCloseable {
 		private static final int DEFAULT_BUFFER_SIZE = 65536;
@@ -117,7 +737,7 @@ public final class ${NAME} {
 		private int pos = 0, bufferLength = 0;
 
 		public FastScanner() {
-			this(new FileInputStream(FileDescriptor.in), DEFAULT_BUFFER_SIZE);
+			this(System.in, DEFAULT_BUFFER_SIZE);
 		}
 
 		public FastScanner(final InputStream in) {
@@ -125,7 +745,7 @@ public final class ${NAME} {
 		}
 
 		public FastScanner(final int bufferSize) {
-			this(new FileInputStream(FileDescriptor.in), bufferSize);
+			this(System.in, bufferSize);
 		}
 
 		public FastScanner(final InputStream in, final int bufferSize) {
@@ -134,101 +754,76 @@ public final class ${NAME} {
 		}
 
 		private int skipSpaces() {
-			int b;
-			do {
-				if (pos >= bufferLength) {
-					try {
-						bufferLength = in.read(buffer);
-						pos = 0;
-					} catch (final IOException e) {
-						throw new RuntimeException(e);
-					}
-					if (bufferLength <= 0) throw new NoSuchElementException();
-				}
-				b = buffer[pos++];
-			} while (b <= 32);
+			int b = read();
+			while (b <= 32) b = read();
 			return b;
 		}
 
 		@Override
 		public void close() {
 			try {
-				in.close();
+				if (in != System.in) in.close();
+				pos = 0;
+				bufferLength = 0;
 			} catch (final IOException e) {
 				throw new RuntimeException(e);
 			}
 		}
 
-		private boolean hasNextByte() {
-			if (pos < bufferLength) return true;
-			pos = 0;
-			try {
-				bufferLength = in.read(buffer);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
+		private int read() {
+			if (pos >= bufferLength) {
+				try {
+					bufferLength = in.read(buffer, pos = 0, buffer.length);
+				} catch (final IOException e) {
+					throw new RuntimeException(e);
+				}
+				if (bufferLength <= 0) throw new RuntimeException(new EOFException());
 			}
-			return bufferLength > 0;
+			return buffer[pos++] & 0xFF;
+		}
+
+		public int peek() {
+			try {
+				int b = skipSpaces();
+				pos--;
+				return b;
+			} catch (final RuntimeException e) {
+				return 0;
+			}
 		}
 
 		public boolean hasNext() {
-			while (hasNextByte()) {
-				if (buffer[pos] > 32) return true;
-				pos++;
-			}
-			return false;
-		}
-
-		public char nextChar() {
-			if (!hasNext()) throw new NoSuchElementException();
-			return (char) buffer[pos++];
+			return peek() != 0;
 		}
 
 		public int nextInt() {
 			int b = skipSpaces();
-			int n = 0;
 			boolean negative = false;
 			if (b == '-') {
 				negative = true;
-				if (pos == bufferLength) hasNextByte();
-				b = buffer[pos++];
+				b = read();
 			}
-			if (pos + 11 <= bufferLength) {
-				do {
-					n = (n << 3) + (n << 1) + (b & 15);
-					b = buffer[pos++];
-				} while (b > 32);
-			} else {
-				do {
-					n = (n << 3) + (n << 1) + (b & 15);
-					if (pos == bufferLength && !hasNextByte()) break;
-					b = buffer[pos++];
-				} while (b > 32);
-			}
-			return negative ? -n : n;
+			int result = 0;
+			do {
+				result = (result << 3) + (result << 1) + (b & 15);
+				b = read();
+			} while (b >= '0' && b <= '9');
+			return negative ? -result : result;
 		}
 
 		public long nextLong() {
 			int b = skipSpaces();
-			long n = 0;
 			boolean negative = false;
 			if (b == '-') {
 				negative = true;
-				if (pos == bufferLength) hasNextByte();
-				b = buffer[pos++];
+				b = read();
 			}
-			if (pos + 20 <= bufferLength) {
-				do {
-					n = (n << 3) + (n << 1) + (b & 15);
-					b = buffer[pos++];
-				} while (b > 32);
-			} else {
-				do {
-					n = (n << 3) + (n << 1) + (b & 15);
-					if (pos == bufferLength && !hasNextByte()) break;
-					b = buffer[pos++];
-				} while (b > 32);
-			}
-			return negative ? -n : n;
+			long result = 0;
+			do {
+				result = (result << 3) + (result << 1) + (b & 15);
+				b = read();
+			} while (b >= '0' && b <= '9');
+			return negative ? -result : result;
 		}
 
 		public double nextDouble() {
@@ -236,31 +831,29 @@ public final class ${NAME} {
 			boolean negative = false;
 			if (b == '-') {
 				negative = true;
-				if (pos == bufferLength) hasNextByte();
-				b = buffer[pos++];
+				b = read();
 			}
 			long intPart = 0;
 			do {
 				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
-				if (pos == bufferLength && !hasNextByte()) {
-					b = -1;
-					break;
-				}
-				b = buffer[pos++];
+				b = read();
 			} while (b >= '0' && b <= '9');
 			double result = intPart;
 			if (b == '.') {
-				if (pos == bufferLength) hasNextByte();
-				b = buffer[pos++];
+				b = read();
 				double scale = 0.1;
 				do {
 					result += (b & 15) * scale;
 					scale *= 0.1;
-					if (pos == bufferLength && !hasNextByte()) break;
-					b = buffer[pos++];
+					b = read();
 				} while (b >= '0' && b <= '9');
 			}
 			return negative ? -result : result;
+		}
+
+		public char nextChar() {
+			int b = skipSpaces();
+			return (char) b;
 		}
 
 		public String next() {
@@ -272,31 +865,21 @@ public final class ${NAME} {
 			int b = skipSpaces();
 			do {
 				sb.append((char) b);
-				if (pos == bufferLength && !hasNextByte()) break;
-				b = buffer[pos++];
+				b = read();
 			} while (b > 32);
 			return sb;
 		}
 
 		public String nextLine() {
 			final StringBuilder sb = new StringBuilder();
-			if (pos == bufferLength && !hasNextByte()) return "";
-			int b = buffer[pos];
-			while (b != '\n' && b != '\r') {
+			int b = read();
+			while (b != 0 && b != '\n' && b != '\r') {
 				sb.append((char) b);
-				pos++;
-				if (pos == bufferLength && !hasNextByte()) {
-					b = -1;
-					break;
-				}
-				b = buffer[pos];
+				b = read();
 			}
-			if (b == '\n' || b == '\r') {
-				pos++;
-				if (b == '\r') {
-					if (pos == bufferLength) hasNextByte();
-					if (pos < bufferLength && buffer[pos] == '\n') pos++;
-				}
+			if (b == '\r') {
+				int c = read();
+				if (c != '\n') pos--;
 			}
 			return sb.toString();
 		}
@@ -621,7 +1204,6 @@ public final class ${NAME} {
 	@SuppressWarnings("unused")
 	private static final class FastPrinter implements AutoCloseable {
 		private static final VarHandle BYTE_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(byte[].class);
-		private static final VarHandle SHORT_HANDLE = MethodHandles.byteArrayViewVarHandle(short[].class, ByteOrder.LITTLE_ENDIAN);
 		private static final int MAX_INT_DIGITS = 11;
 		private static final int MAX_LONG_DIGITS = 20;
 		private static final int DEFAULT_BUFFER_SIZE = 65536;
@@ -632,19 +1214,30 @@ public final class ${NAME} {
 		private static final byte ZERO = '0';
 		private static final byte[] TRUE_BYTES = {'Y', 'e', 's'};
 		private static final byte[] FALSE_BYTES = {'N', 'o'};
-		private static final short[] DIGIT_PAIRS = {
-				12336, 12592, 12848, 13104, 13360, 13616, 13872, 14128, 14384, 14640,
-				12337, 12593, 12849, 13105, 13361, 13617, 13873, 14129, 14385, 14641,
-				12338, 12594, 12850, 13106, 13362, 13618, 13874, 14130, 14386, 14642,
-				12339, 12595, 12851, 13107, 13363, 13619, 13875, 14131, 14387, 14643,
-				12340, 12596, 12852, 13108, 13364, 13620, 13876, 14132, 14388, 14644,
-				12341, 12597, 12853, 13109, 13365, 13621, 13877, 14133, 14389, 14645,
-				12342, 12598, 12854, 13110, 13366, 13622, 13878, 14134, 14390, 14646,
-				12343, 12599, 12855, 13111, 13367, 13623, 13879, 14135, 14391, 14647,
-				12344, 12600, 12856, 13112, 13368, 13624, 13880, 14136, 14392, 14648,
-				12345, 12601, 12857, 13113, 13369, 13625, 13881, 14137, 14393, 14649,
+		private static final byte[] DigitOnes = {
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 		};
-
+		private static final byte[] DigitTens = {
+				'0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+				'1', '1', '1', '1', '1', '1', '1', '1', '1', '1',
+				'2', '2', '2', '2', '2', '2', '2', '2', '2', '2',
+				'3', '3', '3', '3', '3', '3', '3', '3', '3', '3',
+				'4', '4', '4', '4', '4', '4', '4', '4', '4', '4',
+				'5', '5', '5', '5', '5', '5', '5', '5', '5', '5',
+				'6', '6', '6', '6', '6', '6', '6', '6', '6', '6',
+				'7', '7', '7', '7', '7', '7', '7', '7', '7', '7',
+				'8', '8', '8', '8', '8', '8', '8', '8', '8', '8',
+				'9', '9', '9', '9', '9', '9', '9', '9', '9', '9',
+		};
 		private static final long[] POW10 = {
 				1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000,
 				1_000_000_000, 10_000_000_000L, 100_000_000_000L, 1_000_000_000_000L,
@@ -657,7 +1250,7 @@ public final class ${NAME} {
 		private int pos = 0;
 
 		public FastPrinter() {
-			this(new FileOutputStream(FileDescriptor.out), DEFAULT_BUFFER_SIZE, false);
+			this(System.out, DEFAULT_BUFFER_SIZE, false);
 		}
 
 		public FastPrinter(final OutputStream out) {
@@ -665,11 +1258,11 @@ public final class ${NAME} {
 		}
 
 		public FastPrinter(final int bufferSize) {
-			this(new FileOutputStream(FileDescriptor.out), bufferSize, false);
+			this(System.out, bufferSize, false);
 		}
 
 		public FastPrinter(final boolean autoFlush) {
-			this(new FileOutputStream(FileDescriptor.out), DEFAULT_BUFFER_SIZE, autoFlush);
+			this(System.out, DEFAULT_BUFFER_SIZE, autoFlush);
 		}
 
 		public FastPrinter(final OutputStream out, final boolean autoFlush) {
@@ -677,7 +1270,7 @@ public final class ${NAME} {
 		}
 
 		public FastPrinter(final int bufferSize, final boolean autoFlush) {
-			this(new FileOutputStream(FileDescriptor.out), bufferSize, autoFlush);
+			this(System.out, bufferSize, autoFlush);
 		}
 
 		public FastPrinter(final OutputStream out, final int bufferSize) {
@@ -783,7 +1376,6 @@ public final class ${NAME} {
 
 		public FastPrinter println(final boolean b) {
 			write(b);
-			ensureCapacity(1);
 			BYTE_ARRAY_HANDLE.set(buffer, pos++, LINE);
 			if (autoFlush) flush();
 			return this;
@@ -967,7 +1559,7 @@ public final class ${NAME} {
 			final int required = pos + additional;
 			if (required <= buffer.length) return;
 			if (required <= 1_000_000_000) {
-				buffer = Arrays.copyOf(buffer, roundUpToPowerOfTwo(required));
+				buffer = copyOf(buffer, roundUpToPowerOfTwo(required));
 			} else {
 				flush();
 			}
@@ -991,13 +1583,13 @@ public final class ${NAME} {
 			while (i <= -100) {
 				final int q = i / 100;
 				final int r = (q << 6) + (q << 5) + (q << 2) - i;
+				BYTE_ARRAY_HANDLE.set(buf, --writePos, DigitOnes[r]);
+				BYTE_ARRAY_HANDLE.set(buf, --writePos, DigitTens[r]);
 				i = q;
-				writePos -= 2;
-				SHORT_HANDLE.set(buf, writePos, DIGIT_PAIRS[r]);
 			}
 			final int r = -i;
-			if (r >= 10) SHORT_HANDLE.set(buf, writePos - 2, DIGIT_PAIRS[r]);
-			else BYTE_ARRAY_HANDLE.set(buf, writePos - 1, (byte) (r + ZERO));
+			BYTE_ARRAY_HANDLE.set(buf, --writePos, DigitOnes[r]);
+			if (r >= 10) BYTE_ARRAY_HANDLE.set(buf, --writePos, DigitTens[r]);
 			pos = p + digits;
 		}
 
@@ -1011,13 +1603,13 @@ public final class ${NAME} {
 			while (l <= -100) {
 				final long q = l / 100;
 				final int r = (int) ((q << 6) + (q << 5) + (q << 2) - l);
+				BYTE_ARRAY_HANDLE.set(buf, --writePos, DigitOnes[r]);
+				BYTE_ARRAY_HANDLE.set(buf, --writePos, DigitTens[r]);
 				l = q;
-				writePos -= 2;
-				SHORT_HANDLE.set(buf, writePos, DIGIT_PAIRS[r]);
 			}
 			final int r = (int) -l;
-			if (r >= 10) SHORT_HANDLE.set(buf, writePos - 2, DIGIT_PAIRS[r]);
-			else BYTE_ARRAY_HANDLE.set(buf, writePos - 1, (byte) (r + ZERO));
+			BYTE_ARRAY_HANDLE.set(buf, --writePos, DigitOnes[r]);
+			if (r >= 10) BYTE_ARRAY_HANDLE.set(buf, --writePos, DigitTens[r]);
 			pos = p + digits;
 		}
 
@@ -1027,16 +1619,14 @@ public final class ${NAME} {
 			int p = pos, i = 0;
 			final int limit = len & ~7;
 			while (i < limit) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) s.charAt(i));
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) s.charAt(i + 1));
-				BYTE_ARRAY_HANDLE.set(buf, p + 2, (byte) s.charAt(i + 2));
-				BYTE_ARRAY_HANDLE.set(buf, p + 3, (byte) s.charAt(i + 3));
-				BYTE_ARRAY_HANDLE.set(buf, p + 4, (byte) s.charAt(i + 4));
-				BYTE_ARRAY_HANDLE.set(buf, p + 5, (byte) s.charAt(i + 5));
-				BYTE_ARRAY_HANDLE.set(buf, p + 6, (byte) s.charAt(i + 6));
-				BYTE_ARRAY_HANDLE.set(buf, p + 7, (byte) s.charAt(i + 7));
-				p += 8;
-				i += 8;
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
 			}
 			while (i < len) BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
 			pos = p;
@@ -1319,9 +1909,8 @@ public final class ${NAME} {
 			int p = pos;
 			BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[from]);
 			for (int i = from + 1; i < to; i++) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) delimiter);
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) arr[i]);
-				p += 2;
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) delimiter);
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i]);
 			}
 			pos = p;
 			if (autoFlush) flush();
@@ -1588,16 +2177,14 @@ public final class ${NAME} {
 			int p = pos, i = from;
 			final int limit8 = from + (len & ~7);
 			while (i < limit8) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) arr[i]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) arr[i + 1]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 2, (byte) arr[i + 2]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 3, (byte) arr[i + 3]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 4, (byte) arr[i + 4]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 5, (byte) arr[i + 5]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 6, (byte) arr[i + 6]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 7, (byte) arr[i + 7]);
-				p += 8;
-				i += 8;
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i++]);
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i++]);
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i++]);
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i++]);
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i++]);
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i++]);
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i++]);
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i++]);
 			}
 			while (i < to) BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i++]);
 			pos = p;
@@ -1612,16 +2199,14 @@ public final class ${NAME} {
 			int p = pos, i = 0;
 			final int limit = len & ~7;
 			while (i < limit) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) function.applyAsInt(arr[i]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) function.applyAsInt(arr[i + 1]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 2, (byte) function.applyAsInt(arr[i + 2]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 3, (byte) function.applyAsInt(arr[i + 3]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 4, (byte) function.applyAsInt(arr[i + 4]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 5, (byte) function.applyAsInt(arr[i + 5]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 6, (byte) function.applyAsInt(arr[i + 6]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 7, (byte) function.applyAsInt(arr[i + 7]));
-				p += 8;
-				i += 8;
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) function.applyAsInt(arr[i++]));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) function.applyAsInt(arr[i++]));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) function.applyAsInt(arr[i++]));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) function.applyAsInt(arr[i++]));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) function.applyAsInt(arr[i++]));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) function.applyAsInt(arr[i++]));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) function.applyAsInt(arr[i++]));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) function.applyAsInt(arr[i++]));
 			}
 			while (i < len) BYTE_ARRAY_HANDLE.set(buf, p++, (byte) function.applyAsInt(arr[i++]));
 			pos = p;
@@ -1718,16 +2303,14 @@ public final class ${NAME} {
 			int p = pos, i = 0;
 			final int limit8 = len & ~7;
 			while (i < limit8) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) s.charAt(i));
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) s.charAt(i + 1));
-				BYTE_ARRAY_HANDLE.set(buf, p + 2, (byte) s.charAt(i + 2));
-				BYTE_ARRAY_HANDLE.set(buf, p + 3, (byte) s.charAt(i + 3));
-				BYTE_ARRAY_HANDLE.set(buf, p + 4, (byte) s.charAt(i + 4));
-				BYTE_ARRAY_HANDLE.set(buf, p + 5, (byte) s.charAt(i + 5));
-				BYTE_ARRAY_HANDLE.set(buf, p + 6, (byte) s.charAt(i + 6));
-				BYTE_ARRAY_HANDLE.set(buf, p + 7, (byte) s.charAt(i + 7));
-				p += 8;
-				i += 8;
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
 			}
 			while (i < len) BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
 			int copied = 1;
@@ -1753,9 +2336,8 @@ public final class ${NAME} {
 			final byte[] buf = buffer;
 			final byte b = (byte) c;
 			int p = pos;
-			BYTE_ARRAY_HANDLE.set(buf, p, b);
-			BYTE_ARRAY_HANDLE.set(buf, p + 1, LINE);
-			p += 2;
+			BYTE_ARRAY_HANDLE.set(buf, p++, b);
+			BYTE_ARRAY_HANDLE.set(buf, p++, LINE);
 			int copied = 2;
 			while (copied << 1 <= total) {
 				System.arraycopy(buf, pos, buf, p, copied);
@@ -1784,16 +2366,14 @@ public final class ${NAME} {
 			int i = 0;
 			final int limit8 = sLen & ~7;
 			while (i < limit8) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) s.charAt(i));
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) s.charAt(i + 1));
-				BYTE_ARRAY_HANDLE.set(buf, p + 2, (byte) s.charAt(i + 2));
-				BYTE_ARRAY_HANDLE.set(buf, p + 3, (byte) s.charAt(i + 3));
-				BYTE_ARRAY_HANDLE.set(buf, p + 4, (byte) s.charAt(i + 4));
-				BYTE_ARRAY_HANDLE.set(buf, p + 5, (byte) s.charAt(i + 5));
-				BYTE_ARRAY_HANDLE.set(buf, p + 6, (byte) s.charAt(i + 6));
-				BYTE_ARRAY_HANDLE.set(buf, p + 7, (byte) s.charAt(i + 7));
-				p += 8;
-				i += 8;
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
 			}
 			while (i < sLen) BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
 			BYTE_ARRAY_HANDLE.set(buf, p++, LINE);
@@ -1831,9 +2411,8 @@ public final class ${NAME} {
 			final byte[] buf = buffer;
 			int p = pos;
 			for (int i = len - 1; i >= 0; i--) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) arr[i]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, LINE);
-				p += 2;
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i]);
+				BYTE_ARRAY_HANDLE.set(buf, p++, LINE);
 			}
 			pos = p;
 			if (autoFlush) flush();
@@ -1921,9 +2500,8 @@ public final class ${NAME} {
 			int p = pos;
 			BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[len - 1]);
 			for (int i = len - 2; i >= 0; i--) {
-				BYTE_ARRAY_HANDLE.set(buf, p, SPACE);
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) arr[i]);
-				p += 2;
+				BYTE_ARRAY_HANDLE.set(buf, p++, SPACE);
+				BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i]);
 			}
 			pos = p;
 			if (autoFlush) flush();
@@ -2002,5 +2580,4 @@ public final class ${NAME} {
 			return this;
 		}
 	}
-	// endregion
 }

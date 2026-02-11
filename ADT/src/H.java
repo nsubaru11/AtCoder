@@ -1,7 +1,3 @@
-#if (${PACKAGE_NAME} && ${PACKAGE_NAME} != "")package ${PACKAGE_NAME};
-#end
-#parse("File Header.java")
-
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
@@ -12,7 +8,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class ${NAME} {
+public final class H {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -34,7 +30,36 @@ public final class ${NAME} {
 	// endregion
 
 	private static void solve() {
-
+		int n = sc.nextInt();
+		int ma = sc.nextInt();
+		int mb = sc.nextInt();
+		int[][] abc = sc.nextIntMat(n, 3);
+		int suma = 0, sumb = 0;
+		for (int[] v : abc) {
+			suma += v[0];
+			sumb += v[1];
+		}
+		int[][][] dp = new int[n][suma + 1][sumb + 1];
+		dp[0][abc[0][0]][abc[0][1]] = abc[0][2];
+		for (int i = 1; i < n; i++) {
+			int a = abc[i][0], b = abc[i][1], c = abc[i][2];
+			for (int j = 0; j <= suma; j++) {
+				for (int k = 0; k <= sumb; k++) {
+					if ((dp[i - 1][j][k] != 0 && dp[i - 1][j][k] < dp[i][j][k]) || dp[i][j][k] == 0) dp[i][j][k] = dp[i - 1][j][k];
+					if (dp[i - 1][j][k] == 0) continue;
+					if (j * mb == k * ma) continue;
+					if (j + a > suma || k + b > sumb) continue;
+					dp[i][j + a][k + b] = max(dp[i][j + a][k + b], dp[i - 1][j][k] + c);
+				}
+			}
+			if (dp[i][a][b] == 0 || dp[i][a][b] > c) dp[i][a][b] = c;
+		}
+		int ans = Integer.MAX_VALUE;
+		for (int i = 1; ma * i <= suma && mb * i <= sumb; i++) {
+			if (dp[n - 1][ma * i][mb * i] == 0) continue;
+			ans = min(ans, dp[n - 1][ma * i][mb * i]);
+		}
+		out.println(ans == Integer.MAX_VALUE ? -1 : ans);
 	}
 
 	// region < Utility Methods >

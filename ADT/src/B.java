@@ -1,7 +1,3 @@
-#if (${PACKAGE_NAME} && ${PACKAGE_NAME} != "")package ${PACKAGE_NAME};
-#end
-#parse("File Header.java")
-
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
@@ -12,7 +8,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class ${NAME} {
+public final class B {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -24,8 +20,8 @@ public final class ${NAME} {
 
 	static {
 		DEBUG = true;
-		MOD = 998244353;
-		// MOD = 1_000_000_007;
+		// MOD = 998244353;
+		MOD = 1_000_000_007;
 		di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 		dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
 		sc = new FastScanner();
@@ -34,7 +30,20 @@ public final class ${NAME} {
 	// endregion
 
 	private static void solve() {
-
+		int n = sc.nextInt();
+		int m = sc.nextInt();
+		boolean[] ban = new boolean[n + 1];
+		while (m-- > 0) {
+			ban[sc.nextInt()] = true;
+		}
+		int[] dp = new int[n + 1];
+		dp[0] = 1;
+		for (int i = 0; i <= n; i++) {
+			if (ban[i]) continue;
+			if (i + 1 <= n && !ban[i + 1]) dp[i + 1] = (dp[i + 1] + dp[i]) % MOD;
+			if (i + 2 <= n && !ban[i + 2]) dp[i + 2] = (dp[i + 2] + dp[i]) % MOD;
+		}
+		out.println(dp[n]);
 	}
 
 	// region < Utility Methods >

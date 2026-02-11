@@ -1,7 +1,3 @@
-#if (${PACKAGE_NAME} && ${PACKAGE_NAME} != "")package ${PACKAGE_NAME};
-#end
-#parse("File Header.java")
-
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
@@ -12,7 +8,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class ${NAME} {
+public final class F {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -34,7 +30,39 @@ public final class ${NAME} {
 	// endregion
 
 	private static void solve() {
-
+		int t = sc.nextInt();
+		while (t-- > 0) {
+			int n = sc.nextInt();
+			char[] s = sc.nextChars(n - 1);
+			int[] lp = new int[n];
+			int[] rp = new int[n];
+			for (int i = 0; i < n - 1; i++) {
+				if (s[i] == 'R') {
+					lp[i + 1] = lp[i] + 1;
+				} else {
+					rp[i + 1] = rp[i] + 1;
+				}
+			}
+			int[] ls = new int[n];
+			int[] rs = new int[n];
+			for (int i = n - 2; i >= 0; i--) {
+				if (s[i] == 'R') {
+					rs[i] = rs[i + 1] + 1;
+				} else {
+					ls[i] = ls[i + 1] + 1;
+				}
+			}
+			int[] ans = new int[n];
+			for (int i = 0; i < n; i++) {
+				int l = lp[i] + ls[i], r = rp[i] + rs[i];
+				ans[l]++;
+				if (r != 0) ans[n - r]--;
+			}
+			for (int i = 1; i < n; i++) {
+				ans[i] += ans[i - 1];
+			}
+			out.print(ans).println();
+		}
 	}
 
 	// region < Utility Methods >

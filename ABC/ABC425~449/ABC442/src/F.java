@@ -1,7 +1,3 @@
-#if (${PACKAGE_NAME} && ${PACKAGE_NAME} != "")package ${PACKAGE_NAME};
-#end
-#parse("File Header.java")
-
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
@@ -12,7 +8,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class ${NAME} {
+public final class F {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -34,7 +30,31 @@ public final class ${NAME} {
 	// endregion
 
 	private static void solve() {
-
+		int n = sc.nextInt();
+		int[][] a = new int[n + 1][n + 1];
+		int blackCnt = 0;
+		for (int i = 1; i <= n; i++) {
+			for (int j = 1; j <= n; j++) {
+				if (sc.nextChar() == '#') {
+					a[i][j] = 1;
+					blackCnt++;
+				}
+			}
+		}
+		for (int j = 1; j <= n; j++) {
+			for (int i = 1; i <= n; i++) {
+				a[i][j] += a[i - 1][j] + a[i][j - 1] - a[i - 1][j - 1];
+			}
+		}
+		int ans = n * n - blackCnt;
+		for (int k = 1; k <= n; k++) {
+			int b = (n - k) * (n - k);
+			int d = a[n][n] - a[n][k] - a[k][n] + a[k][k];
+			int cnt = (blackCnt - d) + (b - d);
+			debug(k, b, d, cnt);
+			ans = min(ans, cnt);
+		}
+		out.println(ans);
 	}
 
 	// region < Utility Methods >

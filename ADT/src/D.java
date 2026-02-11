@@ -1,7 +1,3 @@
-#if (${PACKAGE_NAME} && ${PACKAGE_NAME} != "")package ${PACKAGE_NAME};
-#end
-#parse("File Header.java")
-
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
@@ -12,7 +8,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class ${NAME} {
+public final class D {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -34,7 +30,27 @@ public final class ${NAME} {
 	// endregion
 
 	private static void solve() {
-
+		int a = sc.nextInt();
+		int b = sc.nextInt();
+		int k = sc.nextInt();
+		boolean[][] ban = new boolean[b][a];
+		while (k-- > 0) {
+			int x = sc.nextInt() - 1;
+			int y = sc.nextInt() - 1;
+			ban[y][x] = true;
+		}
+		long[][] dp = new long[b][a];
+		for (int j = 0; j < a; j++) {
+			if (!ban[0][j]) dp[0][j] = 1;
+		}
+		for (int i = 1; i < b; i++) {
+			dp[i][0] = ban[i][0] ? 0 : dp[i - 1][0];
+			for (int j = 1; j < a; j++) {
+				if (ban[i][j]) continue;
+				dp[i][j] = dp[i - 1][j] + dp[i][j - 1];
+			}
+		}
+		out.println(dp[b - 1][a - 1]);
 	}
 
 	// region < Utility Methods >

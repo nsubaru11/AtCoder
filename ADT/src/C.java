@@ -1,7 +1,3 @@
-#if (${PACKAGE_NAME} && ${PACKAGE_NAME} != "")package ${PACKAGE_NAME};
-#end
-#parse("File Header.java")
-
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
@@ -12,7 +8,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class ${NAME} {
+public final class C {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -34,7 +30,26 @@ public final class ${NAME} {
 	// endregion
 
 	private static void solve() {
+		int a = sc.nextInt();
+		int b = sc.nextInt();
+		int k = sc.nextInt();
+		int[][] memo = new int[a][b];
+		for (int i = 0; i < a; i++) fill(memo[i], -1);
+		memo[a - 1][b - 1] = 1;
+		while (k-- > 0) {
+			int x = sc.nextInt() - 1;
+			int y =sc.nextInt() - 1;
+			memo[x][y] = 0;
+		}
+		out.println(dfs(0, 0, a, b, memo));
+	}
 
+	private static int dfs(int x, int y, int a, int b, int[][] memo) {
+		if (memo[x][y] != -1) return memo[x][y];
+		int xd = 0, yd = 0;
+		if (x + 1 < a) xd = dfs(x + 1, y, a, b, memo);
+		if (y + 1 < b) yd = dfs(x, y + 1, a, b, memo);
+		return memo[x][y] = xd + yd;
 	}
 
 	// region < Utility Methods >

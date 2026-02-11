@@ -1,7 +1,3 @@
-#if (${PACKAGE_NAME} && ${PACKAGE_NAME} != "")package ${PACKAGE_NAME};
-#end
-#parse("File Header.java")
-
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
@@ -12,7 +8,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class ${NAME} {
+public final class D {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -34,7 +30,77 @@ public final class ${NAME} {
 	// endregion
 
 	private static void solve() {
-
+		int t = sc.nextInt();
+		while (t-- > 0) {
+			int n = sc.nextInt();
+			int[] r = sc.nextInt(n);
+			TreeMap<Integer, List<Integer>> tm = new TreeMap<>();
+			for (int i = 0; i < n; i++) {
+				tm.computeIfAbsent(r[i], _ -> new ArrayList<>()).add(i);
+			}
+			boolean[] add = new boolean[n];
+			for (int i : tm.firstEntry().getValue()) {
+				add[i] = true;
+			}
+			ArrayDeque<Integer> dq = new ArrayDeque<>(tm.firstEntry().getValue());
+			int[] p = new int[n];
+			fill(p, -1);
+			while (!dq.isEmpty()) {
+				int i = dq.poll();
+				boolean left = i == 0 || p[i - 1] == -1;
+				boolean right = i == n - 1 || p[i + 1] == -1;
+				if (left && right) {
+					p[i] = r[i];
+					if (i != 0 && !add[i - 1]) {
+						dq.add(i - 1);
+						add[i - 1] = true;
+					}
+					if (i != n - 1 && !add[i + 1]) {
+						dq.add(i + 1);
+						add[i + 1] = true;
+					}
+				} else if (left) {
+					if (abs(p[i + 1] - r[i]) <= 1) p[i] = r[i];
+					else {
+						p[i] = min(n, p[i + 1] + 1);
+					}
+					if (i != 0 && !add[i - 1]) {
+						dq.add(i - 1);
+						add[i - 1] = true;
+					}
+				} else if (right) {
+					if (abs(p[i - 1] - r[i]) <= 1) p[i] = r[i];
+					else {
+						p[i] = min(n, p[i - 1] + 1);
+					}
+					if (i != n - 1 && !add[i + 1]) {
+						dq.add(i + 1);
+						add[i + 1] = true;
+					}
+				} else {
+					if (abs(p[i + 1] - p[i - 1]) == 2) {
+						p[i] = min(n, min(p[i - 1], p[i + 1]) + 1);
+					} else {
+						if (p[i - 1] == r[i] || p[i + 1] == r[i]) p[i] = r[i];
+						else p[i] = min(n, min(p[i - 1], p[i + 1]) + 1);
+					}
+				}
+				List<Integer> list = tm.remove(p[i] + 1);
+				if (list == null) continue;
+				for (int j : list) {
+					if (!add[j]) {
+						dq.add(j);
+						add[j] = true;
+					}
+				}
+			}
+			long ans = 0;
+			for (int i = 0; i < n; i++) {
+				ans += r[i] - p[i];
+			}
+			debug(p);
+			out.println(ans);
+		}
 	}
 
 	// region < Utility Methods >

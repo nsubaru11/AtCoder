@@ -1,18 +1,15 @@
-#if (${PACKAGE_NAME} && ${PACKAGE_NAME} != "")package ${PACKAGE_NAME};
-#end
-#parse("File Header.java")
-
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
 import java.nio.*;
 import java.util.*;
 import java.util.function.*;
+import java.util.random.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class ${NAME} {
+public final class B {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -28,13 +25,20 @@ public final class ${NAME} {
 		// MOD = 1_000_000_007;
 		di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 		dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
-		sc = new FastScanner();
-		out = new FastPrinter();
+		sc = new FastScanner(System.in);
+		out = new FastPrinter(System.out);
 	}
 	// endregion
 
 	private static void solve() {
-
+		int n = sc.nextInt();
+		int[][] a = new int[n][2];
+		for (int i = 0; i < n; i++) {
+			a[i][0] = sc.nextInt();
+			a[i][1] = i + 1;
+		}
+		sort(a, Comparator.comparingInt(o -> o[0]));
+		out.print(a[0][1], a[1][1], a[2][1]);
 	}
 
 	// region < Utility Methods >
