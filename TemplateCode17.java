@@ -43,10 +43,72 @@ public final class ${NAME} {
 		return 0 <= i && i < h && 0 <= j && j < w;
 	}
 
-	private static long modPow(long a, long b, final long mod) {
+	private static void swap(final char[] a, final int i, final int j) {
+		final char tmp = a[i];
+		a[i] = a[j];
+		a[j] = tmp;
+	}
+
+	private static void swap(final int[] a, final int i, final int j) {
+		final int tmp = a[i];
+		a[i] = a[j];
+		a[j] = tmp;
+	}
+
+	private static void swap(final long[] a, final int i, final int j) {
+		final long tmp = a[i];
+		a[i] = a[j];
+		a[j] = tmp;
+	}
+
+	private static boolean chmin(final char[] a, final int i, final char v) {
+		if (a[i] <= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmin(final int[] a, final int i, final int v) {
+		if (a[i] <= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmin(final long[] a, final int i, final long v) {
+		if (a[i] <= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmax(final char[] a, final int i, final char v) {
+		if (a[i] >= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmax(final int[] a, final int i, final int v) {
+		if (a[i] >= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmax(final long[] a, final int i, final long v) {
+		if (a[i] >= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static long lModPow(long a, long b, final long mod) {
 		long ans = 1;
 		for (a %= mod; b > 0; a = a * a % mod, b >>= 1) {
 			if ((b & 1) == 1) ans = ans * a % mod;
+		}
+		return ans;
+	}
+
+	private static int iModPow(int a, int b, final int mod) {
+		int ans = 1;
+		for (a %= mod; b > 0; a = (int) ((long) a * a % mod), b >>= 1) {
+			if ((b & 1) == 1) ans = (int) ((long) ans * a % mod);
 		}
 		return ans;
 	}
@@ -63,15 +125,19 @@ public final class ${NAME} {
 		return a < 0 ? a / b : (a + b - 1) / b;
 	}
 
-	private static long ceilInt(final int a, final int b) {
+	private static int ceilInt(final int a, final int b) {
 		return a < 0 ? a / b : (a + b - 1) / b;
 	}
 
-	private static long LCM(final long x, final long y) {
-		return x == 0 || y == 0 ? 0 : x * (y / GCD(x, y));
+	private static long lcmLong(final long x, final long y) {
+		return x == 0 || y == 0 ? 0 : x / gcdLong(x, y) * y;
 	}
 
-	public static long GCD(long a, long b) {
+	private static int lcmInt(final int x, final int y) {
+		return x == 0 || y == 0 ? 0 : x / gcdInt(x, y) * y;
+	}
+
+	private static long gcdLong(long a, long b) {
 		a = abs(a);
 		b = abs(b);
 		if (a == 0) return b;
@@ -82,6 +148,25 @@ public final class ${NAME} {
 			b >>= Long.numberOfTrailingZeros(b);
 			if (a > b) {
 				long tmp = a;
+				a = b;
+				b = tmp;
+			}
+			b -= a;
+		}
+		return a << commonShift;
+	}
+
+	private static int gcdInt(int a, int b) {
+		a = abs(a);
+		b = abs(b);
+		if (a == 0) return b;
+		if (b == 0) return a;
+		int commonShift = Integer.numberOfTrailingZeros(a | b);
+		a >>= Integer.numberOfTrailingZeros(a);
+		while (b != 0) {
+			b >>= Integer.numberOfTrailingZeros(b);
+			if (a > b) {
+				int tmp = a;
 				a = b;
 				b = tmp;
 			}
