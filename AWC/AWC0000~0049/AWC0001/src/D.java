@@ -3,13 +3,12 @@ import java.lang.invoke.*;
 import java.math.*;
 import java.nio.*;
 import java.util.*;
-import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class C {
+public final class D {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -32,11 +31,23 @@ public final class C {
 
 	private static void solve() {
 		int n = sc.nextInt();
+		int m = sc.nextInt();
 		int k = sc.nextInt();
-		int[] a = sc.nextSortedInt(n);
+		long[][] dp = new long[k + 1][m + 1];
 		long ans = 0;
-		for (int i = 0; i < n - k; i++) {
-			ans += a[i];
+		while (n-- > 0) {
+			int a = sc.nextInt();
+			int b = sc.nextInt();
+			int idx = n % (k + 1);
+			fill(dp[idx], 0);
+			for (int i = 0; i <= k; i++) {
+				if (i == idx) continue;
+				for (int j = b; j <= m; j++) {
+					dp[idx][j] = max(dp[idx][j], dp[i][j - b] + a);
+				}
+			}
+			if (dp[idx][b] < a) dp[idx][b] = a;
+			for (int j = 0; j <= m; j++) if (ans < dp[idx][j]) ans = dp[idx][j];
 		}
 		out.println(ans);
 	}

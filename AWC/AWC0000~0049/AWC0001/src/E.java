@@ -3,13 +3,12 @@ import java.lang.invoke.*;
 import java.math.*;
 import java.nio.*;
 import java.util.*;
-import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class A {
+public final class E {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -31,7 +30,44 @@ public final class A {
 	// endregion
 
 	private static void solve() {
-		out.println(sc.nextLong() + 1);
+		int n = sc.nextInt();
+		int k = sc.nextInt();
+		int[] h = sc.nextInt(n);
+		ArrayDeque<Integer> maxDq = new ArrayDeque<>(k);
+		ArrayDeque<Integer> minDq = new ArrayDeque<>(k);
+		for (int i = 0; i < k; i++) {
+			int hi = h[i];
+			while (!maxDq.isEmpty() && h[maxDq.peekLast()] < hi) {
+				maxDq.pollLast();
+			}
+			maxDq.addLast(i);
+			while (!minDq.isEmpty() && h[minDq.peekLast()] > hi) {
+				minDq.pollLast();
+			}
+			minDq.addLast(i);
+		}
+
+		int ans = h[maxDq.peekFirst()] - h[minDq.peekFirst()];
+		for (int i = k; i < n; i++) {
+			int hi = h[i];
+
+			// max
+			if (!maxDq.isEmpty() && maxDq.peekFirst() <= i - k) maxDq.pollFirst();
+			while (!maxDq.isEmpty() && h[maxDq.peekLast()] < hi) {
+				maxDq.pollLast();
+			}
+			maxDq.addLast(i);
+
+			// min
+			if (!minDq.isEmpty() && minDq.peekFirst() <= i - k) minDq.pollFirst();
+			while (!minDq.isEmpty() && h[minDq.peekLast()] > hi) {
+				minDq.pollLast();
+			}
+			minDq.addLast(i);
+
+			ans = max(ans, h[maxDq.peekFirst()] - h[minDq.peekFirst()]);
+		}
+		out.println(ans);
 	}
 
 	// region < Utility Methods >
