@@ -1,13 +1,17 @@
 // ==UserScript==
 // @name         AtCoder Highlighter
 // @namespace    https://github.com/nsubaru11/AtCoder
-// @version      1.0.0
+// @version      1.1.0
 // @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
 // @author       nsubaru11
+// @license      MIT
 // @match        https://atcoder.jp/contests/*/tasks/*
 // @grant        none
 // @run-at       document-idle
-// @homepageURL  https://github.com/nsubaru11/AtCoder
+// @homepageURL  https://github.com/nsubaru11/AtCoder/tree/main/AtCoder_Scripts/AtCoderHighlighter
+// @supportURL   https://github.com/nsubaru11/AtCoder/issues
+// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderHighlighter/AtCoderHighlighter.user.js
+// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderHighlighter/AtCoderHighlighter.user.js
 // ==/UserScript==
 
 (function () {
