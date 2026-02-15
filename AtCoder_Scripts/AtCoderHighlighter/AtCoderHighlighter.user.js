@@ -264,7 +264,6 @@
 				const valueNumber = match[1] || '';
 				const valueUnit = match[2] || '';
 				const valueStart = fullStart + match[0].lastIndexOf(valueNumber);
-				const valueEnd = valueStart + valueNumber.length;
 				const matchEnd = fullStart + match[0].length;
 				if (fullStart > lastIndex) {
 					fragment.appendChild(document.createTextNode(text.slice(lastIndex, fullStart)));
