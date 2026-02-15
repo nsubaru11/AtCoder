@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         AtCoder Highlighter
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.1.1
+// @version      1.1.2
 // @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
 // @author       nsubaru11
 // @license      MIT
 // @match        https://atcoder.jp/contests/*/tasks/*
-// @grant        none
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_registerMenuCommand
 // @run-at       document-idle
 // @homepageURL  https://github.com/nsubaru11/AtCoder/tree/main/AtCoder_Scripts/AtCoderHighlighter
 // @supportURL   https://github.com/nsubaru11/AtCoder/issues
@@ -19,20 +21,44 @@
 
 	const TARGET_KEYWORDS = ['問題文', 'Problem Statement', '制約', 'Constraints'];
 	const TIME_LIMIT_KEYWORDS = ['Time Limit', '実行時間制限'];
+	const MEMORY_LIMIT_KEYWORDS = ['Memory Limit', 'メモリ制限'];
 	const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'CODE', 'PRE', 'VAR', 'KBD', 'SAMP']);
 
 	const NUM_PATTERN = /(^|\W)([+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:e[+-]?\d+)?)/gi;
 	const NUM_PURE = /^[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:e[+-]?\d+)?$/i;
 
+	const DEFAULT_COLORS = {
+		num: '#0033B3',
+		var: '#9E2927',
+		time: '#8f1d1d',
+		memory: '#1d643b',
+	};
+
+	function readColors() {
+		if (typeof GM_getValue !== 'function') return Object.assign({}, DEFAULT_COLORS);
+		return {
+			num: GM_getValue('numColor', DEFAULT_COLORS.num),
+			var: GM_getValue('varColor', DEFAULT_COLORS.var),
+			time: GM_getValue('timeLimitColor', DEFAULT_COLORS.time),
+			memory: GM_getValue('memoryLimitColor', DEFAULT_COLORS.memory),
+		};
+	}
+
+	function writeColor(key, value) {
+		if (typeof GM_setValue !== 'function') return;
+		GM_setValue(key, value);
+	}
+
 	function injectStyles() {
 		if (document.getElementById('atcoder-highlighter-style')) return;
+		const colors = readColors();
 
 		const style = document.createElement('style');
 		style.id = 'atcoder-highlighter-style';
 		style.textContent = `
             .target-scope {
-                --num-color: #0033B3; /* 数字：濃く深い青 */
-                --var-color: #9E2927; /* 変数：濃く深い赤 */
+                --num-color: ${colors.num}; /* 数字：濃く深い青 */
+                --var-color: ${colors.var}; /* 変数：濃く深い赤 */
                 --font-weight: bold;  /* 視認性を最大化する太字 */
             }
 
@@ -54,13 +80,24 @@
                 border: 2px solid #f59f00;
                 border-left-width: 6px;
                 border-radius: 6px;
-                color: #8f1d1d;
+                color: ${colors.time};
                 font-weight: 800;
                 padding: 2px 8px;
             }
 
             .time-limit-emphasis .number {
                 color: #a61e4d !important;
+            }
+
+            /* メモリ制限の強調 */
+            .memory-limit-emphasis {
+                background: #e6fcf5;
+                border: 2px solid #12b886;
+                border-left-width: 6px;
+                border-radius: 6px;
+                color: ${colors.memory};
+                font-weight: 800;
+                padding: 2px 8px;
             }
         `;
 		(document.head || document.documentElement).appendChild(style);
@@ -170,7 +207,7 @@
 		});
 	}
 
-	function emphasizeTimeLimit() {
+	function emphasizeByKeywords(keywords, className) {
 		const root = document.getElementById('task-statement') || document.body;
 		if (!root) return;
 
@@ -194,21 +231,29 @@
 		while ((currentNode = walker.nextNode())) {
 			const text = currentNode.nodeValue;
 			if (!text) continue;
-			if (!TIME_LIMIT_KEYWORDS.some(kw => text.includes(kw))) continue;
+			if (!keywords.some(kw => text.includes(kw))) continue;
 
 			const parent = currentNode.parentElement;
 			if (!parent) continue;
-			if (!parent.classList.contains('time-limit-emphasis')) {
-				parent.classList.add('time-limit-emphasis');
+			if (!parent.classList.contains(className)) {
+				parent.classList.add(className);
 			}
 
 			if (parent.tagName && parent.tagName.toUpperCase() === 'DT') {
 				const next = parent.nextElementSibling;
-				if (next && !next.classList.contains('time-limit-emphasis')) {
-					next.classList.add('time-limit-emphasis');
+				if (next && !next.classList.contains(className)) {
+					next.classList.add(className);
 				}
 			}
 		}
+	}
+
+	function emphasizeTimeLimit() {
+		emphasizeByKeywords(TIME_LIMIT_KEYWORDS, 'time-limit-emphasis');
+	}
+
+	function emphasizeMemoryLimit() {
+		emphasizeByKeywords(MEMORY_LIMIT_KEYWORDS, 'memory-limit-emphasis');
 	}
 
 	let scheduled = false;
@@ -222,7 +267,50 @@
 			markTargetSections();
 			highlightNumbers();
 			emphasizeTimeLimit();
+			emphasizeMemoryLimit();
 		}, 100);
+	}
+
+	function resetStyles() {
+		const style = document.getElementById('atcoder-highlighter-style');
+		if (style) style.remove();
+		injectStyles();
+	}
+
+	function registerMenu() {
+		if (typeof GM_registerMenuCommand !== 'function') return;
+
+		GM_registerMenuCommand('Highlighter: 数字の色', () => {
+			const current = readColors();
+			const next = prompt('数字の色 (例: #0033B3)', current.num);
+			if (!next) return;
+			writeColor('numColor', next.trim());
+			resetStyles();
+		});
+
+		GM_registerMenuCommand('Highlighter: 変数の色', () => {
+			const current = readColors();
+			const next = prompt('変数の色 (例: #9E2927)', current.var);
+			if (!next) return;
+			writeColor('varColor', next.trim());
+			resetStyles();
+		});
+
+		GM_registerMenuCommand('Highlighter: 実行時間制限の色', () => {
+			const current = readColors();
+			const next = prompt('実行時間制限の色 (例: #8f1d1d)', current.time);
+			if (!next) return;
+			writeColor('timeLimitColor', next.trim());
+			resetStyles();
+		});
+
+		GM_registerMenuCommand('Highlighter: メモリ制限の色', () => {
+			const current = readColors();
+			const next = prompt('メモリ制限の色 (例: #1d643b)', current.memory);
+			if (!next) return;
+			writeColor('memoryLimitColor', next.trim());
+			resetStyles();
+		});
 	}
 
 	function observeTaskStatement() {
@@ -235,5 +323,6 @@
 
 	scheduleHighlight();
 	observeTaskStatement();
+	registerMenu();
 })();
 
