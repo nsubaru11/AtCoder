@@ -96,6 +96,48 @@ public final class ${NAME} {
 		return true;
 	}
 
+	private static int min(int... a) {
+		int len = a.length;
+		int min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static int max(int... a) {
+		int len = a.length;
+		int max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
+	}
+
+	private static long min(long... a) {
+		int len = a.length;
+		long min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static long max(long... a) {
+		int len = a.length;
+		long max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
+	}
+
+	private static double min(double... a) {
+		int len = a.length;
+		double min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static double max(double... a) {
+		int len = a.length;
+		double max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
+	}
+
 	private static long lModPow(long a, long b, final long mod) {
 		long ans = 1;
 		for (a %= mod; b > 0; a = a * a % mod, b >>= 1) {
