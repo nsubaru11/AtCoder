@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Highlighter
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.1.2
+// @version      1.1.3
 // @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
 // @author       nsubaru11
 // @license      MIT
@@ -33,6 +33,30 @@
 		time: '#8f1d1d',
 		memory: '#1d643b',
 	};
+
+	function normalizeHexColor(input) {
+		if (typeof input !== 'string') return null;
+		const value = input.trim();
+		if (/^#[0-9a-fA-F]{3}$/.test(value)) {
+			return `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`;
+		}
+		if (/^#[0-9a-fA-F]{4}$/.test(value)) {
+			return `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}${value[4]}${value[4]}`;
+		}
+		if (/^#[0-9a-fA-F]{6}$/.test(value) || /^#[0-9a-fA-F]{8}$/.test(value)) {
+			return value;
+		}
+		return null;
+	}
+
+	function normalizeColor(input) {
+		if (typeof input !== 'string') return null;
+		const trimmed = input.trim();
+		const normalizedHex = normalizeHexColor(trimmed);
+		if (normalizedHex) return normalizedHex;
+		if (/^(rgb|rgba|hsl|hsla)\([^)]*\)$/.test(trimmed)) return trimmed;
+		return null;
+	}
 
 	function readColors() {
 		if (typeof GM_getValue !== 'function') return Object.assign({}, DEFAULT_COLORS);
@@ -86,7 +110,7 @@
             }
 
             .time-limit-emphasis .number {
-                color: #a61e4d !important;
+                color: ${colors.time} !important;
             }
 
             /* メモリ制限の強調 */
@@ -98,6 +122,10 @@
                 color: ${colors.memory};
                 font-weight: 800;
                 padding: 2px 8px;
+            }
+
+            .memory-limit-emphasis .number {
+                color: ${colors.memory} !important;
             }
         `;
 		(document.head || document.documentElement).appendChild(style);
@@ -211,6 +239,21 @@
 		const root = document.getElementById('task-statement') || document.body;
 		if (!root) return;
 
+		const elements = root.querySelectorAll('dt, th, span, p, div');
+		elements.forEach(el => {
+			const text = el.textContent || '';
+			if (!keywords.some(kw => text.includes(kw))) return;
+			el.classList.add(className);
+			if (el.tagName === 'DT') {
+				const next = el.nextElementSibling;
+				if (next) next.classList.add(className);
+			}
+			if (el.tagName === 'TH') {
+				const row = el.closest('tr');
+				if (row) row.classList.add(className);
+			}
+		});
+
 		const walker = document.createTreeWalker(
 			root,
 			NodeFilter.SHOW_TEXT,
@@ -275,6 +318,7 @@
 		const style = document.getElementById('atcoder-highlighter-style');
 		if (style) style.remove();
 		injectStyles();
+		scheduleHighlight();
 	}
 
 	function registerMenu() {
@@ -282,33 +326,41 @@
 
 		GM_registerMenuCommand('Highlighter: 数字の色', () => {
 			const current = readColors();
-			const next = prompt('数字の色 (例: #0033B3)', current.num);
+			const next = prompt('数字の色 (例: #0033B3 / #03b / rgb(0,51,179))', current.num);
 			if (!next) return;
-			writeColor('numColor', next.trim());
+			const normalized = normalizeColor(next);
+			if (!normalized) return alert('色の形式が正しくありません。');
+			writeColor('numColor', normalized);
 			resetStyles();
 		});
 
 		GM_registerMenuCommand('Highlighter: 変数の色', () => {
 			const current = readColors();
-			const next = prompt('変数の色 (例: #9E2927)', current.var);
+			const next = prompt('変数の色 (例: #9E2927 / #c33 / rgb(158,41,39))', current.var);
 			if (!next) return;
-			writeColor('varColor', next.trim());
+			const normalized = normalizeColor(next);
+			if (!normalized) return alert('色の形式が正しくありません。');
+			writeColor('varColor', normalized);
 			resetStyles();
 		});
 
 		GM_registerMenuCommand('Highlighter: 実行時間制限の色', () => {
 			const current = readColors();
-			const next = prompt('実行時間制限の色 (例: #8f1d1d)', current.time);
+			const next = prompt('実行時間制限の色 (例: #8f1d1d / #c33 / rgb(143,29,29))', current.time);
 			if (!next) return;
-			writeColor('timeLimitColor', next.trim());
+			const normalized = normalizeColor(next);
+			if (!normalized) return alert('色の形式が正しくありません。');
+			writeColor('timeLimitColor', normalized);
 			resetStyles();
 		});
 
 		GM_registerMenuCommand('Highlighter: メモリ制限の色', () => {
 			const current = readColors();
-			const next = prompt('メモリ制限の色 (例: #1d643b)', current.memory);
+			const next = prompt('メモリ制限の色 (例: #1d643b / #0a6 / rgb(29,100,59))', current.memory);
 			if (!next) return;
-			writeColor('memoryLimitColor', next.trim());
+			const normalized = normalizeColor(next);
+			if (!normalized) return alert('色の形式が正しくありません。');
+			writeColor('memoryLimitColor', normalized);
 			resetStyles();
 		});
 	}
