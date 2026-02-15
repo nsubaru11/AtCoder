@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Highlighter
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.1.9
+// @version      1.1.10
 // @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
 // @author       nsubaru11
 // @license      MIT
@@ -37,15 +37,9 @@
 	function normalizeHexColor(input) {
 		if (typeof input !== 'string') return null;
 		const value = input.trim();
-		if (/^#[0-9a-fA-F]{3}$/.test(value)) {
-			return `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`;
-		}
-		if (/^#[0-9a-fA-F]{4}$/.test(value)) {
-			return `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}${value[4]}${value[4]}`;
-		}
-		if (/^#[0-9a-fA-F]{6}$/.test(value) || /^#[0-9a-fA-F]{8}$/.test(value)) {
-			return value;
-		}
+		if (/^#[0-9a-fA-F]{3}$/.test(value)) return `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`;
+		if (/^#[0-9a-fA-F]{4}$/.test(value)) return `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}${value[4]}${value[4]}`;
+		if (/^#[0-9a-fA-F]{6}$/.test(value) || /^#[0-9a-fA-F]{8}$/.test(value)) return value;
 		return null;
 	}
 
