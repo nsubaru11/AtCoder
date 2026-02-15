@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Highlighter
-// @namespace    https://github.com/nsubaru11/AtCoder
-// @version      1.0.0
+// @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
+// @version      1.1.1
 // @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
 // @author       nsubaru11
 // @license      MIT
@@ -18,6 +18,7 @@
 	'use strict';
 
 	const TARGET_KEYWORDS = ['問題文', 'Problem Statement', '制約', 'Constraints'];
+	const TIME_LIMIT_KEYWORDS = ['Time Limit', '実行時間制限'];
 	const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'CODE', 'PRE', 'VAR', 'KBD', 'SAMP']);
 
 	const NUM_PATTERN = /(^|\W)([+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:e[+-]?\d+)?)/gi;
@@ -45,6 +46,21 @@
             .target-scope .number {
                 color: var(--num-color) !important;
                 font-weight: var(--font-weight) !important;
+            }
+
+            /* 実行時間制限の強調 */
+            .time-limit-emphasis {
+                background: #fff3bf;
+                border: 2px solid #f59f00;
+                border-left-width: 6px;
+                border-radius: 6px;
+                color: #8f1d1d;
+                font-weight: 800;
+                padding: 2px 8px;
+            }
+
+            .time-limit-emphasis .number {
+                color: #a61e4d !important;
             }
         `;
 		(document.head || document.documentElement).appendChild(style);
@@ -154,6 +170,47 @@
 		});
 	}
 
+	function emphasizeTimeLimit() {
+		const root = document.getElementById('task-statement') || document.body;
+		if (!root) return;
+
+		const walker = document.createTreeWalker(
+			root,
+			NodeFilter.SHOW_TEXT,
+			{
+				acceptNode: function (node) {
+					const parent = node.parentNode;
+					if (!parent || !parent.tagName) return NodeFilter.FILTER_REJECT;
+
+					const tagName = parent.tagName.toUpperCase();
+					if (SKIP_TAGS.has(tagName)) return NodeFilter.FILTER_REJECT;
+
+					return NodeFilter.FILTER_ACCEPT;
+				}
+			}
+		);
+
+		let currentNode;
+		while ((currentNode = walker.nextNode())) {
+			const text = currentNode.nodeValue;
+			if (!text) continue;
+			if (!TIME_LIMIT_KEYWORDS.some(kw => text.includes(kw))) continue;
+
+			const parent = currentNode.parentElement;
+			if (!parent) continue;
+			if (!parent.classList.contains('time-limit-emphasis')) {
+				parent.classList.add('time-limit-emphasis');
+			}
+
+			if (parent.tagName && parent.tagName.toUpperCase() === 'DT') {
+				const next = parent.nextElementSibling;
+				if (next && !next.classList.contains('time-limit-emphasis')) {
+					next.classList.add('time-limit-emphasis');
+				}
+			}
+		}
+	}
+
 	let scheduled = false;
 
 	function scheduleHighlight() {
@@ -164,6 +221,7 @@
 			injectStyles();
 			markTargetSections();
 			highlightNumbers();
+			emphasizeTimeLimit();
 		}, 100);
 	}
 
@@ -178,3 +236,4 @@
 	scheduleHighlight();
 	observeTaskStatement();
 })();
+

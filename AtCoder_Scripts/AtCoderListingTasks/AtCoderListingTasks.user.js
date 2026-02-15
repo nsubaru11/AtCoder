@@ -1,20 +1,21 @@
 // ==UserScript==
 // @name           AtCoder Listing Tasks
 // @name:en        AtCoder Listing Tasks
-// @namespace      https://github.com/luuguas/AtCoderListingTasks
-// @version        1.5.3
+// @namespace      https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
+// @version        1.5.4
 // @description    「問題」タブにマウスカーソルを置くと、コンテスト内の各問題のページに移動できるドロップダウンリストを表示します。
 // @description:en Hover on the "Tasks" tab to open a drop-down list that takes you to the page for each problem in the contest.
 // @author         luuguas (original), nsubaru11 (modified)
 // @license        Apache-2.0
-// @supportURL     https://github.com/luuguas/AtCoderListingTasks/issues
+// @homepageURL    https://github.com/nsubaru11/AtCoder/tree/main/AtCoder_Scripts/AtCoderListingTasks
+// @supportURL     https://github.com/nsubaru11/AtCoder/issues
 // @match          https://atcoder.jp/contests/*
 // @exclude        https://atcoder.jp/contests/
 // @exclude        https://atcoder.jp/contests/?*
 // @exclude        https://atcoder.jp/contests/archive*
 // @grant          none
-// @downloadURL https://update.greasyfork.org/scripts/467289/AtCoder%20Listing%20Tasks.user.js
-// @updateURL https://update.greasyfork.org/scripts/467289/AtCoder%20Listing%20Tasks.meta.js
+// @updateURL      https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderListingTasks/AtCoderListingTasks.user.js
+// @downloadURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderListingTasks/AtCoderListingTasks.user.js
 // ==/UserScript==
 
 (function () {
@@ -929,3 +930,4 @@ span.${PRE}-caret {
 	launcher.launch();
 
 })();
+

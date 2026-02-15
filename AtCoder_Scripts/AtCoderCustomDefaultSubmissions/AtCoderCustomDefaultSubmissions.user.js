@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         AtCoder Custom Default Submissions
-// @namespace    https://github.com/ktny
-// @version      1.5
+// @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
+// @version      1.5.1
 // @description  AtCoderのすべての提出の絞り込み、並び替え設定のデフォルトを設定します。現在のデフォルトは言語Java, 結果AC, 実行速度の昇順に並び替えです。
 // @author       ktnyori (original), nsubaru11 (modified)
 // @license      MIT
 // @include      https://atcoder.jp/contests/*
-// @downloadURL https://update.greasyfork.org/scripts/393705/AtCoder%20Custom%20Default%20Submissions.user.js
-// @updateURL https://update.greasyfork.org/scripts/393705/AtCoder%20Custom%20Default%20Submissions.meta.js
+// @homepageURL  https://github.com/nsubaru11/AtCoder/tree/main/AtCoder_Scripts/AtCoderCustomDefaultSubmissions
+// @supportURL   https://github.com/nsubaru11/AtCoder/issues
+// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderCustomDefaultSubmissions/AtCoderCustomDefaultSubmissions.user.js
+// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderCustomDefaultSubmissions/AtCoderCustomDefaultSubmissions.user.js
 // ==/UserScript==
 
 (function () {
@@ -41,3 +43,4 @@
 		}
 	}
 })();
+

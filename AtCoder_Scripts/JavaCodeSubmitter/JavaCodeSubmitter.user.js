@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Java Code Submitter
-// @namespace    https://github.com/nsubaru11/AtCoder
-// @version      1.0.3
+// @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
+// @version      1.0.4
 // @description  Java submission helper (Main/DEBUG/fold/shortcuts)
 // @author       nsubaru11
 // @license      MIT
@@ -666,3 +666,4 @@
 	submitter.start();
 
 })();
+
