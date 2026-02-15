@@ -216,54 +216,6 @@
 		});
 	}
 
-	function wrapKeywordInElement(element, keyword, className) {
-		const walker = document.createTreeWalker(
-			element,
-			NodeFilter.SHOW_TEXT,
-			{
-				acceptNode: function (node) {
-					const parent = node.parentNode;
-					if (!parent || !parent.tagName) return NodeFilter.FILTER_REJECT;
-
-					const tagName = parent.tagName.toUpperCase();
-					if (SKIP_TAGS.has(tagName)) return NodeFilter.FILTER_REJECT;
-					if (typeof parent.closest === 'function') {
-						if (parent.closest('.katex, var, .number, .time-limit-value, .memory-limit-value')) {
-							return NodeFilter.FILTER_REJECT;
-						}
-					}
-
-					return NodeFilter.FILTER_ACCEPT;
-				}
-			}
-		);
-
-		const nodes = [];
-		let currentNode;
-		while ((currentNode = walker.nextNode())) {
-			if (currentNode.nodeValue && currentNode.nodeValue.includes(keyword)) {
-				nodes.push(currentNode);
-			}
-		}
-
-		nodes.forEach(node => {
-			const text = node.nodeValue;
-			if (!text || !text.includes(keyword)) return;
-			const parts = text.split(keyword);
-			const fragment = document.createDocumentFragment();
-			parts.forEach((part, index) => {
-				if (part) fragment.appendChild(document.createTextNode(part));
-				if (index < parts.length - 1) {
-					const span = document.createElement('span');
-					span.className = className;
-					span.textContent = keyword;
-					fragment.appendChild(span);
-				}
-			});
-			if (node.parentNode) node.parentNode.replaceChild(fragment, node);
-		});
-	}
-
 	function wrapLimitValue(element, keyword, className) {
 		const walker = document.createTreeWalker(
 			element,
