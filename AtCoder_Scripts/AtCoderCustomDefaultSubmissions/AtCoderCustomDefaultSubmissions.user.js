@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Custom Default Submissions
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.5.2
+// @version      1.5.3
 // @description  AtCoderのすべての提出の絞り込み、並び替え設定のデフォルトを設定します。メニューから設定を変更できます。
 // @author       ktnyori (original), nsubaru11 (modified)
 // @license      MIT
@@ -37,26 +37,59 @@
 		}
 	}
 
-	function configure() {
+	function configureLanguage() {
 		const current = readConfig();
 		const language = window.prompt('Language name (e.g. Java, C#, Python3, Rust):', current.language);
 		if (language === null) return;
-		const status = window.prompt('Status filter (AC/WA/TLE/... or empty for all):', current.status);
-		if (status === null) return;
-		const orderBy = window.prompt('Sort key (source_length/time_consumption/memory_consumption/score):', current.orderBy);
-		if (orderBy === null) return;
-		const includeTaskFilter = window.confirm('問題ページでは問題番号で絞り込みを追加しますか？');
-		writeConfig({
+		const next = Object.assign({}, current, {
 			language: language.trim() || DEFAULTS.language,
-			status: status.trim(),
-			orderBy: orderBy.trim() || DEFAULTS.orderBy,
-			includeTaskFilter,
 		});
+		writeConfig(next);
 		window.alert('設定を保存しました。ページを再読み込みしてください。');
 	}
 
+	function configureStatus() {
+		const current = readConfig();
+		const status = window.prompt('Status filter (AC/WA/TLE/... or empty for all):', current.status);
+		if (status === null) return;
+		const next = Object.assign({}, current, {
+			status: status.trim(),
+		});
+		writeConfig(next);
+		window.alert('設定を保存しました。ページを再読み込みしてください。');
+	}
+
+	function configureOrderBy() {
+		const current = readConfig();
+		const orderBy = window.prompt('Sort key (source_length/time_consumption/memory_consumption/score):', current.orderBy);
+		if (orderBy === null) return;
+		const next = Object.assign({}, current, {
+			orderBy: orderBy.trim() || DEFAULTS.orderBy,
+		});
+		writeConfig(next);
+		window.alert('設定を保存しました。ページを再読み込みしてください。');
+	}
+
+	function toggleTaskFilter() {
+		const current = readConfig();
+		const next = Object.assign({}, current, {
+			includeTaskFilter: !current.includeTaskFilter,
+		});
+		writeConfig(next);
+		window.alert(`問題番号の絞り込み: ${next.includeTaskFilter ? 'ON' : 'OFF'}`);
+	}
+
+	function resetConfig() {
+		writeConfig(Object.assign({}, DEFAULTS));
+		window.alert('設定をリセットしました。ページを再読み込みしてください。');
+	}
+
 	if (typeof GM_registerMenuCommand === 'function') {
-		GM_registerMenuCommand('AtCoder Custom Default Submissions: 設定', configure);
+		GM_registerMenuCommand('AtCoder Custom Default Submissions: 言語設定', configureLanguage);
+		GM_registerMenuCommand('AtCoder Custom Default Submissions: 結果フィルタ設定', configureStatus);
+		GM_registerMenuCommand('AtCoder Custom Default Submissions: 並び順設定', configureOrderBy);
+		GM_registerMenuCommand('AtCoder Custom Default Submissions: 問題番号絞り込み切替', toggleTaskFilter);
+		GM_registerMenuCommand('AtCoder Custom Default Submissions: 設定リセット', resetConfig);
 	}
 
 	const config = readConfig();
