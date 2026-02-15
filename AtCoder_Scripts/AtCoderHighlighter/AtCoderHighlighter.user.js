@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Highlighter
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.1.6
+// @version      1.1.7
 // @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
 // @author       nsubaru11
 // @license      MIT
@@ -30,7 +30,7 @@
 	const DEFAULT_COLORS = {
 		num: '#0033B3',
 		var: '#9E2927',
-		time: '#8f1d1d',
+		time: '#b3542a',
 		memory: '#1d643b',
 	};
 
@@ -102,6 +102,12 @@
             .time-limit-value {
                 color: ${colors.time};
                 font-weight: 800;
+            }
+
+            .time-limit-value-number {
+                color: ${colors.time};
+                font-weight: 800;
+                font-size: 1.08em;
             }
 
             .memory-limit-value {
@@ -216,7 +222,7 @@
 		});
 	}
 
-	function wrapLimitValue(element, keyword, className) {
+	function wrapLimitValue(element, keyword, className, options = {}) {
 		const walker = document.createTreeWalker(
 			element,
 			NodeFilter.SHOW_TEXT,
@@ -228,7 +234,7 @@
 					const tagName = parent.tagName.toUpperCase();
 					if (SKIP_TAGS.has(tagName)) return NodeFilter.FILTER_REJECT;
 					if (typeof parent.closest === 'function') {
-						if (parent.closest('.katex, var, .number, .time-limit-value, .memory-limit-value')) {
+						if (parent.closest('.katex, var, .number, .time-limit-value, .time-limit-value-number, .memory-limit-value')) {
 							return NodeFilter.FILTER_REJECT;
 						}
 					}
@@ -245,7 +251,7 @@
 			}
 		}
 
-		const valuePattern = new RegExp(`${keyword}\\s*[:：]\\s*([0-9][0-9,]*(?:\\.[0-9]+)?\\s*[a-zA-Z]+)?`, 'g');
+		const valuePattern = new RegExp(`${keyword}\\s*[:：]\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)(\\s*[a-zA-Z]+)?`, 'g');
 
 		nodes.forEach(node => {
 			const text = node.nodeValue;
@@ -255,17 +261,26 @@
 			let match;
 			while ((match = valuePattern.exec(text)) !== null) {
 				const fullStart = match.index;
-				const valueText = match[1];
-				const valueStart = fullStart + match[0].lastIndexOf(valueText);
-				const valueEnd = valueStart + valueText.length;
+				const valueNumber = match[1] || '';
+				const valueUnit = match[2] || '';
+				const valueStart = fullStart + match[0].lastIndexOf(valueNumber);
+				const valueEnd = valueStart + valueNumber.length;
 				if (fullStart > lastIndex) {
 					fragment.appendChild(document.createTextNode(text.slice(lastIndex, fullStart)));
 				}
 				fragment.appendChild(document.createTextNode(text.slice(fullStart, valueStart)));
-				const span = document.createElement('span');
-				span.className = className;
-				span.textContent = valueText;
-				fragment.appendChild(span);
+				if (options.numberOnly) {
+					const span = document.createElement('span');
+					span.className = options.numberClass || className;
+					span.textContent = valueNumber;
+					fragment.appendChild(span);
+					if (valueUnit) fragment.appendChild(document.createTextNode(valueUnit));
+				} else {
+					const span = document.createElement('span');
+					span.className = className;
+					span.textContent = valueNumber + valueUnit;
+					fragment.appendChild(span);
+				}
 				lastIndex = valueEnd;
 			}
 			if (lastIndex < text.length) {
@@ -286,8 +301,11 @@
 			const hasMemory = MEMORY_LIMIT_KEYWORDS.some(kw => text.includes(kw));
 			if (!hasTime && !hasMemory) return;
 
-			if (hasTime && !el.querySelector('.time-limit-value')) {
-				TIME_LIMIT_KEYWORDS.forEach(kw => wrapLimitValue(el, kw, 'time-limit-value'));
+			if (hasTime && !el.querySelector('.time-limit-value-number')) {
+				TIME_LIMIT_KEYWORDS.forEach(kw => wrapLimitValue(el, kw, 'time-limit-value', {
+					numberOnly: true,
+					numberClass: 'time-limit-value-number',
+				}));
 			}
 			if (hasMemory && !el.querySelector('.memory-limit-value')) {
 				MEMORY_LIMIT_KEYWORDS.forEach(kw => wrapLimitValue(el, kw, 'memory-limit-value'));
@@ -341,7 +359,7 @@
 
 		GM_registerMenuCommand('Highlighter: 実行時間制限の色', () => {
 			const current = readColors();
-			const next = prompt('実行時間制限の色 (例: #8f1d1d / #c33 / rgb(143,29,29))', current.time);
+			const next = prompt('実行時間制限の色 (例: #b3542a / #c73 / rgb(179,84,42))', current.time);
 			if (!next) return;
 			const normalized = normalizeColor(next);
 			if (!normalized) return alert('色の形式が正しくありません。');
@@ -372,4 +390,3 @@
 	observeTaskStatement();
 	registerMenu();
 })();
-
