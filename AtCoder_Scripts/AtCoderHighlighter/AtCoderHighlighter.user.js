@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Highlighter
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.1.8
+// @version      1.1.9
 // @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
 // @author       nsubaru11
 // @license      MIT
@@ -265,6 +265,7 @@
 				const valueUnit = match[2] || '';
 				const valueStart = fullStart + match[0].lastIndexOf(valueNumber);
 				const valueEnd = valueStart + valueNumber.length;
+				const matchEnd = fullStart + match[0].length;
 				if (fullStart > lastIndex) {
 					fragment.appendChild(document.createTextNode(text.slice(lastIndex, fullStart)));
 				}
@@ -281,7 +282,7 @@
 					span.textContent = valueNumber + valueUnit;
 					fragment.appendChild(span);
 				}
-				lastIndex = valueEnd;
+				lastIndex = matchEnd;
 			}
 			if (lastIndex < text.length) {
 				fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
