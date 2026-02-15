@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Highlighter
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.1.7
+// @version      1.1.8
 // @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
 // @author       nsubaru11
 // @license      MIT
@@ -107,7 +107,7 @@
             .time-limit-value-number {
                 color: ${colors.time};
                 font-weight: 800;
-                font-size: 1.08em;
+                font-size: 2em;
             }
 
             .memory-limit-value {
