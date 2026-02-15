@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Highlighter
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.1.4
+// @version      1.1.5
 // @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
 // @author       nsubaru11
 // @license      MIT
@@ -98,39 +98,15 @@
                 font-weight: var(--font-weight) !important;
             }
 
-            /* 実行時間/メモリ制限の強調 */
-            .limit-line {
-                background: #fff3bf;
-                border: 2px solid #f59f00;
-                border-left-width: 6px;
-                border-radius: 6px;
+            /* 実行時間/メモリ制限の値のみ強調 */
+            .time-limit-value {
+                color: ${colors.time};
                 font-weight: 800;
-                padding: 2px 8px;
             }
 
-            .limit-line[data-limit-type="memory"] {
-                background: #e6fcf5;
-                border-color: #12b886;
-            }
-
-            .limit-line[data-limit-type="both"] {
-                background: linear-gradient(90deg, #fff3bf, #e6fcf5);
-            }
-
-            .limit-line[data-limit-type="time"] {
-                color: ${colors.time};
-            }
-
-            .limit-line[data-limit-type="memory"] {
+            .memory-limit-value {
                 color: ${colors.memory};
-            }
-
-            .time-limit-label {
-                color: ${colors.time};
-            }
-
-            .memory-limit-label {
-                color: ${colors.memory};
+                font-weight: 800;
             }
         `;
 		(document.head || document.documentElement).appendChild(style);
@@ -252,7 +228,7 @@
 					const tagName = parent.tagName.toUpperCase();
 					if (SKIP_TAGS.has(tagName)) return NodeFilter.FILTER_REJECT;
 					if (typeof parent.closest === 'function') {
-						if (parent.closest('.katex, var, .number, .time-limit-label, .memory-limit-label')) {
+						if (parent.closest('.katex, var, .number, .time-limit-value, .memory-limit-value')) {
 							return NodeFilter.FILTER_REJECT;
 						}
 					}
@@ -288,6 +264,65 @@
 		});
 	}
 
+	function wrapLimitValue(element, keyword, className) {
+		const walker = document.createTreeWalker(
+			element,
+			NodeFilter.SHOW_TEXT,
+			{
+				acceptNode: function (node) {
+					const parent = node.parentNode;
+					if (!parent || !parent.tagName) return NodeFilter.FILTER_REJECT;
+
+					const tagName = parent.tagName.toUpperCase();
+					if (SKIP_TAGS.has(tagName)) return NodeFilter.FILTER_REJECT;
+					if (typeof parent.closest === 'function') {
+						if (parent.closest('.katex, var, .number, .time-limit-value, .memory-limit-value')) {
+							return NodeFilter.FILTER_REJECT;
+						}
+					}
+					return NodeFilter.FILTER_ACCEPT;
+				}
+			}
+		);
+
+		const nodes = [];
+		let currentNode;
+		while ((currentNode = walker.nextNode())) {
+			if (currentNode.nodeValue && currentNode.nodeValue.includes(keyword)) {
+				nodes.push(currentNode);
+			}
+		}
+
+		const valuePattern = new RegExp(`${keyword}\\s*[:：]\\s*([0-9][0-9,]*(?:\\.[0-9]+)?\\s*[a-zA-Z]+)?`, 'g');
+
+		nodes.forEach(node => {
+			const text = node.nodeValue;
+			if (!text || !text.includes(keyword)) return;
+			const fragment = document.createDocumentFragment();
+			let lastIndex = 0;
+			let match;
+			while ((match = valuePattern.exec(text)) !== null) {
+				const fullStart = match.index;
+				const valueText = match[1];
+				const valueStart = fullStart + match[0].lastIndexOf(valueText);
+				const valueEnd = valueStart + valueText.length;
+				if (fullStart > lastIndex) {
+					fragment.appendChild(document.createTextNode(text.slice(lastIndex, fullStart)));
+				}
+				fragment.appendChild(document.createTextNode(text.slice(fullStart, valueStart)));
+				const span = document.createElement('span');
+				span.className = className;
+				span.textContent = valueText;
+				fragment.appendChild(span);
+				lastIndex = valueEnd;
+			}
+			if (lastIndex < text.length) {
+				fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+			}
+			if (node.parentNode) node.parentNode.replaceChild(fragment, node);
+		});
+	}
+
 	function emphasizeLimits() {
 		const root = document.getElementById('main-container') || document.body;
 		if (!root) return;
@@ -299,30 +334,11 @@
 			const hasMemory = MEMORY_LIMIT_KEYWORDS.some(kw => text.includes(kw));
 			if (!hasTime && !hasMemory) return;
 
-			el.classList.add('limit-line');
-			const limitType = hasTime && hasMemory ? 'both' : hasTime ? 'time' : 'memory';
-			el.setAttribute('data-limit-type', limitType);
-
-			if (hasTime && !el.querySelector('.time-limit-label')) {
-				TIME_LIMIT_KEYWORDS.forEach(kw => wrapKeywordInElement(el, kw, 'time-limit-label'));
+			if (hasTime && !el.querySelector('.time-limit-value')) {
+				TIME_LIMIT_KEYWORDS.forEach(kw => wrapLimitValue(el, kw, 'time-limit-value'));
 			}
-			if (hasMemory && !el.querySelector('.memory-limit-label')) {
-				MEMORY_LIMIT_KEYWORDS.forEach(kw => wrapKeywordInElement(el, kw, 'memory-limit-label'));
-			}
-
-			if (el.tagName === 'DT') {
-				const next = el.nextElementSibling;
-				if (next) {
-					next.classList.add('limit-line');
-					next.setAttribute('data-limit-type', limitType);
-				}
-			}
-			if (el.tagName === 'TH') {
-				const row = el.closest('tr');
-				if (row) {
-					row.classList.add('limit-line');
-					row.setAttribute('data-limit-type', limitType);
-				}
+			if (hasMemory && !el.querySelector('.memory-limit-value')) {
+				MEMORY_LIMIT_KEYWORDS.forEach(kw => wrapLimitValue(el, kw, 'memory-limit-value'));
 			}
 		});
 	}
