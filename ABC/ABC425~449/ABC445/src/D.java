@@ -112,7 +112,7 @@ public final class D {
 		// -------------- 公開メソッド --------------
 
 		/**
-		 * 要素を追加する。
+		 * 要素を追加する
 		 *
 		 * @param node 追加するノード
 		 * @param c    追加するノードのコスト
@@ -125,6 +125,39 @@ public final class D {
 			position[node] = size;
 			size++;
 			unsortedCount++;
+		}
+
+		/**
+		 * 全ての要素を追加する
+		 *
+		 * @param nodes 追加するノードの配列
+		 * @param costs 追加するコストの配列
+		 */
+		public void pushAll(final int[] nodes, final long[] costs) {
+			final int n = nodes.length;
+			int s = size;
+			final long[] cArr = cost;
+			final int[] hArr = heap;
+			final int[] pArr = position;
+			if (isDescendingOrder) {
+				for (int i = 0; i < n; i++) {
+					final int node = nodes[i];
+					if (pArr[node] != -2) throw new IllegalArgumentException();
+					cArr[node] = -costs[i];
+					hArr[s] = node;
+					pArr[node] = s++;
+				}
+			} else {
+				for (int i = 0; i < n; i++) {
+					final int node = nodes[i];
+					if (pArr[node] != -2) throw new IllegalArgumentException();
+					cArr[node] = costs[i];
+					hArr[s] = node;
+					pArr[node] = s++;
+				}
+			}
+			size = s;
+			unsortedCount += n;
 		}
 
 		/**
@@ -298,7 +331,7 @@ public final class D {
 		}
 
 		/**
-		 * このインスタンスが保持する要素数を取得する
+		 * 要素数を取得する
 		 *
 		 * @return 要素数
 		 */
@@ -362,17 +395,17 @@ public final class D {
 		// -------------- ヒープ構築（遅延評価） --------------
 
 		/**
-		 * 遅延評価された未ソート要素をヒープ化し、ヒーププロパティを復元する。
+		 * 遅延評価された未ソート要素をヒープ化し、ヒーププロパティを復元する
 		 * <p>
-		 * このメソッドは、未ソート要素が存在する場合に最適なアルゴリズムを自動選択して実行します。
+		 * このメソッドは、未ソート要素が存在する場合に最適なアルゴリズムを自動選択して実行します
 		 * <p><b>分岐点の決定：</b>
-		 * 両アルゴリズムの最大比較回数を計算し、コストが小さい方を実行する。
+		 * 両アルゴリズムの最大比較回数を計算し、コストが小さい方を実行する
 		 * (heapifyCost < incrementalCost なら heapify を選択)
 		 */
 		private void ensureHeapProperty() {
-			int log2N = 31 - Integer.numberOfLeadingZeros(size);
-			int heapifyCost = size * 2 - 2 * log2N;
-			int incrementalCost = unsortedCount <= 100 ? getIncrementalCostStrict() : getIncrementalCostApprox();
+			final int log2N = 31 - Integer.numberOfLeadingZeros(size);
+			final int heapifyCost = size * 2 - 2 * log2N;
+			final int incrementalCost = unsortedCount <= 100 ? getIncrementalCostStrict() : getIncrementalCostApprox();
 			if (heapifyCost < incrementalCost) {
 				heapify();
 			} else {
@@ -382,32 +415,32 @@ public final class D {
 		}
 
 		/**
-		 * インクリメンタル構築の最大比較回数を厳密に計算する。
+		 * インクリメンタル構築の最大比較回数を厳密に計算する
 		 *
 		 * @return 最大比較回数の合計
 		 */
 		private int getIncrementalCostStrict() {
 			int totalCost = 0;
-			int sortedSize = size - unsortedCount;
+			final int sortedSize = size - unsortedCount;
 			for (int i = 1; i <= unsortedCount; i++) {
-				int currentHeapSize = sortedSize + i;
-				int depth = 31 - Integer.numberOfLeadingZeros(currentHeapSize);
+				final int currentHeapSize = sortedSize + i;
+				final int depth = 31 - Integer.numberOfLeadingZeros(currentHeapSize);
 				totalCost += depth;
 			}
 			return totalCost;
 		}
 
 		/**
-		 * インクリメンタル構築の最大比較回数を高速に近似計算する。
+		 * インクリメンタル構築の最大比較回数を高速に近似計算する
 		 * <p>コスト ≈ k * floor(log₂(平均ヒープサイズ))
 		 *
 		 * @return 最大比較回数の近似値
 		 */
 		private int getIncrementalCostApprox() {
-			int sortedSize = size - unsortedCount;
-			int avgHeapSize = sortedSize + (unsortedCount >> 1);
+			final int sortedSize = size - unsortedCount;
+			final int avgHeapSize = sortedSize + (unsortedCount >> 1);
 			if (avgHeapSize == 0) return 0;
-			int depthOfAvgSize = 31 - Integer.numberOfLeadingZeros(avgHeapSize);
+			final int depthOfAvgSize = 31 - Integer.numberOfLeadingZeros(avgHeapSize);
 			return unsortedCount * depthOfAvgSize;
 		}
 
@@ -427,17 +460,20 @@ public final class D {
 		 * @param i    ノードの現在位置
 		 */
 		private void siftUp(final int node, int i) {
-			long c = cost[node];
+			final long[] cArr = cost;
+			final int[] hArr = heap;
+			final int[] pArr = position;
+			final long c = cArr[node];
 			while (i > 0) {
-				int j = (i - 1) >> 1;
-				int parent = heap[j];
-				if (c >= cost[parent]) break;
-				heap[i] = parent;
-				position[parent] = i;
+				final int j = (i - 1) >> 1;
+				final int parent = hArr[j];
+				if (c >= cArr[parent]) break;
+				hArr[i] = parent;
+				pArr[parent] = i;
 				i = j;
 			}
-			heap[i] = node;
-			position[node] = i;
+			hArr[i] = node;
+			pArr[node] = i;
 		}
 
 		/**
@@ -447,19 +483,23 @@ public final class D {
 		 * @param i    ノードの現在位置
 		 */
 		private void siftDown(final int node, int i) {
-			long c = cost[node];
-			int half = size >> 1;
+			final long[] cArr = cost;
+			final int[] hArr = heap;
+			final int[] pArr = position;
+			final int n = size;
+			final long c = cArr[node];
+			final int half = n >> 1;
 			while (i < half) {
 				int child = (i << 1) + 1;
-				child += child + 1 < size && cost[heap[child]] > cost[heap[child + 1]] ? 1 : 0;
-				int childNode = heap[child];
-				if (c <= cost[childNode]) break;
-				heap[i] = childNode;
-				position[childNode] = i;
+				if (child + 1 < n && cArr[hArr[child]] > cArr[hArr[child + 1]]) child++;
+				final int childNode = hArr[child];
+				if (c <= cArr[childNode]) break;
+				hArr[i] = childNode;
+				pArr[childNode] = i;
 				i = child;
 			}
-			heap[i] = node;
-			position[node] = i;
+			hArr[i] = node;
+			pArr[node] = i;
 		}
 	}
 
@@ -664,7 +704,7 @@ public final class D {
 
 	@SuppressWarnings("unused")
 	private static final class FastScanner implements AutoCloseable {
-		private static final int DEFAULT_BUFFER_SIZE = 65536;
+		private static final int DEFAULT_BUFFER_SIZE = 1 << 20;
 		private final InputStream in;
 		private final byte[] buffer;
 		private int pos = 0, bufferLength = 0;
@@ -687,19 +727,22 @@ public final class D {
 		}
 
 		private int skipSpaces() {
-			int b;
+			final byte[] buf = buffer;
+			int p = pos, len = bufferLength, b;
 			do {
-				if (pos >= bufferLength) {
+				if (p >= len) {
 					try {
-						bufferLength = in.read(buffer);
-						pos = 0;
+						len = in.read(buf);
+						p = 0;
 					} catch (final IOException e) {
 						throw new RuntimeException(e);
 					}
-					if (bufferLength <= 0) throw new NoSuchElementException();
+					if (len <= 0) throw new NoSuchElementException();
 				}
-				b = buffer[pos++];
+				b = buf[p++];
 			} while (b <= 32);
+			pos = p;
+			bufferLength = len;
 			return b;
 		}
 
@@ -745,18 +788,29 @@ public final class D {
 				if (pos == bufferLength) hasNextByte();
 				b = buffer[pos++];
 			}
-			if (pos + 11 <= bufferLength) {
+			final byte[] buf = buffer;
+			int p = pos, len = bufferLength;
+			if (p + 11 <= len) {
 				do {
 					n = (n << 3) + (n << 1) + (b & 15);
-					b = buffer[pos++];
+					b = buf[p++];
 				} while (b > 32);
 			} else {
 				do {
 					n = (n << 3) + (n << 1) + (b & 15);
-					if (pos == bufferLength && !hasNextByte()) break;
-					b = buffer[pos++];
+					if (p == len) {
+						pos = p;
+						if (!hasNextByte()) {
+							p = pos;
+							break;
+						}
+						p = pos;
+						len = bufferLength;
+					}
+					b = buf[p++];
 				} while (b > 32);
 			}
+			pos = p;
 			return negative ? -n : n;
 		}
 
@@ -769,18 +823,29 @@ public final class D {
 				if (pos == bufferLength) hasNextByte();
 				b = buffer[pos++];
 			}
-			if (pos + 20 <= bufferLength) {
+			final byte[] buf = buffer;
+			int p = pos, len = bufferLength;
+			if (p + 20 <= len) {
 				do {
 					n = (n << 3) + (n << 1) + (b & 15);
-					b = buffer[pos++];
+					b = buf[p++];
 				} while (b > 32);
 			} else {
 				do {
 					n = (n << 3) + (n << 1) + (b & 15);
-					if (pos == bufferLength && !hasNextByte()) break;
-					b = buffer[pos++];
+					if (p == len) {
+						pos = p;
+						if (!hasNextByte()) {
+							p = pos;
+							break;
+						}
+						p = pos;
+						len = bufferLength;
+					}
+					b = buf[p++];
 				} while (b > 32);
 			}
+			pos = p;
 			return negative ? -n : n;
 		}
 
@@ -793,26 +858,63 @@ public final class D {
 				b = buffer[pos++];
 			}
 			long intPart = 0;
-			do {
-				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
-				if (pos == bufferLength && !hasNextByte()) {
-					b = -1;
-					break;
-				}
-				b = buffer[pos++];
-			} while (b >= '0' && b <= '9');
+			final byte[] buf = buffer;
+			int p = pos, len = bufferLength;
+			if (p + 20 <= len) {
+				do {
+					intPart = (intPart << 3) + (intPart << 1) + (b & 15);
+					b = buf[p++];
+				} while ('0' <= b && b <= '9');
+			} else {
+				do {
+					intPart = (intPart << 3) + (intPart << 1) + (b & 15);
+					if (p == len) {
+						pos = p;
+						if (!hasNextByte()) {
+							p = pos;
+							b = -1;
+							break;
+						}
+						p = pos;
+						len = bufferLength;
+					}
+					b = buf[p++];
+				} while ('0' <= b && b <= '9');
+			}
 			double result = intPart;
 			if (b == '.') {
-				if (pos == bufferLength) hasNextByte();
-				b = buffer[pos++];
+				if (p == len) {
+					pos = p;
+					hasNextByte();
+					p = pos;
+					len = bufferLength;
+				}
+				b = buf[p++];
 				double scale = 0.1;
-				do {
-					result += (b & 15) * scale;
-					scale *= 0.1;
-					if (pos == bufferLength && !hasNextByte()) break;
-					b = buffer[pos++];
-				} while (b >= '0' && b <= '9');
+				if (p + 20 <= len) {
+					do {
+						result += (b & 15) * scale;
+						scale *= 0.1;
+						b = buf[p++];
+					} while ('0' <= b && b <= '9');
+				} else {
+					do {
+						result += (b & 15) * scale;
+						scale *= 0.1;
+						if (p == len) {
+							pos = p;
+							if (!hasNextByte()) {
+								p = pos;
+								break;
+							}
+							p = pos;
+							len = bufferLength;
+						}
+						b = buf[p++];
+					} while ('0' <= b && b <= '9');
+				}
 			}
+			pos = p;
 			return negative ? -result : result;
 		}
 
@@ -822,35 +924,57 @@ public final class D {
 
 		public StringBuilder nextStringBuilder() {
 			final StringBuilder sb = new StringBuilder();
-			int b = skipSpaces();
+			int b = skipSpaces(), p = pos, len = bufferLength;
 			do {
 				sb.append((char) b);
-				if (pos == bufferLength && !hasNextByte()) break;
-				b = buffer[pos++];
+				if (p == len) {
+					pos = p;
+					if (!hasNextByte()) {
+						p = pos;
+						break;
+					}
+					p = pos;
+					len = bufferLength;
+				}
+				b = buffer[p++];
 			} while (b > 32);
+			pos = p;
 			return sb;
 		}
 
 		public String nextLine() {
 			final StringBuilder sb = new StringBuilder();
 			if (pos == bufferLength && !hasNextByte()) return "";
-			int b = buffer[pos];
+			final byte[] buf = buffer;
+			int p = pos, len = bufferLength, b = buf[p];
 			while (b != '\n' && b != '\r') {
 				sb.append((char) b);
-				pos++;
-				if (pos == bufferLength && !hasNextByte()) {
-					b = -1;
-					break;
+				p++;
+				if (p == len) {
+					pos = p;
+					if (!hasNextByte()) {
+						p = pos;
+						b = -1;
+						break;
+					}
+					p = pos;
+					len = bufferLength;
 				}
-				b = buffer[pos];
+				b = buf[p];
 			}
 			if (b == '\n' || b == '\r') {
-				pos++;
+				p++;
 				if (b == '\r') {
-					if (pos == bufferLength) hasNextByte();
-					if (pos < bufferLength && buffer[pos] == '\n') pos++;
+					if (p == len) {
+						pos = p;
+						hasNextByte();
+						p = pos;
+						len = bufferLength;
+					}
+					if (p < len && buf[p] == '\n') p++;
 				}
 			}
+			pos = p;
 			return sb.toString();
 		}
 
@@ -877,6 +1001,26 @@ public final class D {
 		public double[] nextDouble(final int n) {
 			final double[] a = new double[n];
 			for (int i = 0; i < n; i++) a[i] = nextDouble();
+			return a;
+		}
+
+		public int nextInt0() {
+			return nextInt() - 1;
+		}
+
+		public long nextLong0() {
+			return nextLong() - 1;
+		}
+
+		public int[] nextInt0(final int n) {
+			final int[] a = new int[n];
+			for (int i = 0; i < n; i++) a[i] = nextInt() - 1;
+			return a;
+		}
+
+		public long[] nextLong0(final int n) {
+			final long[] a = new long[n];
+			for (int i = 0; i < n; i++) a[i] = nextLong() - 1;
 			return a;
 		}
 
@@ -1177,7 +1321,7 @@ public final class D {
 		private static final VarHandle SHORT_HANDLE = MethodHandles.byteArrayViewVarHandle(short[].class, ByteOrder.LITTLE_ENDIAN);
 		private static final int MAX_INT_DIGITS = 11;
 		private static final int MAX_LONG_DIGITS = 20;
-		private static final int DEFAULT_BUFFER_SIZE = 65536;
+		private static final int DEFAULT_BUFFER_SIZE = 1 << 20;
 		private static final byte LINE = '\n';
 		private static final byte SPACE = ' ';
 		private static final byte HYPHEN = '-';
@@ -1311,7 +1455,7 @@ public final class D {
 		public void close() {
 			try {
 				flush();
-				if (out != System.out) out.close();
+				out.close();
 			} catch (final IOException e) {
 				throw new RuntimeException(e);
 			}
@@ -1520,7 +1664,7 @@ public final class D {
 			final int required = pos + additional;
 			if (required <= buffer.length) return;
 			if (required <= 1_000_000_000) {
-				buffer = Arrays.copyOf(buffer, roundUpToPowerOfTwo(required));
+				buffer = copyOf(buffer, roundUpToPowerOfTwo(required));
 			} else {
 				flush();
 			}
@@ -1534,9 +1678,8 @@ public final class D {
 			pos += len;
 		}
 
-		private void write(int i) {
+		private int write(int i, int p) {
 			final byte[] buf = buffer;
-			int p = pos;
 			if (i >= 0) i = -i;
 			else BYTE_ARRAY_HANDLE.set(buf, p++, HYPHEN);
 			final int digits = countDigits(i);
@@ -1551,12 +1694,15 @@ public final class D {
 			final int r = -i;
 			if (r >= 10) SHORT_HANDLE.set(buf, writePos - 2, DIGIT_PAIRS[r]);
 			else BYTE_ARRAY_HANDLE.set(buf, writePos - 1, (byte) (r + ZERO));
-			pos = p + digits;
+			return p + digits;
 		}
 
-		private void write(long l) {
+		private void write(int i) {
+			pos = write(i, pos);
+		}
+
+		private int write(long l, int p) {
 			final byte[] buf = buffer;
-			int p = pos;
 			if (l >= 0) l = -l;
 			else BYTE_ARRAY_HANDLE.set(buf, p++, HYPHEN);
 			final int digits = countDigits(l);
@@ -1571,13 +1717,17 @@ public final class D {
 			final int r = (int) -l;
 			if (r >= 10) SHORT_HANDLE.set(buf, writePos - 2, DIGIT_PAIRS[r]);
 			else BYTE_ARRAY_HANDLE.set(buf, writePos - 1, (byte) (r + ZERO));
-			pos = p + digits;
+			return p + digits;
 		}
 
-		private void write(final String s) {
+		private void write(long l) {
+			pos = write(l, pos);
+		}
+
+		private int write(final String s, int p) {
 			final int len = s.length();
 			final byte[] buf = buffer;
-			int p = pos, i = 0;
+			int i = 0;
 			final int limit = len & ~7;
 			while (i < limit) {
 				BYTE_ARRAY_HANDLE.set(buf, p, (byte) s.charAt(i));
@@ -1592,7 +1742,11 @@ public final class D {
 				i += 8;
 			}
 			while (i < len) BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
-			pos = p;
+			return p;
+		}
+
+		private void write(final String s) {
+			pos = write(s, pos);
 		}
 
 		public FastPrinter println(final int a, final int b) {
@@ -1885,11 +2039,15 @@ public final class D {
 			if (from >= to) return this;
 			final int len = to - from;
 			ensureCapacity(len * (MAX_INT_DIGITS + 1));
-			write(arr[from]);
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[from], p);
+			final byte d = (byte) delimiter;
 			for (int i = from + 1; i < to; i++) {
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
-				write(arr[i]);
+				BYTE_ARRAY_HANDLE.set(buf, p++, d);
+				p = write(arr[i], p);
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1898,11 +2056,15 @@ public final class D {
 			if (from >= to) return this;
 			final int len = to - from;
 			ensureCapacity(len * (MAX_LONG_DIGITS + 1));
-			write(arr[from]);
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[from], p);
+			final byte d = (byte) delimiter;
 			for (int i = from + 1; i < to; i++) {
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
-				write(arr[i]);
+				BYTE_ARRAY_HANDLE.set(buf, p++, d);
+				p = write(arr[i], p);
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1910,24 +2072,34 @@ public final class D {
 		public FastPrinter print(final double[] arr, final int from, final int to, final char delimiter) {
 			if (from >= to) return this;
 			print(arr[from]);
+			int p = pos;
+			final byte d = (byte) delimiter;
 			for (int i = from + 1; i < to; i++) {
-				String s = Double.toString(arr[i]);
+				final String s = Double.toString(arr[i]);
+				pos = p;
 				ensureCapacity(s.length() + 1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
-				write(s);
+				p = pos;
+				BYTE_ARRAY_HANDLE.set(buffer, p++, d);
+				p = write(s, p);
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter print(final String[] arr, final int from, final int to, final char delimiter) {
 			if (from >= to) return this;
-			print(arr[from]);
+			int p = pos;
+			p = write(arr[from], p);
+			final byte d = (byte) delimiter;
 			for (int i = from + 1; i < to; i++) {
+				pos = p;
 				ensureCapacity(arr[i].length() + 1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
-				write(arr[i]);
+				p = pos;
+				BYTE_ARRAY_HANDLE.set(buffer, p++, d);
+				p = write(arr[i], p);
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}

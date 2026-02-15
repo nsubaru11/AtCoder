@@ -8,7 +8,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class A {
+public final class C2 {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -24,14 +24,20 @@ public final class A {
 		// MOD = 1_000_000_007;
 		di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 		dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
-		sc = new FastScanner(64);
-		out = new FastPrinter(64);
+		sc = new FastScanner();
+		out = new FastPrinter();
 	}
 	// endregion
 
 	private static void solve() {
-		char[] s = sc.nextChars();
-		out.println(s[0] == s[s.length - 1]);
+		int n = sc.nextInt();
+		int[] a = sc.nextInt0(n);
+		int[] ans = new int[n];
+		for (int i = n - 1; i >= 0; i--) {
+			if (i == a[i]) ans[i] = i + 1;
+			else ans[i] = ans[a[i]];
+		}
+		out.print(ans).println();
 	}
 
 	// region < Utility Methods >
@@ -1195,7 +1201,7 @@ public final class A {
 			final int required = pos + additional;
 			if (required <= buffer.length) return;
 			if (required <= 1_000_000_000) {
-				buffer = copyOf(buffer, roundUpToPowerOfTwo(required));
+				buffer = Arrays.copyOf(buffer, roundUpToPowerOfTwo(required));
 			} else {
 				flush();
 			}
