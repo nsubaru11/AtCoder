@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Highlighter
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.2.0
+// @version      1.2.1
 // @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
 // @author       nsubaru11
 // @license      MIT
@@ -74,43 +74,35 @@
 		const colors = readColors();
 		const style = document.createElement('style');
 		style.id = 'atcoder-highlighter-style';
-		style.textContent = `
-            .target-scope {
-                --num-color: ${colors.num}; /* 数字：濃く深い青 */
-                --var-color: ${colors.var}; /* 変数：濃く深い赤 */
-                --font-weight: bold;  /* 視認性を最大化する太字 */
-            }
+		style.textContent = /* language=css */ `
+			/* 強調表示の共通設定 */
+			.target-scope .katex .mathnormal,
+			.target-scope .number,
+			.time-limit-value,
+			.memory-limit-value {
+				font-weight: 800 !important;
+			}
 
-            /* KaTeX の変数 (アルファベット) : .mathnormal クラスを持つ要素 */
-            .target-scope .katex .mathnormal {
-                color: var(--var-color) !important;
-                font-weight: var(--font-weight) !important;
-            }
+			.target-scope .katex .mathnormal {
+				color: ${colors.var} !important;
+			}
 
-            /* 数値（JSで抽出した部分） */
-            .target-scope .number {
-                color: var(--num-color) !important;
-                font-weight: var(--font-weight) !important;
-            }
+			.target-scope .number {
+				color: ${colors.num} !important;
+			}
 
-            /* 実行時間/メモリ制限の値のみ強調 */
-            .time-limit-value {
-                color: ${colors.time};
-                font-weight: 800;
-            }
+			.time-limit-value, .time-limit-value-number {
+				color: ${colors.time};
+			}
 
-            .time-limit-value-number {
-                color: ${colors.time};
-                font-weight: 800;
-                font-size: 2em;
-            }
+			.memory-limit-value, .memory-limit-value-number {
+				color: ${colors.memory};
+			}
 
-            .memory-limit-value {
-                color: ${colors.memory};
-                font-weight: 800;
-                font-size: 2em;
-            }
-        `;
+			.time-limit-value-number, .memory-limit-value-number {
+				font-size: 2em;
+			}
+		`;
 		(document.head || document.documentElement).appendChild(style);
 	}
 
@@ -290,22 +282,22 @@
 		const root = document.getElementById('main-container') || document.body;
 		if (!root) return;
 
+		const configs = [
+			{keywords: TIME_LIMIT_KEYWORDS, cls: 'time-limit-value', numCls: 'time-limit-value-number'},
+			{keywords: MEMORY_LIMIT_KEYWORDS, cls: 'memory-limit-value', numCls: 'memory-limit-value-number'}
+		];
+
 		const candidates = root.querySelectorAll('p, dt, dd, th, td, div, li');
 		candidates.forEach(el => {
 			const text = el.textContent || '';
-			const hasTime = TIME_LIMIT_KEYWORDS.some(kw => text.includes(kw));
-			const hasMemory = MEMORY_LIMIT_KEYWORDS.some(kw => text.includes(kw));
-			if (!hasTime && !hasMemory) return;
-
-			if (hasTime && !el.querySelector('.time-limit-value-number')) {
-				TIME_LIMIT_KEYWORDS.forEach(kw => wrapLimitValue(el, kw, 'time-limit-value', {
-					numberOnly: true,
-					numberClass: 'time-limit-value-number',
-				}));
-			}
-			if (hasMemory && !el.querySelector('.memory-limit-value')) {
-				MEMORY_LIMIT_KEYWORDS.forEach(kw => wrapLimitValue(el, kw, 'memory-limit-value'));
-			}
+			configs.forEach(({keywords, cls, numCls}) => {
+				if (keywords.some(kw => text.includes(kw)) && !el.querySelector(`.${numCls}`)) {
+					keywords.forEach(kw => wrapLimitValue(el, kw, cls, {
+						numberOnly: true,
+						numberClass: numCls,
+					}));
+				}
+			});
 		});
 	}
 
@@ -333,44 +325,23 @@
 	function registerMenu() {
 		if (typeof GM_registerMenuCommand !== 'function') return;
 
-		GM_registerMenuCommand('Highlighter: 数字の色', () => {
-			const current = readColors();
-			const next = prompt('数字の色 (例: #0033B3 / #03b / rgb(0,51,179))', current.num);
-			if (!next) return;
-			const normalized = normalizeColor(next);
-			if (!normalized) return alert('色の形式が正しくありません。');
-			writeColor('numColor', normalized);
-			resetStyles();
-		});
+		const menuItems = [
+			{label: '数字の色', key: 'numColor', prop: 'num'},
+			{label: '変数の色', key: 'varColor', prop: 'var'},
+			{label: '実行時間制限の色', key: 'timeLimitColor', prop: 'time'},
+			{label: 'メモリ制限の色', key: 'memoryLimitColor', prop: 'memory'}
+		];
 
-		GM_registerMenuCommand('Highlighter: 変数の色', () => {
-			const current = readColors();
-			const next = prompt('変数の色 (例: #9E2927 / #c33 / rgb(158,41,39))', current.var);
-			if (!next) return;
-			const normalized = normalizeColor(next);
-			if (!normalized) return alert('色の形式が正しくありません。');
-			writeColor('varColor', normalized);
-			resetStyles();
-		});
-
-		GM_registerMenuCommand('Highlighter: 実行時間制限の色', () => {
-			const current = readColors();
-			const next = prompt('実行時間制限の色 (例: #b3542a / #c73 / rgb(179,84,42))', current.time);
-			if (!next) return;
-			const normalized = normalizeColor(next);
-			if (!normalized) return alert('色の形式が正しくありません。');
-			writeColor('timeLimitColor', normalized);
-			resetStyles();
-		});
-
-		GM_registerMenuCommand('Highlighter: メモリ制限の色', () => {
-			const current = readColors();
-			const next = prompt('メモリ制限の色 (例: #1d643b / #0a6 / rgb(29,100,59))', current.memory);
-			if (!next) return;
-			const normalized = normalizeColor(next);
-			if (!normalized) return alert('色の形式が正しくありません。');
-			writeColor('memoryLimitColor', normalized);
-			resetStyles();
+		menuItems.forEach(({label, key, prop}) => {
+			GM_registerMenuCommand(`Highlighter: ${label}`, () => {
+				const current = readColors();
+				const next = prompt(`${label} (例: #0033B3 / #03b / rgb(0,51,179))`, current[prop]);
+				if (!next) return;
+				const normalized = normalizeColor(next);
+				if (!normalized) return alert('色の形式が正しくありません。');
+				writeColor(key, normalized);
+				resetStyles();
+			});
 		});
 	}
 
