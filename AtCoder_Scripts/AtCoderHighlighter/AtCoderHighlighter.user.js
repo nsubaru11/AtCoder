@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AtCoder Highlighter
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.2.1
+// @version      1.3.0
 // @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
 // @author       nsubaru11
 // @license      MIT
@@ -32,6 +32,18 @@
 		var: '#9E2927',
 		time: '#b3542a',
 		memory: '#1d643b',
+	};
+
+	const IS_JP = navigator.language.startsWith('ja');
+	const MSG = {
+		prompt: IS_JP ? 'の色 (例: #0033B3 / #03b / rgb(0,51,179))' : ' Color (e.g. #0033B3 / #03b / rgb(0,51,179))',
+		error: IS_JP ? '色の形式が正しくありません。' : 'Invalid color format.',
+		labels: {
+			num: IS_JP ? '数字の色' : 'Numbers Color',
+			var: IS_JP ? '変数の色' : 'Variables Color',
+			time: IS_JP ? '実行時間制限の色' : 'Time Limit Color',
+			memory: IS_JP ? 'メモリ制限の色' : 'Memory Limit Color'
+		}
 	};
 
 	function normalizeHexColor(input) {
@@ -326,19 +338,19 @@
 		if (typeof GM_registerMenuCommand !== 'function') return;
 
 		const menuItems = [
-			{label: '数字の色', key: 'numColor', prop: 'num'},
-			{label: '変数の色', key: 'varColor', prop: 'var'},
-			{label: '実行時間制限の色', key: 'timeLimitColor', prop: 'time'},
-			{label: 'メモリ制限の色', key: 'memoryLimitColor', prop: 'memory'}
+			{label: MSG.labels.num, key: 'numColor', prop: 'num'},
+			{label: MSG.labels.var, key: 'varColor', prop: 'var'},
+			{label: MSG.labels.time, key: 'timeLimitColor', prop: 'time'},
+			{label: MSG.labels.memory, key: 'memoryLimitColor', prop: 'memory'}
 		];
 
 		menuItems.forEach(({label, key, prop}) => {
 			GM_registerMenuCommand(`Highlighter: ${label}`, () => {
 				const current = readColors();
-				const next = prompt(`${label} (例: #0033B3 / #03b / rgb(0,51,179))`, current[prop]);
+				const next = prompt(`${label}${MSG.prompt}`, current[prop]);
 				if (!next) return;
 				const normalized = normalizeColor(next);
-				if (!normalized) return alert('色の形式が正しくありません。');
+				if (!normalized) return alert(MSG.error);
 				writeColor(key, normalized);
 				resetStyles();
 			});
