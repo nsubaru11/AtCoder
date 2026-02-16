@@ -14,8 +14,6 @@
 // @run-at          document-idle
 // @homepageURL     https://github.com/nsubaru11/AtCoder/tree/main/AtCoder_Scripts/AtCoderHighlighter
 // @supportURL      https://github.com/nsubaru11/AtCoder/issues
-// @downloadURL     https://update.greasyfork.org/scripts/566471/AtCoder%20Highlighter.user.js
-// @updateURL       https://update.greasyfork.org/scripts/566471/AtCoder%20Highlighter.meta.js
 // ==/UserScript==
 
 (function () {
