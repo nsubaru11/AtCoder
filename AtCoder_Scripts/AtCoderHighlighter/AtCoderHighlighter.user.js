@@ -68,9 +68,10 @@
 	}
 
 	function injectStyles() {
-		if (document.getElementById('atcoder-highlighter-style')) return;
-		const colors = readColors();
+		const existingStyle = document.getElementById('atcoder-highlighter-style');
+		if (existingStyle) existingStyle.remove();
 
+		const colors = readColors();
 		const style = document.createElement('style');
 		style.id = 'atcoder-highlighter-style';
 		style.textContent = `
@@ -107,6 +108,7 @@
             .memory-limit-value {
                 color: ${colors.memory};
                 font-weight: 800;
+                font-size: 2em;
             }
         `;
 		(document.head || document.documentElement).appendChild(style);
