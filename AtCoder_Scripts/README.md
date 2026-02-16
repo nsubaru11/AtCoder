@@ -8,7 +8,7 @@
 
 AtCoder の提出一覧の絞り込み・並び替えのデフォルト設定を適用します。
 
-- **[インストール](https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderCustomDefaultSubmissions/AtCoderCustomDefaultSubmissions.user.js)**
+- **[インストール](https://greasyfork.org/ja/scripts/566471-atcoder-highlighter)**
 
 ### AtCoder Easy Test for Java
 
