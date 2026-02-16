@@ -1,19 +1,21 @@
 // ==UserScript==
-// @name         AtCoder Highlighter
-// @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.3.0
-// @description  Highlight numbers and variables in AtCoder task statements strictly for KaTeX
-// @author       nsubaru11
-// @license      MIT
-// @match        https://atcoder.jp/contests/*/tasks/*
-// @grant        GM_getValue
-// @grant        GM_setValue
-// @grant        GM_registerMenuCommand
-// @run-at       document-idle
-// @homepageURL  https://github.com/nsubaru11/AtCoder/tree/main/AtCoder_Scripts/AtCoderHighlighter
-// @supportURL   https://github.com/nsubaru11/AtCoder/issues
-// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderHighlighter/AtCoderHighlighter.user.js
-// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderHighlighter/AtCoderHighlighter.user.js
+// @name            AtCoder Highlighter
+// @name:en         AtCoder Highlighter
+// @namespace       https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
+// @version         1.3.1
+// @description     AtCoder の問題文中の数字と変数、実行時間/メモリ制限を自動で強調表示させます
+// @description:en  Automatically highlights numbers, variables, and time/memory limits in AtCoder task statements
+// @author          nsubaru11
+// @license         MIT
+// @match           https://atcoder.jp/contests/*/tasks/*
+// @grant           GM_getValue
+// @grant           GM_setValue
+// @grant           GM_registerMenuCommand
+// @run-at          document-idle
+// @homepageURL     https://github.com/nsubaru11/AtCoder/tree/main/AtCoder_Scripts/AtCoderHighlighter
+// @supportURL      https://github.com/nsubaru11/AtCoder/issues
+// @downloadURL     https://update.greasyfork.org/scripts/566471/AtCoder%20Highlighter.user.js
+// @updateURL       https://update.greasyfork.org/scripts/566471/AtCoder%20Highlighter.meta.js
 // ==/UserScript==
 
 (function () {
