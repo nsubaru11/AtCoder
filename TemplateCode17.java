@@ -29,8 +29,8 @@ public final class ${NAME} {
 		// MOD = 1_000_000_007;
 		di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 		dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
-		sc = new FastScanner(System.in);
-		out = new FastPrinter(System.out);
+		sc = new FastScanner();
+		out = new FastPrinter();
 	}
 	// endregion
 
@@ -95,6 +95,48 @@ public final class ${NAME} {
 		if (a[i] >= v) return false;
 		a[i] = v;
 		return true;
+	}
+
+	private static int min(int... a) {
+		int len = a.length;
+		int min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static int max(int... a) {
+		int len = a.length;
+		int max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
+	}
+
+	private static long min(long... a) {
+		int len = a.length;
+		long min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static long max(long... a) {
+		int len = a.length;
+		long max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
+	}
+
+	private static double min(double... a) {
+		int len = a.length;
+		double min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static double max(double... a) {
+		int len = a.length;
+		double max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
 	}
 
 	private static long lModPow(long a, long b, final long mod) {
@@ -289,19 +331,19 @@ public final class ${NAME} {
 					b = buf[p++];
 				} while (b > 32);
 			} else {
-			do {
-				n = (n << 3) + (n << 1) + (b & 15);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
+				do {
+					n = (n << 3) + (n << 1) + (b & 15);
+					if (p == len) {
+						pos = p;
+						if (!hasNextByte()) {
+							p = pos;
+							break;
+						}
 						p = pos;
-						break;
+						len = bufferLength;
 					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buf[p++];
-			} while (b > 32);
+					b = buf[p++];
+				} while (b > 32);
 			}
 			pos = p;
 			return negative ? -n : n;
@@ -324,19 +366,19 @@ public final class ${NAME} {
 					b = buf[p++];
 				} while (b > 32);
 			} else {
-			do {
-				n = (n << 3) + (n << 1) + (b & 15);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
+				do {
+					n = (n << 3) + (n << 1) + (b & 15);
+					if (p == len) {
+						pos = p;
+						if (!hasNextByte()) {
+							p = pos;
+							break;
+						}
 						p = pos;
-						break;
+						len = bufferLength;
 					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buf[p++];
-			} while (b > 32);
+					b = buf[p++];
+				} while (b > 32);
 			}
 			pos = p;
 			return negative ? -n : n;
@@ -354,10 +396,10 @@ public final class ${NAME} {
 			final byte[] buf = buffer;
 			int p = pos, len = bufferLength;
 			if (p + 20 <= len) {
-			do {
-				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
-				b = buf[p++];
-			} while ('0' <= b && b <= '9');
+				do {
+					intPart = (intPart << 3) + (intPart << 1) + (b & 15);
+					b = buf[p++];
+				} while ('0' <= b && b <= '9');
 			} else {
 				do {
 					intPart = (intPart << 3) + (intPart << 1) + (b & 15);
@@ -386,11 +428,11 @@ public final class ${NAME} {
 				long fracPart = 0;
 				long divisor = 1;
 				if (p + 20 <= len) {
-				do {
-					fracPart = fracPart * 10 + (b & 15);
-					divisor *= 10;
-					b = buf[p++];
-				} while ('0' <= b && b <= '9');
+					do {
+						fracPart = fracPart * 10 + (b & 15);
+						divisor *= 10;
+						b = buf[p++];
+					} while ('0' <= b && b <= '9');
 				} else {
 					do {
 						fracPart = fracPart * 10 + (b & 15);
@@ -454,20 +496,20 @@ public final class ${NAME} {
 					}
 					p = pos;
 					len = bufferLength;
-			}
+				}
 				b = buf[p];
 			}
 			if (b == '\n' || b == '\r') {
 				p++;
-			if (b == '\r') {
-				if (p == len) {
-					pos = p;
-					hasNextByte();
-					p = pos;
-					len = bufferLength;
+				if (b == '\r') {
+					if (p == len) {
+						pos = p;
+						hasNextByte();
+						p = pos;
+						len = bufferLength;
+					}
+					if (p < len && buf[p] == '\n') p++;
 				}
-				if (p < len && buf[p] == '\n') p++;
-			}
 			}
 			pos = p;
 			return sb.toString();
@@ -2240,6 +2282,5 @@ public final class ${NAME} {
 			return this;
 		}
 	}
-
 	// endregion
 }
