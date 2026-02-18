@@ -11,6 +11,7 @@ import java.util.function.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
+import static java.util.Comparator.*;
 
 public final class ${NAME} {
 
