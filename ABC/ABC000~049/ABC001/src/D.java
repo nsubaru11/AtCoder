@@ -7,9 +7,8 @@ import java.util.function.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
-import static java.util.Comparator.*;
 
-public final class A {
+public final class D {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -31,9 +30,25 @@ public final class A {
 	// endregion
 
 	private static void solve() {
-		int h1 = sc.nextInt();
-		int h2 = sc.nextInt();
-		out.println(h1 - h2);
+		int n = sc.nextInt();
+		int[] ps = new int[2402];
+		while (n-- > 0) {
+			String[] s = sc.next().split("-");
+			int l = Integer.parseInt(s[0]), r = Integer.parseInt(s[1]);
+			r = r + (5 - r % 5) % 5;
+			if (r % 100 == 60) r = (r / 100 + 1) * 100;
+			ps[l - l % 5]++;
+			ps[r + 1]--;
+		}
+		parallelPrefix(ps, Integer::sum);
+		int p = -1;
+		for (int i = 0; i < 2402; i++) {
+			if (ps[i] != 0 && p == -1) p = i;
+			else if (ps[i] == 0 && p != -1) {
+				out.printf("%04d-%04d\n", p, i - 1);
+				p = -1;
+			}
+		}
 	}
 
 	// region < Utility Methods >

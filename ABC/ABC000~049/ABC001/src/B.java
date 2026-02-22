@@ -9,7 +9,7 @@ import static java.lang.Math.*;
 import static java.util.Arrays.*;
 import static java.util.Comparator.*;
 
-public final class A {
+public final class B {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -31,9 +31,23 @@ public final class A {
 	// endregion
 
 	private static void solve() {
-		int h1 = sc.nextInt();
-		int h2 = sc.nextInt();
-		out.println(h1 - h2);
+		int m = sc.nextInt();
+		if (m < 100) {
+			out.println("00");
+		} else if (m <= 5000) {
+			int vv = m / 100;
+			if (vv < 10) {
+				out.print('0').println(vv);
+			} else {
+				out.println(vv);
+			}
+		} else if (m <= 30000) {
+			out.println(m / 1000 + 50);
+		} else if (m <= 70000) {
+			out.println((m / 1000 - 30) / 5 + 80);
+		} else {
+			out.println(89);
+		}
 	}
 
 	// region < Utility Methods >

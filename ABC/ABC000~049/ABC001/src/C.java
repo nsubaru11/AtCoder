@@ -9,7 +9,7 @@ import static java.lang.Math.*;
 import static java.util.Arrays.*;
 import static java.util.Comparator.*;
 
-public final class A {
+public final class C {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG;
@@ -31,9 +31,51 @@ public final class A {
 	// endregion
 
 	private static void solve() {
-		int h1 = sc.nextInt();
-		int h2 = sc.nextInt();
-		out.println(h1 - h2);
+		int deg = sc.nextInt() * 10;
+		int dis = sc.nextInt();
+		String dir = getDir(deg);
+		int w = getPower((int) round(dis / 60.0 * 10) / 10.0);
+		if (w == 0) {
+			out.println("C 0");
+			return;
+		}
+		out.print(dir, w).println();
+	}
+
+	private static String getDir(int deg) {
+		if (deg < 1125) return "N";
+		if (deg < 3375) return "NNE";
+		if (deg < 5625) return "NE";
+		if (deg < 7875) return "ENE";
+		if (deg < 10125) return "E";
+		if (deg < 12375) return "ESE";
+		if (deg < 14625) return "SE";
+		if (deg < 16875) return "SSE";
+		if (deg < 19125) return "S";
+		if (deg < 21375) return "SSW";
+		if (deg < 23625) return "SW";
+		if (deg < 25875) return "WSW";
+		if (deg < 28125) return "W";
+		if (deg < 30375) return "WNW";
+		if (deg < 32625) return "NW";
+		if (deg < 34875) return "NNW";
+		return "N";
+	}
+
+	private static int getPower(double dir) {
+		if (dir <= 0.2) return 0;
+		if (dir <= 1.5) return 1;
+		if (dir <= 3.3) return 2;
+		if (dir <= 5.4) return 3;
+		if (dir <= 7.9) return 4;
+		if (dir <= 10.7) return 5;
+		if (dir <= 13.8) return 6;
+		if (dir <= 17.1) return 7;
+		if (dir <= 20.7) return 8;
+		if (dir <= 24.4) return 9;
+		if (dir <= 28.4) return 10;
+		if (dir <= 32.6) return 11;
+		return 12;
 	}
 
 	// region < Utility Methods >
