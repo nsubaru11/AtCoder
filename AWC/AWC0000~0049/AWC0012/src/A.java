@@ -33,10 +33,10 @@ public final class A {
 		int n = sc.nextInt();
 		int t = sc.nextInt();
 		int[] h = sc.nextInt(n);
-		int[] c = sc.nextInt(n);
 		long ans = 0;
 		for (int i = 0; i < n; i++) {
-			if (h[i] <= t) ans += c[i];
+			int c = sc.nextInt();
+			if (h[i] <= t) ans += c;
 		}
 		out.println(ans);
 	}
