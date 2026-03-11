@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AtCoder Custom Default Submissions
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version      1.5.3
-// @description  AtCoderのすべての提出の絞り込み、並び替え設定のデフォルトを設定します。メニューから設定を変更できます。
+// @version      1.6.0
+// @description  AtCoderのすべての提出・自分の提出の絞り込み、並び替え設定のデフォルトを設定します。メニューから設定を変更できます。
 // @author       ktnyori (original), nsubaru11 (modified)
 // @license      MIT
 // @include      https://atcoder.jp/contests/*
@@ -92,29 +92,39 @@
 		GM_registerMenuCommand('AtCoder Custom Default Submissions: 設定リセット', resetConfig);
 	}
 
+	function getTaskId() {
+		const match = location.pathname.match(/^\/contests\/[^/]+\/tasks\/([^/?#]+)\/?$/);
+		return match && match[1] ? match[1] : '';
+	}
+
+	function buildSubmissionQuery(config, task) {
+		const params = new URLSearchParams({
+			'f.LanguageName': config.language,
+			// AC, WA, TLE, MLE, RE, CE, QLE, OLE, IE, WJ, WR, Judging
+			'f.Status': config.status,
+			// source_length, time_consumption, memory_consumption, score
+			'orderBy': config.orderBy,
+		});
+		if (task) params.set('f.Task', task);
+		return params.toString();
+	}
+
+	function isSubmissionLink(url) {
+		return /\/submissions(?:\/me)?\/?$/.test(url.pathname);
+	}
+
 	const config = readConfig();
 
 	// 問題ページにいるときは問題番号での絞り込みも追加
-	const taskPage = location.href.match(/tasks\/(.+?)$/);
-	let task = '';
-	if (config.includeTaskFilter && taskPage && taskPage[1]) {
-		task = taskPage[1];
-	}
-	const params = {
-		'f.LanguageName': config.language,
-		// AC, WA, TLE, MLE, RE, CE, QLE, OLE, IE, WJ, WR, Judging
-		'f.Status': config.status,
-		// source_length, time_consumption, memory_consumption, score
-		'orderBy': config.orderBy,
-	};
-	if (task) params['f.Task'] = task;
-	const esc = encodeURIComponent;
-	const querystring = Object.keys(params).map(k => esc(k) + '=' + esc(params[k])).join('&');
+	const task = config.includeTaskFilter ? getTaskId() : '';
+	const querystring = buildSubmissionQuery(config, task);
 	const links = document.querySelectorAll('#contest-nav-tabs a');
 	for (let i = 0; i < links.length; i++) {
 		const href = links[i].getAttribute('href');
-		if (href && href.endsWith('submissions')) {
-			links[i].setAttribute('href', `${href}?${querystring}`);
-		}
+		if (!href) continue;
+		const url = new URL(href, location.origin);
+		if (!isSubmissionLink(url)) continue;
+		url.search = querystring;
+		links[i].setAttribute('href', `${url.pathname}${url.search}${url.hash}`);
 	}
 })();
