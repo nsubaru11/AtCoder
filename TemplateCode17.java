@@ -18,22 +18,13 @@ import static java.util.Comparator.*;
 public final class ${NAME} {
 
 	// region < Constants & Globals >
-	private static final boolean DEBUG;
-	private static final int MOD;
-	private static final int[] di;
-	private static final int[] dj;
-	private static final FastScanner sc;
-	private static final FastPrinter out;
-
-	static {
-		DEBUG = true;
-		MOD = 998244353;
-		// MOD = 1_000_000_007;
-		di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
-		dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
-		sc = new FastScanner();
-		out = new FastPrinter();
-	}
+	private static final boolean DEBUG = true;
+	private static final int MOD = 998244353;
+	// private static final int MOD = 1_000_000_007;
+	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
+	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
+	private static final FastScanner sc = new FastScanner();
+	private static final FastPrinter out = new FastPrinter();
 	// endregion
 
 	private static void solve() {
@@ -41,8 +32,12 @@ public final class ${NAME} {
 	}
 
 	// region < Utility Methods >
+	private static boolean isValidRange(final int i, final int from, final int to) {
+		return ((i - from) | (to - 1 - i)) >= 0;
+	}
+
 	private static boolean isValidRange(final int i, final int j, final int h, final int w) {
-		return 0 <= i && i < h && 0 <= j && j < w;
+		return ((i | j | (h - 1 - i) | (w - 1 - j)) >>> 31) == 0;
 	}
 
 	private static void swap(final char[] a, final int i, final int j) {
@@ -142,35 +137,23 @@ public final class ${NAME} {
 	}
 
 	private static long lModPow(long a, long b, final long mod) {
+		if (b == 0) return 1;
 		long ans = 1;
-		for (a %= mod; b > 0; a = a * a % mod, b >>= 1) {
+		for (a %= mod; b > 1; b >>= 1) {
 			if ((b & 1) == 1) ans = ans * a % mod;
+			a = a * a % mod;
 		}
-		return ans;
+		return ans * a % mod;
 	}
 
 	private static int iModPow(int a, int b, final int mod) {
+		if (b == 0) return 1;
 		int ans = 1;
-		for (a %= mod; b > 0; a = (int) ((long) a * a % mod), b >>= 1) {
+		for (a %= mod; b > 1; b >>= 1) {
 			if ((b & 1) == 1) ans = (int) ((long) ans * a % mod);
+			a = (int) ((long) a * a % mod);
 		}
-		return ans;
-	}
-
-	private static long floorLong(final long a, final long b) {
-		return a < 0 ? (a - b + 1) / b : a / b;
-	}
-
-	private static int floorInt(final int a, final int b) {
-		return a < 0 ? (a - b + 1) / b : a / b;
-	}
-
-	private static long ceilLong(final long a, final long b) {
-		return a < 0 ? a / b : (a + b - 1) / b;
-	}
-
-	private static int ceilInt(final int a, final int b) {
-		return a < 0 ? a / b : (a + b - 1) / b;
+		return (int) ((long) ans * a % mod);
 	}
 
 	private static long lcmLong(final long x, final long y) {
@@ -224,8 +207,9 @@ public final class ${NAME} {
 	public static void main(final String[] args) {
 		try {
 			solve();
-		} catch (final Exception e) {
+		} catch (final Throwable e) {
 			e.printStackTrace();
+			Runtime.getRuntime().halt(1);
 		} finally {
 			sc.close();
 			out.close();
@@ -1091,14 +1075,7 @@ public final class ${NAME} {
 		}
 
 		private static int roundUpToPowerOfTwo(int x) {
-			if (x <= 1) return 1;
-			x--;
-			x |= x >>> 1;
-			x |= x >>> 2;
-			x |= x >>> 4;
-			x |= x >>> 8;
-			x |= x >>> 16;
-			return x + 1;
+			return x <= 1 ? 1 : 1 << (32 - Integer.numberOfLeadingZeros(x - 1));
 		}
 
 		@Override
