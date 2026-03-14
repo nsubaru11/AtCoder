@@ -4,126 +4,729 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
+const readline = require("readline");
 
-const PORT = 8080;
+const PORT = Number(process.env.LOCAL_RUNNER_PORT || 8080);
 const JAVA_HOME = process.env.JAVA_HOME;
-const MAX_BODY_SIZE = 1024 * 1024; // 1MB 超えは拒否
+const MAX_BODY_SIZE = 4 * 1024 * 1024;
+const MAX_LOG_FILE_SIZE = Number(process.env.LOCAL_RUNNER_MAX_LOG_FILE_SIZE_BYTES || (8 * 1024 * 1024));
+const MAX_CACHE_SIZE = 10;
+const COMPILE_TIMEOUT_MS = 30000;
+const RUN_TIMEOUT_MS = 10000;
+const DISPATCHER_STARTUP_TIMEOUT_MS = 10000;
+const DEFAULT_DISPATCHER_CAPTURE_LIMIT_BYTES = 2 << 20;
+const DISPATCHER_CAPTURE_LIMIT_BYTES = Number(
+	process.env.LOCAL_RUNNER_CAPTURE_LIMIT_BYTES || DEFAULT_DISPATCHER_CAPTURE_LIMIT_BYTES,
+);
+const RUNNER_MODE = (process.env.LOCAL_RUNNER_MODE || "daemon").toLowerCase();
+const IS_LEGACY_MODE = RUNNER_MODE === "legacy";
+const DEFAULT_BASE_DIR = process.platform === "linux"
+	? "/dev/shm/atcoder-local-runner"
+	: path.join(os.tmpdir(), "atcoder-local-runner");
+const BASE_DIR = process.env.LOCAL_RUNNER_BASE_DIR || DEFAULT_BASE_DIR;
+const LOG_FILE_PATH = path.join(BASE_DIR, "local-runner.log");
+const COMPILE_ROOT_DIR = path.join(BASE_DIR, "compiled");
+const DISPATCHER_BUILD_DIR = path.join(BASE_DIR, "dispatcher");
+const DISPATCHER_SOURCE_FILE = resolveDispatcherSourceFile();
+const DISPATCHER_CLASS_FILE = path.join(DISPATCHER_BUILD_DIR, "Dispatcher.class");
+const WARMUP_SOURCE_CODE = "public final class Main { public static void main(String[] args) {} }";
+const WARMUP_STDIN = "";
+let hasDispatcherWarmedUp = false;
+
+function formatLogLine(level, message) {
+	return `[${new Date().toISOString()}] [${level}] ${message}`;
+}
+
+function appendLogLine(line) {
+	try {
+		fs.mkdirSync(BASE_DIR, {recursive: true});
+		rotateLogFileIfNeeded();
+		fs.appendFileSync(LOG_FILE_PATH, `${line}\n`, "utf8");
+	} catch {
+	}
+}
+
+function rotateLogFileIfNeeded() {
+	if (MAX_LOG_FILE_SIZE <= 0 || !fs.existsSync(LOG_FILE_PATH)) {
+		return;
+	}
+	const currentSize = fs.statSync(LOG_FILE_PATH).size;
+	if (currentSize < MAX_LOG_FILE_SIZE) {
+		return;
+	}
+	const backupPath = `${LOG_FILE_PATH}.1`;
+	try {
+		if (fs.existsSync(backupPath)) {
+			fs.rmSync(backupPath, {force: true});
+		}
+		fs.renameSync(LOG_FILE_PATH, backupPath);
+	} catch {
+	}
+}
+
+function logInfo(message) {
+	const line = formatLogLine("INFO", message);
+	process.stdout.write(`${line}\n`);
+	appendLogLine(line);
+}
+
+function logWarn(message) {
+	const line = formatLogLine("WARN", message);
+	process.stderr.write(`${line}\n`);
+	appendLogLine(line);
+}
+
+function logError(message) {
+	const line = formatLogLine("ERROR", message);
+	process.stderr.write(`${line}\n`);
+	appendLogLine(line);
+}
+
+function isWindowsStylePath(targetPath) {
+	return /^[A-Za-z]:\\/.test(targetPath);
+}
+
+function resolveJavaHome() {
+	const javaHome = process.env.JAVA_HOME;
+	if (!javaHome) {
+		return "";
+	}
+	if (process.platform === "linux" && isWindowsStylePath(javaHome)) {
+		logInfo(`Ignoring Windows-style JAVA_HOME on Linux: ${javaHome}`);
+		return "";
+	}
+	return javaHome;
+}
 
 function getJavaEnv() {
-	if (!JAVA_HOME) {
-		console.log("JAVA_HOME is not set. Using default Java.");
+	const resolvedJavaHome = resolveJavaHome();
+	if (!resolvedJavaHome) {
+		logInfo("JAVA_HOME is not set. Using java/javac from PATH.");
 		return process.env;
 	}
-	console.log(`Using Java from: ${JAVA_HOME}`);
+	logInfo(`Using Java from: ${resolvedJavaHome}`);
 	return {
 		...process.env,
-		JAVA_HOME,
-		PATH: path.join(JAVA_HOME, "bin") + path.delimiter + process.env.PATH,
+		JAVA_HOME: resolvedJavaHome,
+		PATH: path.join(resolvedJavaHome, "bin") + path.delimiter + process.env.PATH,
 	};
 }
 
-const javaEnv = getJavaEnv();
-const JAVA_PATH = JAVA_HOME ? path.join(JAVA_HOME, "bin", "java") : "java";
-const JAVAC_PATH = JAVA_HOME ? path.join(JAVA_HOME, "bin", "javac") : "javac";
+const JAVA_ENV = getJavaEnv();
+const RESOLVED_JAVA_HOME = resolveJavaHome();
+const JAVA_PATH = RESOLVED_JAVA_HOME ? path.join(RESOLVED_JAVA_HOME, "bin", "java") : "java";
+const JAVAC_PATH = RESOLVED_JAVA_HOME ? path.join(RESOLVED_JAVA_HOME, "bin", "javac") : "javac";
 
-// ウォームアップ
-console.log("Warming up JVM...");
-for (let i = 0; i < 3; i++) {
-	spawnSync(JAVA_PATH, ["-version"], {env: javaEnv, stdio: "ignore"});
-	spawnSync(JAVAC_PATH, ["-version"], {env: javaEnv, stdio: "ignore"});
-}
-console.log("JVM warmed up.");
-
-// コンパイルキャッシュ: hash -> Promise<entry>
 const compileCache = new Map();
-const MAX_CACHE_SIZE = 10;
+const dispatcherState = {
+	proc: null,
+	readline: null,
+	startupPromise: null,
+	currentRequest: null,
+	requestQueue: Promise.resolve(),
+	nextRequestId: 0,
+};
+
+function ensureDirectory(targetDir) {
+	fs.mkdirSync(targetDir, {recursive: true});
+}
+
+function removeDirectory(targetDir) {
+	try {
+		fs.rmSync(targetDir, {recursive: true, force: true});
+	} catch {
+	}
+}
 
 function hashCode(sourceCode) {
-	return crypto.createHash("md5").update(sourceCode).digest("hex");
+	const digest = crypto.createHash("md5").update(sourceCode).digest("hex");
+	return `${sourceCode.length.toString(16)}-${digest}`;
 }
 
-function cleanupOldCache() {
-	if (compileCache.size > MAX_CACHE_SIZE) {
-		const oldest = compileCache.keys().next().value;
-		compileCache.get(oldest).then((entry) => {
-			if (entry && entry.tmpDir) {
-				try {
-					fs.rmSync(entry.tmpDir, {recursive: true, force: true});
-				} catch {
-				}
-			}
-		});
-		compileCache.delete(oldest);
+function resolveDispatcherSourceFile() {
+	const envPath = process.env.LOCAL_RUNNER_DISPATCHER_SOURCE;
+	const candidates = [
+		envPath,
+		path.join(__dirname, "Dispatcher.java"),
+		path.join(__dirname, "src", "Dispatcher.java"),
+	].filter(Boolean);
+	for (const candidate of candidates) {
+		if (fs.existsSync(candidate)) {
+			return candidate;
+		}
 	}
+	throw new Error(`Dispatcher source not found. Tried: ${candidates.join(", ")}`);
 }
 
-function getCompiledEntry(sourceCode) {
-	const hash = hashCode(sourceCode);
-
-	if (compileCache.has(hash)) {
-		return compileCache.get(hash);
-	}
-
-	cleanupOldCache();
-
-	const promise = new Promise((resolve) => {
-		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "runner-"));
-		const sourceFile = path.join(tmpDir, "Main.java");
-		fs.writeFileSync(sourceFile, sourceCode);
-
-		const startTime = Date.now();
-		const proc = spawn(JAVAC_PATH, ["Main.java"], {
-			cwd: tmpDir,
-			env: javaEnv,
-		});
-
-		const compileTimeout = setTimeout(() => {
-			proc.kill();
-		}, 30000);
-
-		let stderr = "";
-		proc.stderr.on("data", (data) => {
-			stderr += data;
-		});
-
-		proc.on("close", (code) => {
-			clearTimeout(compileTimeout);
-			const compileTime = Date.now() - startTime;
-			if (code === 0) {
-				console.log(`[Compile] OK (${compileTime}ms)`);
-				resolve({tmpDir, status: "compiled", error: null});
-			} else {
-				console.log(`[Compile] Error (${compileTime}ms)`);
-				resolve({tmpDir, status: "error", error: stderr});
-			}
-		});
-
-		proc.on("error", (err) => {
-			clearTimeout(compileTimeout);
-			resolve({tmpDir: null, status: "error", error: err.message});
-		});
-	});
-
-	compileCache.set(hash, promise);
-	return promise;
+function encodeField(value) {
+	return Buffer.from(value ?? "", "utf8").toString("base64");
 }
 
-// Javaバージョンを取得してラベルに使用
+function decodeField(value) {
+	return Buffer.from(value, "base64").toString("utf8");
+}
+
+function requiresIsolatedProcess(sourceCode) {
+	return /FileDescriptor\.(?:in|out|err)\b/.test(sourceCode)
+		|| /Runtime\.getRuntime\(\)\.halt\s*\(/.test(sourceCode)
+		|| /System\.exit\s*\(/.test(sourceCode);
+}
+
+function warmUpJavaTools() {
+	logInfo("Warming up javac/java discovery...");
+	spawnSync(JAVA_PATH, ["-version"], {env: JAVA_ENV, stdio: "ignore"});
+	spawnSync(JAVAC_PATH, ["-version"], {env: JAVA_ENV, stdio: "ignore"});
+}
+
 function getJavaVersion() {
 	try {
 		const result = spawnSync(JAVA_PATH, ["-version"], {
-			env: javaEnv,
+			env: JAVA_ENV,
 			encoding: "utf8",
 		});
 		const output = result.stderr || result.stdout || "";
-		const match = output.match(/version "(\d+)/);
-		return match ? match[1] : "Unknown";
+		const match = output.match(/version "([^"]+)"/);
+		if (!match) {
+			return "Unknown";
+		}
+		const rawVersion = match[1];
+		if (rawVersion.startsWith("1.")) {
+			const legacyMatch = rawVersion.match(/^1\.(\d+)/);
+			return legacyMatch ? legacyMatch[1] : rawVersion;
+		}
+		const modernMatch = rawVersion.match(/^(\d+)/);
+		return modernMatch ? modernMatch[1] : rawVersion;
 	} catch {
 		return "Unknown";
 	}
 }
 
-const javaVersion = getJavaVersion();
+const JAVA_VERSION = getJavaVersion();
+const RUNNER_LABEL = IS_LEGACY_MODE
+	? `Java ${JAVA_VERSION} (Windows Legacy Local)`
+	: (process.platform === "linux"
+		? `Java ${JAVA_VERSION} (WSL Daemon Local)`
+		: `Java ${JAVA_VERSION} (Daemon Local)`);
+
+function cleanupOldCache() {
+	if (compileCache.size <= MAX_CACHE_SIZE) {
+		return;
+	}
+	const oldestHash = compileCache.keys().next().value;
+	const oldestEntryPromise = compileCache.get(oldestHash);
+	compileCache.delete(oldestHash);
+	if (!oldestEntryPromise) {
+		return;
+	}
+	oldestEntryPromise.then((entry) => {
+		if (entry && entry.rootDir) {
+			removeDirectory(entry.rootDir);
+		}
+		return null;
+	});
+}
+
+function runCommand(command, args, options = {}) {
+	return new Promise((resolve) => {
+		const proc = spawn(command, args, {
+			cwd: options.cwd,
+			env: options.env,
+			stdio: ["pipe", "pipe", "pipe"],
+		});
+		let stdout = "";
+		let stderr = "";
+		let timedOut = false;
+		let settled = false;
+		let killTimer = null;
+		const finish = (result) => {
+			if (settled) {
+				return;
+			}
+			settled = true;
+			if (killTimer) {
+				clearTimeout(killTimer);
+			}
+			resolve(result);
+		};
+
+		if (proc.stdout) {
+			proc.stdout.on("data", (data) => {
+				stdout += data.toString();
+			});
+		}
+		if (proc.stderr) {
+			proc.stderr.on("data", (data) => {
+				stderr += data.toString();
+			});
+		}
+		if (options.input !== undefined && proc.stdin) {
+			proc.stdin.end(options.input, "utf8");
+		} else if (proc.stdin) {
+			proc.stdin.end();
+		}
+
+		proc.on("close", (code, signal) => {
+			finish({code: code ?? -1, signal, stdout, stderr, timedOut});
+		});
+
+		proc.on("error", (error) => {
+			finish({
+				code: -1,
+				signal: null,
+				stdout,
+				stderr: stderr ? `${stderr}\n${error.message}` : error.message,
+				timedOut,
+			});
+		});
+
+		if (options.timeoutMs) {
+			killTimer = setTimeout(() => {
+				timedOut = true;
+				proc.kill();
+			}, options.timeoutMs);
+		}
+	});
+}
+
+async function compileDispatcher() {
+	ensureDirectory(DISPATCHER_BUILD_DIR);
+	const result = await runCommand(
+		JAVAC_PATH,
+		["-encoding", "UTF-8", "-g:none", "-d", DISPATCHER_BUILD_DIR, DISPATCHER_SOURCE_FILE],
+		{env: JAVA_ENV, timeoutMs: COMPILE_TIMEOUT_MS},
+	);
+	if (result.code !== 0 || result.timedOut || !fs.existsSync(DISPATCHER_CLASS_FILE)) {
+		throw new Error(result.stderr || "Failed to compile Dispatcher.java.");
+	}
+}
+
+function stopDispatcher() {
+	if (dispatcherState.readline) {
+		dispatcherState.readline.close();
+		dispatcherState.readline = null;
+	}
+	if (dispatcherState.proc) {
+		dispatcherState.proc.kill();
+		dispatcherState.proc = null;
+	}
+	if (dispatcherState.currentRequest) {
+		dispatcherState.currentRequest.reject(new Error("Dispatcher stopped while a request was running."));
+		dispatcherState.currentRequest = null;
+	}
+}
+
+function handleDispatcherResponse(line) {
+	const parts = line.split("\t");
+	const responseType = parts[0];
+	if (responseType === "PONG" || responseType === "RUN") {
+		return;
+	}
+	const pendingRequest = dispatcherState.currentRequest;
+	if (!pendingRequest) {
+		logWarn(`[Dispatcher] Unexpected response without a pending request: ${line}`);
+		return;
+	}
+	if (parts[1] !== pendingRequest.id) {
+		pendingRequest.reject(new Error(`Dispatcher response ID mismatch: ${line}`));
+		dispatcherState.currentRequest = null;
+		return;
+	}
+	if (responseType === "RESULT") {
+		const stdoutTruncated = Number(parts[6] || "0") !== 0;
+		const stderrTruncated = Number(parts[7] || "0") !== 0;
+		pendingRequest.resolve({
+			exitCode: Number(parts[2]),
+			time: Number(parts[3]),
+			stdout: decodeField(parts[4] || ""),
+			stderr: decodeField(parts[5] || ""),
+			stdoutTruncated,
+			stderrTruncated,
+		});
+		dispatcherState.currentRequest = null;
+		return;
+	}
+	if (responseType === "ERROR") {
+		pendingRequest.reject(new Error(decodeField(parts[2] || "")));
+		dispatcherState.currentRequest = null;
+		return;
+	}
+	pendingRequest.reject(new Error(`Unknown dispatcher response: ${line}`));
+	dispatcherState.currentRequest = null;
+}
+
+async function startDispatcher() {
+	await compileDispatcher();
+	await new Promise((resolve, reject) => {
+		const proc = spawn(JAVA_PATH, ["-cp", DISPATCHER_BUILD_DIR, "Dispatcher"], {
+			cwd: DISPATCHER_BUILD_DIR,
+			env: JAVA_ENV,
+			stdio: ["pipe", "pipe", "pipe"],
+		});
+		const lineReader = readline.createInterface({
+			input: proc.stdout,
+			crlfDelay: Infinity,
+		});
+		let settled = false;
+		let readyTimer = null;
+		const settleResolve = () => {
+			if (settled) {
+				return;
+			}
+			settled = true;
+			if (readyTimer) {
+				clearTimeout(readyTimer);
+			}
+			resolve();
+		};
+		const settleReject = (error) => {
+			if (settled) {
+				return;
+			}
+			settled = true;
+			if (readyTimer) {
+				clearTimeout(readyTimer);
+			}
+			reject(error);
+		};
+
+		dispatcherState.proc = proc;
+		dispatcherState.readline = lineReader;
+
+		proc.stderr.on("data", (data) => {
+			process.stderr.write(`[Dispatcher] ${data}`);
+		});
+
+		lineReader.on("line", (line) => {
+			if (!settled) {
+				if (line === "READY") {
+					settleResolve();
+					return;
+				}
+				settleReject(new Error(`Unexpected dispatcher startup response: ${line}`));
+				return;
+			}
+			handleDispatcherResponse(line);
+		});
+
+		proc.on("error", (error) => {
+			settleReject(error);
+			if (dispatcherState.currentRequest) {
+				dispatcherState.currentRequest.reject(error);
+				dispatcherState.currentRequest = null;
+			}
+		});
+
+		proc.on("exit", (code, signal) => {
+			if (!settled) {
+				settleReject(new Error(`Dispatcher exited before READY (code=${code}, signal=${signal}).`));
+			}
+			if (dispatcherState.currentRequest) {
+				dispatcherState.currentRequest.reject(
+					new Error(`Dispatcher exited during execution (code=${code}, signal=${signal}).`),
+				);
+				dispatcherState.currentRequest = null;
+			}
+			dispatcherState.proc = null;
+			if (dispatcherState.readline === lineReader) {
+				dispatcherState.readline = null;
+			}
+		});
+
+		readyTimer = setTimeout(() => {
+			proc.kill();
+			settleReject(new Error("Dispatcher startup timed out."));
+		}, DISPATCHER_STARTUP_TIMEOUT_MS);
+	});
+}
+
+async function ensureDispatcherReady() {
+	if (dispatcherState.proc && !dispatcherState.proc.killed) {
+		return;
+	}
+	if (!dispatcherState.startupPromise) {
+		dispatcherState.startupPromise = startDispatcher().finally(() => {
+			dispatcherState.startupPromise = null;
+		});
+	}
+	await dispatcherState.startupPromise;
+}
+
+async function warmUpDispatcher() {
+	if (IS_LEGACY_MODE || hasDispatcherWarmedUp) {
+		return;
+	}
+	logInfo("Warming up dispatcher with a dummy execution...");
+	try {
+		const warmupEntry = await getCompiledEntry(WARMUP_SOURCE_CODE);
+		if (warmupEntry.status !== "compiled") {
+			logWarn("[WarmUp] Skipped because warm-up source failed to compile.");
+			hasDispatcherWarmedUp = true;
+			return;
+		}
+		const result = await queueDispatcherRun(warmupEntry, WARMUP_STDIN);
+		if (result.timedOut) {
+			logWarn(`[WarmUp] Timed out after ${RUN_TIMEOUT_MS}ms.`);
+		} else {
+			logInfo(`[WarmUp] Completed in ${result.time}ms.`);
+		}
+	} catch (error) {
+		logWarn(`[WarmUp] ${error.message}`);
+	} finally {
+		hasDispatcherWarmedUp = true;
+	}
+}
+
+function logCaptureAndBodySizeBalance() {
+	if (MAX_BODY_SIZE < DISPATCHER_CAPTURE_LIMIT_BYTES) {
+		logWarn(
+			`[Config] MAX_BODY_SIZE (${MAX_BODY_SIZE}) is smaller than LOCAL_RUNNER_CAPTURE_LIMIT_BYTES (${DISPATCHER_CAPTURE_LIMIT_BYTES}).`,
+		);
+	}
+}
+
+function queueDispatcherRun(entry, standardInput) {
+	dispatcherState.requestQueue = dispatcherState.requestQueue
+		.catch(() => null)
+		.then(async () => {
+			await ensureDispatcherReady();
+			return new Promise((resolve, reject) => {
+				const requestId = String(++dispatcherState.nextRequestId);
+				let settled = false;
+				let timeoutHandle = null;
+				const finishResolve = (value) => {
+					if (settled) {
+						return;
+					}
+					settled = true;
+					if (timeoutHandle) {
+						clearTimeout(timeoutHandle);
+					}
+					resolve(value);
+				};
+				const finishReject = (error) => {
+					if (settled) {
+						return;
+					}
+					settled = true;
+					if (timeoutHandle) {
+						clearTimeout(timeoutHandle);
+					}
+					reject(error);
+				};
+
+				dispatcherState.currentRequest = {
+					id: requestId,
+					resolve: finishResolve,
+					reject: finishReject,
+				};
+
+				timeoutHandle = setTimeout(() => {
+					const timeoutError = new Error(`Execution timed out after ${RUN_TIMEOUT_MS}ms.`);
+					if (dispatcherState.currentRequest && dispatcherState.currentRequest.id === requestId) {
+						dispatcherState.currentRequest = null;
+					}
+					stopDispatcher();
+					finishResolve({timedOut: true, error: timeoutError.message});
+				}, RUN_TIMEOUT_MS);
+
+				const command = [
+					"RUN",
+					requestId,
+					encodeField(entry.classDir),
+					encodeField(entry.mainClass),
+					Buffer.from(standardInput ?? "", "utf8").toString("base64"),
+				].join("\t");
+				dispatcherState.proc.stdin.write(`${command}\n`, "utf8", (error) => {
+					if (error) {
+						if (dispatcherState.currentRequest && dispatcherState.currentRequest.id === requestId) {
+							dispatcherState.currentRequest = null;
+						}
+						finishReject(error);
+					}
+				});
+			});
+		});
+	return dispatcherState.requestQueue;
+}
+
+async function compileSource(sourceCode, hash) {
+	ensureDirectory(COMPILE_ROOT_DIR);
+	const rootDir = path.join(COMPILE_ROOT_DIR, hash);
+	const classDir = path.join(rootDir, "classes");
+	const sourceFile = path.join(rootDir, "Main.java");
+	const classFile = path.join(classDir, "Main.class");
+
+	if (fs.existsSync(sourceFile) && fs.existsSync(classFile)) {
+		const existingSource = fs.readFileSync(sourceFile, "utf8");
+		if (existingSource === sourceCode) {
+			return {
+				rootDir,
+				classDir,
+				mainClass: "Main",
+				requiresIsolatedProcess: requiresIsolatedProcess(sourceCode),
+				status: "compiled",
+				error: null,
+			};
+		}
+	}
+
+	removeDirectory(rootDir);
+	ensureDirectory(classDir);
+	fs.writeFileSync(sourceFile, sourceCode, "utf8");
+
+	const compileStart = Date.now();
+	const result = await runCommand(
+		JAVAC_PATH,
+		["-encoding", "UTF-8", "-g:none", "-d", "classes", "Main.java"],
+		{cwd: rootDir, env: JAVA_ENV, timeoutMs: COMPILE_TIMEOUT_MS},
+	);
+	const compileTime = Date.now() - compileStart;
+
+	if (result.code === 0 && !result.timedOut) {
+		logInfo(`[Compile] OK (${compileTime}ms) -> ${hash}`);
+		return {
+			rootDir,
+			classDir,
+			mainClass: "Main",
+			requiresIsolatedProcess: requiresIsolatedProcess(sourceCode),
+			status: "compiled",
+			error: null,
+		};
+	}
+
+	logWarn(`[Compile] Error (${compileTime}ms) -> ${hash}`);
+	return {
+		rootDir,
+		classDir,
+		mainClass: "Main",
+		requiresIsolatedProcess: requiresIsolatedProcess(sourceCode),
+		status: "error",
+		error: result.timedOut
+			? `Compilation timed out after ${COMPILE_TIMEOUT_MS}ms.\n${result.stderr}`.trim()
+			: (result.stderr || "Compilation failed."),
+	};
+}
+
+function getCompiledEntry(sourceCode) {
+	const hash = hashCode(sourceCode);
+	if (compileCache.has(hash)) {
+		return compileCache.get(hash);
+	}
+	const entryPromise = compileSource(sourceCode, hash);
+	compileCache.set(hash, entryPromise);
+	cleanupOldCache();
+	return entryPromise;
+}
+
+async function runCodeInIsolatedJvm(entry, standardInput) {
+	const execStart = Date.now();
+	const result = await runCommand(
+		JAVA_PATH,
+		[
+			"-XX:+TieredCompilation",
+			"-XX:TieredStopAtLevel=1",
+			"-cp",
+			entry.classDir,
+			entry.mainClass,
+		],
+		{
+			cwd: entry.rootDir,
+			env: JAVA_ENV,
+			input: standardInput,
+			timeoutMs: RUN_TIMEOUT_MS,
+		},
+	);
+	return {
+		status: result.timedOut ? "timeLimitExceeded" : (result.code === 0 ? "success" : "runtimeError"),
+		exitCode: result.timedOut ? 124 : result.code,
+		stdout: result.stdout,
+		stderr: result.timedOut ? (`Execution timed out after ${RUN_TIMEOUT_MS}ms.\n${result.stderr}`).trim() : result.stderr,
+		time: result.timedOut ? RUN_TIMEOUT_MS : (Date.now() - execStart),
+		stdoutTruncated: false,
+		stderrTruncated: false,
+		memory: 0,
+	};
+}
+
+async function runCode({sourceCode, stdin}) {
+	const overallStart = Date.now();
+	const entry = await getCompiledEntry(sourceCode);
+	const waitTime = Date.now() - overallStart;
+
+	if (entry.status === "error") {
+		return {
+			status: "compileError",
+			exitCode: 1,
+			stdout: "",
+			stderr: entry.error,
+			time: waitTime,
+			stdoutTruncated: false,
+			stderrTruncated: false,
+			memory: 0,
+		};
+	}
+
+	if (IS_LEGACY_MODE) {
+		const result = await runCodeInIsolatedJvm(entry, stdin || "");
+		const totalTime = Date.now() - overallStart;
+		logInfo(`Wait: ${waitTime}ms, Exec: ${result.time}ms, Total: ${totalTime}ms [legacy]`);
+		return result;
+	}
+
+	if (entry.requiresIsolatedProcess) {
+		logInfo("[Run] Falling back to isolated JVM mode due to FileDescriptor/System.exit/Runtime.halt usage.");
+		const result = await runCodeInIsolatedJvm(entry, stdin || "");
+		const totalTime = Date.now() - overallStart;
+		logInfo(`Wait: ${waitTime}ms, Exec: ${result.time}ms, Total: ${totalTime}ms [isolated]`);
+		return result;
+	}
+
+	try {
+		const result = await queueDispatcherRun(entry, stdin || "");
+		if (result.timedOut) {
+			logWarn(`Wait: ${waitTime}ms, Exec: timeout, Total: ${Date.now() - overallStart}ms`);
+			return {
+				status: "timeLimitExceeded",
+				exitCode: 124,
+				stdout: "",
+				stderr: result.error,
+				time: RUN_TIMEOUT_MS,
+				stdoutTruncated: false,
+				stderrTruncated: false,
+				memory: 0,
+			};
+		}
+		const totalTime = Date.now() - overallStart;
+		if (result.stdoutTruncated || result.stderrTruncated) {
+			logWarn(
+				`[Run] Output truncated by dispatcher (stdout=${result.stdoutTruncated}, stderr=${result.stderrTruncated}).`,
+			);
+		}
+		logInfo(`Wait: ${waitTime}ms, Exec: ${result.time}ms, Total: ${totalTime}ms`);
+		return {
+			status: result.exitCode === 0 ? "success" : "runtimeError",
+			exitCode: result.exitCode,
+			stdout: result.stdout,
+			stderr: result.stderr,
+			time: result.time,
+			stdoutTruncated: !!result.stdoutTruncated,
+			stderrTruncated: !!result.stderrTruncated,
+			memory: 0,
+		};
+	} catch (error) {
+		logError(`[Run] Internal error: ${error.message}`);
+		return {
+			status: "internalError",
+			exitCode: -1,
+			stdout: "",
+			stderr: error.message,
+			time: 0,
+			stdoutTruncated: false,
+			stderrTruncated: false,
+			memory: 0,
+		};
+	}
+}
 
 const server = http.createServer(async (req, res) => {
 	res.setHeader("Access-Control-Allow-Origin", "*");
@@ -157,13 +760,12 @@ const server = http.createServer(async (req, res) => {
 	try {
 		const request = JSON.parse(body);
 		let response;
-
 		if (request.mode === "list") {
 			response = [
 				{
 					language: "Java",
-					compilerName: `java${javaVersion}`,
-					label: `Java ${javaVersion} (Local)`,
+					compilerName: `java${JAVA_VERSION}`,
+					label: RUNNER_LABEL,
 				},
 			];
 		} else if (request.mode === "precompile") {
@@ -183,87 +785,50 @@ const server = http.createServer(async (req, res) => {
 	}
 });
 
-async function runCode({compilerName, sourceCode, stdin}) {
-	const overallStart = Date.now();
-
-	const entry = await getCompiledEntry(sourceCode);
-
-	const waitTime = Date.now() - overallStart;
-
-	if (entry.status === "error") {
-		return {
-			status: "compileError",
-			exitCode: 1,
-			stdout: "",
-			stderr: entry.error,
-			time: waitTime,
-			memory: 0,
-		};
+async function bootstrap() {
+	ensureDirectory(BASE_DIR);
+	ensureDirectory(COMPILE_ROOT_DIR);
+	logInfo(`Local runner base directory: ${BASE_DIR}`);
+	logInfo(`Runner mode: ${RUNNER_MODE}`);
+	logInfo(`Log file: ${LOG_FILE_PATH}`);
+	logInfo(`Log rotation size: ${MAX_LOG_FILE_SIZE} bytes`);
+	logInfo(`Dispatcher capture limit: ${DISPATCHER_CAPTURE_LIMIT_BYTES} bytes`);
+	logCaptureAndBodySizeBalance();
+	if (process.platform === "linux" && BASE_DIR.startsWith("/dev/shm")) {
+		logInfo("Using /dev/shm for low-latency compile cache.");
 	}
-
-	const execStart = Date.now();
-	const result = await new Promise((resolve) => {
-		const proc = spawn(
-			JAVA_PATH,
-			["-XX:+TieredCompilation", "-XX:TieredStopAtLevel=1", "Main"],
-			{
-				cwd: entry.tmpDir,
-				env: javaEnv,
-			},
-		);
-
-		const execTimeout = setTimeout(() => {
-			proc.kill();
-		}, 10000);
-
-		let stdout = "";
-		let stderr = "";
-
-		proc.stdout.on("data", (data) => {
-			stdout += data;
-		});
-		proc.stderr.on("data", (data) => {
-			stderr += data;
-		});
-
-		if (stdin) {
-			proc.stdin.write(stdin);
-		}
-		proc.stdin.end();
-
-		proc.on("close", (code) => {
-			clearTimeout(execTimeout);
-			resolve({
-				status: code === 0 ? "success" : "runtimeError",
-				exitCode: code ?? -1,
-				stdout,
-				stderr,
-				time: Date.now() - execStart,
-				memory: 0,
-			});
-		});
-
-		proc.on("error", (err) => {
-			clearTimeout(execTimeout);
-			resolve({
-				status: "internalError",
-				exitCode: -1,
-				stdout: "",
-				stderr: err.message,
-				time: 0,
-				memory: 0,
-			});
-		});
+	warmUpJavaTools();
+	if (!IS_LEGACY_MODE) {
+		ensureDirectory(DISPATCHER_BUILD_DIR);
+		await ensureDispatcherReady();
+		await warmUpDispatcher();
+	}
+	server.listen(PORT, () => {
+		logInfo(`LocalRunner server listening on http://localhost:${PORT}`);
+		logInfo(`Runner label: ${RUNNER_LABEL}`);
 	});
-
-	const totalTime = Date.now() - overallStart;
-	console.log(
-		`Wait: ${waitTime}ms, Exec: ${result.time}ms, Total: ${totalTime}ms`,
-	);
-
-	return result;
 }
 
-server.listen(PORT, () => {
-	console.log(`LocalRunner server listening on http://localhost:${PORT}`);
+function shutdown(signal) {
+	logInfo(`Shutting down LocalRunner server (${signal})...`);
+	stopDispatcher();
+	server.close(() => {
+		process.exit(0);
+	});
+}
+
+server.on("error", (error) => {
+	logError(`[Server] ${error.message}`);
+	process.exit(1);
+});
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("exit", () => {
+	stopDispatcher();
+});
+
+bootstrap().catch((error) => {
+	logError(`[Bootstrap] ${error.message}`);
+	process.exit(1);
 });

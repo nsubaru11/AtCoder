@@ -2053,6 +2053,14 @@ def __run():
 					}
 					break;
 				}
+				case "runtimeError": {
+					result.status = "RE";
+					break;
+				}
+				case "timeLimitExceeded": {
+					result.status = "TLE";
+					break;
+				}
 				case "compileError": {
 					result.status = "CE";
 					break;
@@ -2154,6 +2162,7 @@ def __run():
 	let precompileTimeout = null;
 	let lastPrecompiledCode = '';
 	let isPrecompiling = false;
+	const PRECOMPILE_DELAY_MS = 180;
 
 	async function triggerPrecompile() {
 		if (isPrecompiling) return;
@@ -2195,7 +2204,7 @@ def __run():
 		// プリコンパイル機能が無効なら何もしない
 		if (!config.get("codeRunner.precompile.enable", true)) return;
 		if (precompileTimeout) clearTimeout(precompileTimeout);
-		precompileTimeout = setTimeout(triggerPrecompile, 500);
+		precompileTimeout = setTimeout(triggerPrecompile, PRECOMPILE_DELAY_MS);
 	}
 
 	site.then(currentSite => {

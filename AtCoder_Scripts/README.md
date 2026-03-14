@@ -15,6 +15,7 @@ AtCoder の提出一覧の絞り込み・並び替えのデフォルト設定を
 サンプル入出力のテストを簡単に行えるようにします（Java 向け拡張）。
 
 - **[インストール](https://raw.githubusercontent.com/nsubaru11/AtCoder/main/AtCoder_Scripts/AtCoderEasyTestForJava/AtCoderEasyTestForJava.user.js)**
+- ローカル実行サーバーは `AtCoderEasyTestForJava/README.md` を参照してください（WSL + 常駐 JVM 構成）。
 
 ### AtCoder Highlighter
 
