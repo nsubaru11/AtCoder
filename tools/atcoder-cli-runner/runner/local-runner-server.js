@@ -1,10 +1,14 @@
-const http = require("http");
-const {spawn, spawnSync} = require("child_process");
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
-const crypto = require("crypto");
-const readline = require("readline");
+import http from "node:http";
+import {spawn, spawnSync} from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
+import crypto from "node:crypto";
+import readline from "node:readline";
+import {fileURLToPath} from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.LOCAL_RUNNER_PORT || 8080);
 const JAVA_HOME = process.env.JAVA_HOME;
@@ -33,6 +37,15 @@ const WARMUP_SOURCE_CODE = "public final class Main { public static void main(St
 const WARMUP_STDIN = "";
 let hasDispatcherWarmedUp = false;
 
+const ANSI = {
+	RESET: "\x1b[0m",
+	GREEN: "\x1b[32m",
+	RED: "\x1b[31m",
+	YELLOW: "\x1b[33m",
+	ORANGE: "\x1b[38;5;208m",
+	CYAN: "\x1b[36m",
+};
+
 function formatLogLine(level, message) {
 	return `[${new Date().toISOString()}] [${level}] ${message}`;
 }
@@ -41,9 +54,13 @@ function appendLogLine(line) {
 	try {
 		fs.mkdirSync(BASE_DIR, {recursive: true});
 		rotateLogFileIfNeeded();
-		fs.appendFileSync(LOG_FILE_PATH, `${line}\n`, "utf8");
+		fs.appendFileSync(LOG_FILE_PATH, `${stripAnsi(line)}\n`, "utf8");
 	} catch {
 	}
+}
+
+function stripAnsi(text) {
+	return String(text || "").replace(/\x1B\[[0-9;]*m/g, "");
 }
 
 function rotateLogFileIfNeeded() {
@@ -80,6 +97,102 @@ function logError(message) {
 	const line = formatLogLine("ERROR", message);
 	process.stderr.write(`${line}\n`);
 	appendLogLine(line);
+}
+
+function supportsColor() {
+	if (process.env.NO_COLOR) {
+		return false;
+	}
+	if (process.env.LOCAL_RUNNER_FORCE_COLOR === "0") {
+		return false;
+	}
+	// PowerShell -> WSL 経由では isTTY が false になることがあるため、既定で色を有効化。
+	return true;
+}
+
+function colorizeStatus(status) {
+	if (!supportsColor()) return status;
+	if (status === "AC") return `${ANSI.GREEN}${status}${ANSI.RESET}`;
+	if (status === "WA") return `${ANSI.RED}${status}${ANSI.RESET}`;
+	if (status === "CE") return `${ANSI.YELLOW}${status}${ANSI.RESET}`;
+	if (["RE", "TLE", "MLE", "OLE", "IE"].includes(status)) return `${ANSI.ORANGE}${status}${ANSI.RESET}`;
+	if (["WJ", "WR"].includes(status)) return `${ANSI.CYAN}${status}${ANSI.RESET}`;
+	return status;
+}
+
+function toRunLabel(status) {
+	switch (status) {
+		case "success":
+			return "AC";
+		case "compileError":
+			return "CE";
+		case "timeLimitExceeded":
+			return "TLE";
+		case "runtimeError":
+			return "RE";
+		case "internalError":
+			return "IE";
+		default:
+			return String(status || "UNKNOWN").toUpperCase();
+	}
+}
+
+function firstLine(text) {
+	if (!text) return "";
+	return String(text).replace(/\r\n?/g, "\n").split("\n")[0].trim();
+}
+
+function trimForLog(text, maxLen = 72) {
+	if (!text) return "";
+	if (text.length <= maxLen) return text;
+	return `${text.slice(0, maxLen - 3)}...`;
+}
+
+function shortMode(modeTag) {
+	switch (modeTag) {
+		case "daemon":
+			return "D";
+		case "legacy":
+			return "L";
+		case "isolated":
+			return "I";
+		case "compile":
+			return "C";
+		default:
+			return String(modeTag || "?").slice(0, 1).toUpperCase();
+	}
+}
+
+function shortHash(hash) {
+	if (!hash) return "";
+	return hash.length <= 16 ? hash : `${hash.slice(0, 16)}...`;
+}
+
+function formatRunSummary(result, waitMs, totalMs, modeTag) {
+	const status = toRunLabel(result.status);
+	const parts = [
+		`[Run]`,
+		`Mode=${modeTag}`,
+		`Status=${colorizeStatus(status)}`,
+		`Wait=${waitMs}ms`,
+		`Exec=${result.time}ms`,
+		`Total=${totalMs}ms`,
+		`Exit=${result.exitCode}`,
+	];
+	if (result.memory > 0) {
+		parts.push(`Memory=${result.memory}KB`);
+	}
+	if (result.stdoutTruncated || result.stderrTruncated) {
+		const flags = [];
+		if (result.stdoutTruncated) flags.push("stdout");
+		if (result.stderrTruncated) flags.push("stderr");
+		parts.push(`Truncated=${flags.join(",")}`);
+	}
+	const err = firstLine(result.stderr);
+	if (err && result.status !== "success") {
+		parts.push(`Error=${trimForLog(err)}`);
+	}
+	return parts.join(" ");
 }
 
 function isWindowsStylePath(targetPath) {
@@ -173,7 +286,7 @@ function requiresIsolatedProcess(sourceCode) {
 }
 
 function warmUpJavaTools() {
-	logInfo("Warming up javac/java discovery...");
+	logInfo("Warm up javac/java...");
 	spawnSync(JAVA_PATH, ["-version"], {env: JAVA_ENV, stdio: "ignore"});
 	spawnSync(JAVAC_PATH, ["-version"], {env: JAVA_ENV, stdio: "ignore"});
 }
@@ -282,7 +395,7 @@ function runCommand(command, args, options = {}) {
 		if (options.timeoutMs) {
 			killTimer = setTimeout(() => {
 				timedOut = true;
-				proc.kill();
+				proc.kill('SIGKILL');
 			}, options.timeoutMs);
 		}
 	});
@@ -306,7 +419,7 @@ function stopDispatcher() {
 		dispatcherState.readline = null;
 	}
 	if (dispatcherState.proc) {
-		dispatcherState.proc.kill();
+		dispatcherState.proc.kill('SIGKILL');
 		dispatcherState.proc = null;
 	}
 	if (dispatcherState.currentRequest) {
@@ -433,7 +546,7 @@ async function startDispatcher() {
 		});
 
 		readyTimer = setTimeout(() => {
-			proc.kill();
+			proc.kill('SIGKILL');
 			settleReject(new Error("Dispatcher startup timed out."));
 		}, DISPATCHER_STARTUP_TIMEOUT_MS);
 	});
@@ -455,19 +568,19 @@ async function warmUpDispatcher() {
 	if (IS_LEGACY_MODE || hasDispatcherWarmedUp) {
 		return;
 	}
-	logInfo("Warming up dispatcher with a dummy execution...");
+	logInfo("Warm up dispatcher...");
 	try {
 		const warmupEntry = await getCompiledEntry(WARMUP_SOURCE_CODE);
 		if (warmupEntry.status !== "compiled") {
-			logWarn("[WarmUp] Skipped because warm-up source failed to compile.");
+			logWarn("[WarmUp] skipped (compile failed)");
 			hasDispatcherWarmedUp = true;
 			return;
 		}
 		const result = await queueDispatcherRun(warmupEntry, WARMUP_STDIN);
 		if (result.timedOut) {
-			logWarn(`[WarmUp] Timed out after ${RUN_TIMEOUT_MS}ms.`);
+			logWarn(`[WarmUp] timeout ${RUN_TIMEOUT_MS}ms`);
 		} else {
-			logInfo(`[WarmUp] Completed in ${result.time}ms.`);
+			logInfo(`[WarmUp] done ${result.time}ms`);
 		}
 	} catch (error) {
 		logWarn(`[WarmUp] ${error.message}`);
@@ -583,7 +696,7 @@ async function compileSource(sourceCode, hash) {
 	const compileTime = Date.now() - compileStart;
 
 	if (result.code === 0 && !result.timedOut) {
-		logInfo(`[Compile] OK (${compileTime}ms) -> ${hash}`);
+		logInfo(`[Compile] OK ${compileTime}ms -> ${shortHash(hash)}`);
 		return {
 			rootDir,
 			classDir,
@@ -594,7 +707,7 @@ async function compileSource(sourceCode, hash) {
 		};
 	}
 
-	logWarn(`[Compile] Error (${compileTime}ms) -> ${hash}`);
+	logWarn(`[Compile] NG ${compileTime}ms -> ${shortHash(hash)}`);
 	return {
 		rootDir,
 		classDir,
@@ -654,7 +767,7 @@ async function runCode({sourceCode, stdin}) {
 	const waitTime = Date.now() - overallStart;
 
 	if (entry.status === "error") {
-		return {
+		const response = {
 			status: "compileError",
 			exitCode: 1,
 			stdout: "",
@@ -664,12 +777,14 @@ async function runCode({sourceCode, stdin}) {
 			stderrTruncated: false,
 			memory: 0,
 		};
+		logWarn(formatRunSummary(response, waitTime, Date.now() - overallStart, "compile"));
+		return response;
 	}
 
 	if (IS_LEGACY_MODE) {
 		const result = await runCodeInIsolatedJvm(entry, stdin || "");
 		const totalTime = Date.now() - overallStart;
-		logInfo(`Wait: ${waitTime}ms, Exec: ${result.time}ms, Total: ${totalTime}ms [legacy]`);
+		logInfo(formatRunSummary(result, waitTime, totalTime, "legacy"));
 		return result;
 	}
 
@@ -677,15 +792,14 @@ async function runCode({sourceCode, stdin}) {
 		logInfo("[Run] Falling back to isolated JVM mode due to FileDescriptor/System.exit/Runtime.halt usage.");
 		const result = await runCodeInIsolatedJvm(entry, stdin || "");
 		const totalTime = Date.now() - overallStart;
-		logInfo(`Wait: ${waitTime}ms, Exec: ${result.time}ms, Total: ${totalTime}ms [isolated]`);
+		logInfo(formatRunSummary(result, waitTime, totalTime, "isolated"));
 		return result;
 	}
 
 	try {
 		const result = await queueDispatcherRun(entry, stdin || "");
 		if (result.timedOut) {
-			logWarn(`Wait: ${waitTime}ms, Exec: timeout, Total: ${Date.now() - overallStart}ms`);
-			return {
+			const response = {
 				status: "timeLimitExceeded",
 				exitCode: 124,
 				stdout: "",
@@ -695,6 +809,8 @@ async function runCode({sourceCode, stdin}) {
 				stderrTruncated: false,
 				memory: 0,
 			};
+			logWarn(formatRunSummary(response, waitTime, Date.now() - overallStart, "daemon"));
+			return response;
 		}
 		const totalTime = Date.now() - overallStart;
 		if (result.stdoutTruncated || result.stderrTruncated) {
@@ -702,8 +818,7 @@ async function runCode({sourceCode, stdin}) {
 				`[Run] Output truncated by dispatcher (stdout=${result.stdoutTruncated}, stderr=${result.stderrTruncated}).`,
 			);
 		}
-		logInfo(`Wait: ${waitTime}ms, Exec: ${result.time}ms, Total: ${totalTime}ms`);
-		return {
+		const response = {
 			status: result.exitCode === 0 ? "success" : "runtimeError",
 			exitCode: result.exitCode,
 			stdout: result.stdout,
@@ -713,9 +828,12 @@ async function runCode({sourceCode, stdin}) {
 			stderrTruncated: !!result.stderrTruncated,
 			memory: 0,
 		};
+		const logger = response.status === "success" ? logInfo : logWarn;
+		logger(formatRunSummary(response, waitTime, totalTime, "daemon"));
+		return response;
 	} catch (error) {
 		logError(`[Run] Internal error: ${error.message}`);
-		return {
+		const response = {
 			status: "internalError",
 			exitCode: -1,
 			stdout: "",
@@ -725,6 +843,8 @@ async function runCode({sourceCode, stdin}) {
 			stderrTruncated: false,
 			memory: 0,
 		};
+		logError(formatRunSummary(response, waitTime, Date.now() - overallStart, "daemon"));
+		return response;
 	}
 }
 
@@ -828,7 +948,9 @@ process.on("exit", () => {
 	stopDispatcher();
 });
 
-bootstrap().catch((error) => {
+try {
+	await bootstrap();
+} catch (error) {
 	logError(`[Bootstrap] ${error.message}`);
 	process.exit(1);
-});
+}

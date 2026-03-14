@@ -116,7 +116,9 @@ function Start-WslRunner {
 	$bashCommands.Add("chmod +x ./start-local-runner.sh")
 	$bashCommands.Add("./start-local-runner.sh " + (ConvertTo-BashSingleQuotedLiteral -Value $JavaVer))
 	$bashCommand = [string]::Join(" && ", $bashCommands)
-	& wsl.exe bash -lc $bashCommand | ForEach-Object {
+	# Merge stderr on bash side to avoid PowerShell NativeCommandError handling in 5.1.
+	$bashCommandWithRedirect = "{ $bashCommand; } 2>&1"
+	& wsl.exe bash -lc $bashCommandWithRedirect | ForEach-Object {
 		Write-RunnerMessage ([string]$_)
 	}
 	$exitCode = if ($null -ne $LASTEXITCODE) {
@@ -137,7 +139,7 @@ function Start-WslRunner {
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $shPath = Join-Path $scriptDir "start-local-runner.sh"
-$serverPath = Join-Path $scriptDir "AtCoder_Scripts\AtCoderEasyTestForJava\local-runner-server.js"
+$serverPath = Join-Path $scriptDir "..\runner\local-runner-server.js"
 
 
 $wslStarted = Start-WslRunner -ScriptDir $scriptDir -ShPath $shPath -JavaVer $JavaVer
@@ -147,5 +149,3 @@ if ($wslStarted) {
 }
 
 Start-WindowsLegacyRunner -ScriptDir $scriptDir -ServerPath $serverPath -JavaVer $JavaVer
-
-

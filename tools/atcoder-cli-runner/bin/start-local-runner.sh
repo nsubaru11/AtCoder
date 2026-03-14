@@ -16,7 +16,7 @@ source_optional "$HOME/.bashrc"
 source_optional "$HOME/.sdkman/bin/sdkman-init.sh"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-SERVER_PATH="$SCRIPT_DIR/AtCoder_Scripts/AtCoderEasyTestForJava/local-runner-server.js"
+SERVER_PATH="$SCRIPT_DIR/../runner/local-runner-server.js"
 JAVA_VER="${1:-24}"
 JAVA_HOME_VAR="JAVA_HOME_${JAVA_VER}"
 JAVA_PATH="${!JAVA_HOME_VAR:-${JAVA_HOME:-}}"
@@ -52,6 +52,7 @@ if ! command -v javac >/dev/null 2>&1; then
 fi
 
 export LOCAL_RUNNER_BASE_DIR="${LOCAL_RUNNER_BASE_DIR:-/dev/shm/atcoder-local-runner}"
+
 LOG_FILE_PATH="$LOCAL_RUNNER_BASE_DIR/local-runner.log"
 
 mkdir -p "$LOCAL_RUNNER_BASE_DIR"
@@ -75,8 +76,3 @@ java -version
 
 echo "Starting WSL local runner server..."
 exec node "$SERVER_PATH"
-
-
-
-
-
