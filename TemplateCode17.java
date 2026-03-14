@@ -209,11 +209,9 @@ public final class ${NAME} {
 			solve();
 		} catch (final Throwable e) {
 			e.printStackTrace();
-			Runtime.getRuntime().halt(1);
 		} finally {
 			sc.close();
 			out.close();
-			Runtime.getRuntime().halt(0);
 		}
 	}
 
@@ -232,7 +230,7 @@ public final class ${NAME} {
 		private int pos = 0, bufferLength = 0;
 
 		public FastScanner() {
-			this(new FileInputStream(FileDescriptor.in), DEFAULT_BUFFER_SIZE);
+			this(System.in, DEFAULT_BUFFER_SIZE);
 		}
 
 		public FastScanner(final InputStream in) {
@@ -240,7 +238,7 @@ public final class ${NAME} {
 		}
 
 		public FastScanner(final int bufferSize) {
-			this(new FileInputStream(FileDescriptor.in), bufferSize);
+			this(System.in, bufferSize);
 		}
 
 		public FastScanner(final InputStream in, final int bufferSize) {
@@ -988,7 +986,7 @@ public final class ${NAME} {
 		private int pos;
 
 		public FastPrinter() {
-			this(new FileOutputStream(FileDescriptor.out), DEFAULT_BUFFER_SIZE, false);
+			this(System.out, DEFAULT_BUFFER_SIZE, false);
 		}
 
 		public FastPrinter(final OutputStream out) {
@@ -996,11 +994,11 @@ public final class ${NAME} {
 		}
 
 		public FastPrinter(final int bufferSize) {
-			this(new FileOutputStream(FileDescriptor.out), bufferSize, false);
+			this(System.out, bufferSize, false);
 		}
 
 		public FastPrinter(final boolean autoFlush) {
-			this(new FileOutputStream(FileDescriptor.out), DEFAULT_BUFFER_SIZE, autoFlush);
+			this(System.out, DEFAULT_BUFFER_SIZE, autoFlush);
 		}
 
 		public FastPrinter(final OutputStream out, final boolean autoFlush) {
@@ -1008,7 +1006,7 @@ public final class ${NAME} {
 		}
 
 		public FastPrinter(final int bufferSize, final boolean autoFlush) {
-			this(new FileOutputStream(FileDescriptor.out), bufferSize, autoFlush);
+			this(System.out, bufferSize, autoFlush);
 		}
 
 		public FastPrinter(final OutputStream out, final int bufferSize) {
