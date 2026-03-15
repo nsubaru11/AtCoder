@@ -18,7 +18,7 @@ public final class D {
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
 	private static final FastScanner sc = new FastScanner();
-	private static final FastPrinter out = new FastPrinter();
+	private static final FastPrinter out = new FastPrinter(64);
 	// endregion
 
 	private static void solve() {
@@ -225,11 +225,9 @@ public final class D {
 			solve();
 		} catch (final Throwable e) {
 			e.printStackTrace();
-			Runtime.getRuntime().halt(1);
 		} finally {
 			sc.close();
 			out.close();
-			Runtime.getRuntime().halt(0);
 		}
 	}
 
@@ -242,11 +240,19 @@ public final class D {
 
 	/**
 	 * 自己ループを含まない連結無向グラフ管理用ライブラリ
+	 * <p>
+	 * 無向辺は追加順に0始まりの辺IDが割り当てられます。
+	 * 内部表現では1本の無向辺を2本の内部辺として保持しますが、
+	 * 外部には無向辺IDとして公開します。
+	 * <p>
+	 * {@link #adjEdgeIds(int)} で取得した辺IDは {@link #to(int, int)} と
+	 * {@link #cost(int)} にそのまま渡せます。
+	 * {@link #to(int, int)} は「頂点 {@code u} から見た接続先頂点」を返します。
 	 */
 	@SuppressWarnings("unused")
 	private static final class UndirectedGraph {
-		// -------------- フィールド --------------
 		private final int[] dest, next, first, degree;
+		private final long[] cost;
 		private final int n;
 		private int edgeCount = 0;
 
@@ -258,21 +264,28 @@ public final class D {
 			first = new int[n];
 			fill(first, -1);
 			degree = new int[n];
+			cost = new long[m2];
 		}
 
 		public void add(final int i, final int j) {
+			add(i, j, 1);
+		}
+
+		public void add(final int i, final int j, final long c) {
 			dest[edgeCount] = j;
 			next[edgeCount] = first[i];
+			cost[edgeCount] = c;
 			first[i] = edgeCount++;
 			degree[i]++;
 
 			dest[edgeCount] = i;
 			next[edgeCount] = first[j];
+			cost[edgeCount] = c;
 			first[j] = edgeCount++;
 			degree[j]++;
 		}
 
-		public int getDegree(final int i) {
+		public int degree(final int i) {
 			return degree[i];
 		}
 
@@ -287,6 +300,7 @@ public final class D {
 				for (int e = first[u]; e != -1; e = next[e]) {
 					int v = dest[e];
 					if (color[v] == color[u]) return false;
+					if (color[v] != 0) continue;
 					color[v] = -color[u];
 					q[tail++] = v;
 				}
@@ -294,22 +308,30 @@ public final class D {
 			return true;
 		}
 
-		public Iterable<Integer> adj(final int u) {
-			return () -> new PrimitiveIterator.OfInt() {
-				private int e = first[u];
+		public int to(final int u, final int e) {
+			int v1 = dest[e << 1];
+			int v2 = dest[e << 1 | 1];
+			return u != v1 ? v1 : v2;
+		}
 
-				@Override
-				public boolean hasNext() {
-					return e != -1;
-				}
+		public long cost(final int e) {
+			return cost[e << 1];
+		}
 
-				@Override
-				public int nextInt() {
-					int v = dest[e];
-					e = next[e];
-					return v;
-				}
-			};
+		public int[] adj(final int u) {
+			int[] adj = new int[degree[u]];
+			for (int e = first[u], i = 0; e != -1; e = next[e], i++) {
+				adj[i] = dest[e];
+			}
+			return adj;
+		}
+
+		public int[] adjEdgeIds(final int u) {
+			int[] ids = new int[degree[u]];
+			for (int e = first[u], i = 0; e != -1; e = next[e], i++) {
+				ids[i] = e >> 1;
+			}
+			return ids;
 		}
 
 		public Iterable<Integer> bfs(final int s) {
@@ -424,7 +446,7 @@ public final class D {
 		private int pos = 0, bufferLength = 0;
 
 		public FastScanner() {
-			this(new FileInputStream(FileDescriptor.in), DEFAULT_BUFFER_SIZE);
+			this(System.in, DEFAULT_BUFFER_SIZE);
 		}
 
 		public FastScanner(final InputStream in) {
@@ -432,7 +454,7 @@ public final class D {
 		}
 
 		public FastScanner(final int bufferSize) {
-			this(new FileInputStream(FileDescriptor.in), bufferSize);
+			this(System.in, bufferSize);
 		}
 
 		public FastScanner(final InputStream in, final int bufferSize) {
@@ -1161,7 +1183,7 @@ public final class D {
 		private int pos;
 
 		public FastPrinter() {
-			this(new FileOutputStream(FileDescriptor.out), DEFAULT_BUFFER_SIZE, false);
+			this(System.out, DEFAULT_BUFFER_SIZE, false);
 		}
 
 		public FastPrinter(final OutputStream out) {
@@ -1169,11 +1191,11 @@ public final class D {
 		}
 
 		public FastPrinter(final int bufferSize) {
-			this(new FileOutputStream(FileDescriptor.out), bufferSize, false);
+			this(System.out, bufferSize, false);
 		}
 
 		public FastPrinter(final boolean autoFlush) {
-			this(new FileOutputStream(FileDescriptor.out), DEFAULT_BUFFER_SIZE, autoFlush);
+			this(System.out, DEFAULT_BUFFER_SIZE, autoFlush);
 		}
 
 		public FastPrinter(final OutputStream out, final boolean autoFlush) {
@@ -1181,7 +1203,7 @@ public final class D {
 		}
 
 		public FastPrinter(final int bufferSize, final boolean autoFlush) {
-			this(new FileOutputStream(FileDescriptor.out), bufferSize, autoFlush);
+			this(System.out, bufferSize, autoFlush);
 		}
 
 		public FastPrinter(final OutputStream out, final int bufferSize) {
