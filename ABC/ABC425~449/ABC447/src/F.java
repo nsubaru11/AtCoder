@@ -12,22 +12,13 @@ import static java.util.Arrays.*;
 public final class F {
 
 	// region < Constants & Globals >
-	private static final boolean DEBUG;
-	private static final int MOD;
-	private static final int[] di;
-	private static final int[] dj;
-	private static final FastScanner sc;
-	private static final FastPrinter out;
-
-	static {
-		DEBUG = true;
-		MOD = 998244353;
-		// MOD = 1_000_000_007;
-		di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
-		dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
-		sc = new FastScanner();
-		out = new FastPrinter();
-	}
+	private static final boolean DEBUG = true;
+	private static final int MOD = 998244353;
+	// private static final int MOD = 1_000_000_007;
+	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
+	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
+	private static final FastScanner sc = new FastScanner();
+	private static final FastPrinter out = new FastPrinter();
 	// endregion
 
 	private static int ans;
@@ -37,7 +28,7 @@ public final class F {
 		while (q-- > 0) {
 			ans = 1;
 			int n = sc.nextInt();
-			UndirectedGraph g = new UndirectedGraph(n, n);
+			UndirectedGraph g = new UndirectedGraph(n, n - 1);
 			while (n-- > 1) {
 				g.add(sc.nextInt0(), sc.nextInt0());
 			}
@@ -58,15 +49,19 @@ public final class F {
 				max2 = d;
 			}
 		}
-		int deg = g.getDegree(u);
+		int deg = g.degree(u);
 		if (deg < 3) return 0;
 		ans = max(ans, max1 + (deg == 3 ? 1 : max2 + 1));
 		return deg == 3 ? 1 : max1 + 1;
 	}
 
 	// region < Utility Methods >
+	private static boolean isValidRange(final int i, final int from, final int to) {
+		return ((i - from) | (to - 1 - i)) >= 0;
+	}
+
 	private static boolean isValidRange(final int i, final int j, final int h, final int w) {
-		return 0 <= i && i < h && 0 <= j && j < w;
+		return ((i | j | (h - 1 - i) | (w - 1 - j)) >>> 31) == 0;
 	}
 
 	private static void swap(final char[] a, final int i, final int j) {
@@ -166,35 +161,23 @@ public final class F {
 	}
 
 	private static long lModPow(long a, long b, final long mod) {
+		if (b == 0) return 1;
 		long ans = 1;
-		for (a %= mod; b > 0; a = a * a % mod, b >>= 1) {
+		for (a %= mod; b > 1; b >>= 1) {
 			if ((b & 1) == 1) ans = ans * a % mod;
+			a = a * a % mod;
 		}
-		return ans;
+		return ans * a % mod;
 	}
 
 	private static int iModPow(int a, int b, final int mod) {
+		if (b == 0) return 1;
 		int ans = 1;
-		for (a %= mod; b > 0; a = (int) ((long) a * a % mod), b >>= 1) {
+		for (a %= mod; b > 1; b >>= 1) {
 			if ((b & 1) == 1) ans = (int) ((long) ans * a % mod);
+			a = (int) ((long) a * a % mod);
 		}
-		return ans;
-	}
-
-	private static long floorLong(final long a, final long b) {
-		return a < 0 ? (a - b + 1) / b : a / b;
-	}
-
-	private static int floorInt(final int a, final int b) {
-		return a < 0 ? (a - b + 1) / b : a / b;
-	}
-
-	private static long ceilLong(final long a, final long b) {
-		return a < 0 ? a / b : (a + b - 1) / b;
-	}
-
-	private static int ceilInt(final int a, final int b) {
-		return a < 0 ? a / b : (a + b - 1) / b;
+		return (int) ((long) ans * a % mod);
 	}
 
 	private static long lcmLong(final long x, final long y) {
@@ -248,12 +231,11 @@ public final class F {
 	public static void main(final String[] args) {
 		try {
 			solve();
-		} catch (final Exception e) {
+		} catch (final Throwable e) {
 			e.printStackTrace();
 		} finally {
 			sc.close();
 			out.close();
-			Runtime.getRuntime().halt(0);
 		}
 	}
 
@@ -266,11 +248,19 @@ public final class F {
 
 	/**
 	 * 自己ループを含まない連結無向グラフ管理用ライブラリ
+	 * <p>
+	 * 無向辺は追加順に0始まりの辺IDが割り当てられます。
+	 * 内部表現では1本の無向辺を2本の内部辺として保持しますが、
+	 * 外部には無向辺IDとして公開します。
+	 * <p>
+	 * {@link #adjEdgeIds(int)} で取得した辺IDは {@link #to(int, int)} と
+	 * {@link #cost(int)} にそのまま渡せます。
+	 * {@link #to(int, int)} は「頂点 {@code u} から見た接続先頂点」を返します。
 	 */
 	@SuppressWarnings("unused")
 	private static final class UndirectedGraph {
-		// -------------- フィールド --------------
 		private final int[] dest, next, first, degree;
+		private final long[] cost;
 		private final int n;
 		private int edgeCount = 0;
 
@@ -282,21 +272,28 @@ public final class F {
 			first = new int[n];
 			fill(first, -1);
 			degree = new int[n];
+			cost = new long[m2];
 		}
 
 		public void add(final int i, final int j) {
+			add(i, j, 1);
+		}
+
+		public void add(final int i, final int j, final long c) {
 			dest[edgeCount] = j;
 			next[edgeCount] = first[i];
+			cost[edgeCount] = c;
 			first[i] = edgeCount++;
 			degree[i]++;
 
 			dest[edgeCount] = i;
 			next[edgeCount] = first[j];
+			cost[edgeCount] = c;
 			first[j] = edgeCount++;
 			degree[j]++;
 		}
 
-		public int getDegree(final int i) {
+		public int degree(final int i) {
 			return degree[i];
 		}
 
@@ -311,6 +308,7 @@ public final class F {
 				for (int e = first[u]; e != -1; e = next[e]) {
 					int v = dest[e];
 					if (color[v] == color[u]) return false;
+					if (color[v] != 0) continue;
 					color[v] = -color[u];
 					q[tail++] = v;
 				}
@@ -318,22 +316,30 @@ public final class F {
 			return true;
 		}
 
-		public Iterable<Integer> adj(final int u) {
-			return () -> new PrimitiveIterator.OfInt() {
-				private int e = first[u];
+		public int to(final int u, final int e) {
+			int v1 = dest[e << 1];
+			int v2 = dest[e << 1 | 1];
+			return u != v1 ? v1 : v2;
+		}
 
-				@Override
-				public boolean hasNext() {
-					return e != -1;
-				}
+		public long cost(final int e) {
+			return cost[e << 1];
+		}
 
-				@Override
-				public int nextInt() {
-					int v = dest[e];
-					e = next[e];
-					return v;
-				}
-			};
+		public int[] adj(final int u) {
+			int[] adj = new int[degree[u]];
+			for (int e = first[u], i = 0; e != -1; e = next[e], i++) {
+				adj[i] = dest[e];
+			}
+			return adj;
+		}
+
+		public int[] adjEdgeIds(final int u) {
+			int[] ids = new int[degree[u]];
+			for (int e = first[u], i = 0; e != -1; e = next[e], i++) {
+				ids[i] = e >> 1;
+			}
+			return ids;
 		}
 
 		public Iterable<Integer> bfs(final int s) {
@@ -448,7 +454,7 @@ public final class F {
 		private int pos = 0, bufferLength = 0;
 
 		public FastScanner() {
-			this(new FileInputStream(FileDescriptor.in), DEFAULT_BUFFER_SIZE);
+			this(System.in, DEFAULT_BUFFER_SIZE);
 		}
 
 		public FastScanner(final InputStream in) {
@@ -456,7 +462,7 @@ public final class F {
 		}
 
 		public FastScanner(final int bufferSize) {
-			this(new FileInputStream(FileDescriptor.in), bufferSize);
+			this(System.in, bufferSize);
 		}
 
 		public FastScanner(final InputStream in, final int bufferSize) {
@@ -533,7 +539,7 @@ public final class F {
 		private int nextIntFast(int b, final boolean negative) {
 			final byte[] buf = buffer;
 			int p = pos, n = 0;
-			long a = (long) FastScanner.Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			long a = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
 			long check = a & 0xF0F0F0F0F0F0F0F0L;
 			if (check == 0) {
 				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
@@ -586,7 +592,7 @@ public final class F {
 			final byte[] buf = buffer;
 			int p = pos;
 			long n = 0;
-			long a = (long) FastScanner.Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			long a = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
 			long check = a & 0xF0F0F0F0F0F0F0F0L;
 			if (check == 0) {
 				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
@@ -595,7 +601,7 @@ public final class F {
 				n = a;
 				p += 7;
 				b = buf[p++];
-				long a2 = (long) FastScanner.Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+				long a2 = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
 				long check2 = a2 & 0xF0F0F0F0F0F0F0F0L;
 				if (check2 == 0) {
 					a2 = (a2 * 10 + (a2 >>> 8)) & 0x00FF00FF00FF00FFL;
@@ -1185,7 +1191,7 @@ public final class F {
 		private int pos;
 
 		public FastPrinter() {
-			this(new FileOutputStream(FileDescriptor.out), DEFAULT_BUFFER_SIZE, false);
+			this(System.out, DEFAULT_BUFFER_SIZE, false);
 		}
 
 		public FastPrinter(final OutputStream out) {
@@ -1193,11 +1199,11 @@ public final class F {
 		}
 
 		public FastPrinter(final int bufferSize) {
-			this(new FileOutputStream(FileDescriptor.out), bufferSize, false);
+			this(System.out, bufferSize, false);
 		}
 
 		public FastPrinter(final boolean autoFlush) {
-			this(new FileOutputStream(FileDescriptor.out), DEFAULT_BUFFER_SIZE, autoFlush);
+			this(System.out, DEFAULT_BUFFER_SIZE, autoFlush);
 		}
 
 		public FastPrinter(final OutputStream out, final boolean autoFlush) {
@@ -1205,7 +1211,7 @@ public final class F {
 		}
 
 		public FastPrinter(final int bufferSize, final boolean autoFlush) {
-			this(new FileOutputStream(FileDescriptor.out), bufferSize, autoFlush);
+			this(System.out, bufferSize, autoFlush);
 		}
 
 		public FastPrinter(final OutputStream out, final int bufferSize) {
@@ -1214,7 +1220,7 @@ public final class F {
 
 		public FastPrinter(final OutputStream out, final int bufferSize, final boolean autoFlush) {
 			this.out = out;
-			this.buffer = new byte[max(64, roundUpToPowerOfTwo(bufferSize))];
+			this.buffer = new byte[bufferSize(bufferSize)];
 			this.autoFlush = autoFlush;
 		}
 
@@ -1271,15 +1277,8 @@ public final class F {
 			}
 		}
 
-		private static int roundUpToPowerOfTwo(int x) {
-			if (x <= 1) return 1;
-			x--;
-			x |= x >>> 1;
-			x |= x >>> 2;
-			x |= x >>> 4;
-			x |= x >>> 8;
-			x |= x >>> 16;
-			return x + 1;
+		private static int bufferSize(int x) {
+			return x <= 64 ? 64 : 1 << (32 - Integer.numberOfLeadingZeros(x - 1));
 		}
 
 		@Override
@@ -1508,11 +1507,11 @@ public final class F {
 			final int bufferLength = buffer.length;
 			if (required <= bufferLength) return;
 			flush();
-			if (additional > bufferLength) buffer = new byte[roundUpToPowerOfTwo(additional)];
+			if (additional > bufferLength) buffer = new byte[bufferSize(additional)];
 		}
 
 		private int write(final boolean b, int p) {
-			final byte[] src = b ? FastPrinter.Cache.TRUE_BYTES : FastPrinter.Cache.FALSE_BYTES;
+			final byte[] src = b ? Cache.TRUE_BYTES : Cache.FALSE_BYTES;
 			final int len = src.length;
 			System.arraycopy(src, 0, buffer, p, len);
 			return p + len;
@@ -1520,10 +1519,10 @@ public final class F {
 
 		private int write(int i, int p) {
 			final byte[] buf = buffer;
-			final VarHandle shortHandle = FastPrinter.Cache.SHORT_HANDLE;
-			final VarHandle intHandle = FastPrinter.Cache.INT_HANDLE;
-			final short[] digits2 = FastPrinter.Cache.DIGITS_2;
-			final int[] digits4 = FastPrinter.Cache.DIGITS_4;
+			final VarHandle shortHandle = Cache.SHORT_HANDLE;
+			final VarHandle intHandle = Cache.INT_HANDLE;
+			final short[] digits2 = Cache.DIGITS_2;
+			final int[] digits4 = Cache.DIGITS_4;
 			if (i >= 0) i = -i;
 			else buf[p++] = HYPHEN;
 			final int digits = countDigits(i);
@@ -1559,10 +1558,10 @@ public final class F {
 
 		private int write(long l, int p) {
 			final byte[] buf = buffer;
-			final VarHandle shortHandle = FastPrinter.Cache.SHORT_HANDLE;
-			final VarHandle intHandle = FastPrinter.Cache.INT_HANDLE;
-			final short[] digits2 = FastPrinter.Cache.DIGITS_2;
-			final int[] digits4 = FastPrinter.Cache.DIGITS_4;
+			final VarHandle shortHandle = Cache.SHORT_HANDLE;
+			final VarHandle intHandle = Cache.INT_HANDLE;
+			final short[] digits2 = Cache.DIGITS_2;
+			final int[] digits4 = Cache.DIGITS_4;
 			if (l >= 0) l = -l;
 			else buf[p++] = HYPHEN;
 			final int digits = countDigits(l);
@@ -1697,7 +1696,7 @@ public final class F {
 			}
 			if (n > 18) n = 18;
 			final long intPart = (long) d;
-			final long fracPart = (long) ((d - intPart) * FastPrinter.Cache.POW10[n]);
+			final long fracPart = (long) ((d - intPart) * Cache.POW10[n]);
 			p = write(intPart, p);
 			buf[p++] = PERIOD;
 			int leadingZeros = n - countDigits(-fracPart);
