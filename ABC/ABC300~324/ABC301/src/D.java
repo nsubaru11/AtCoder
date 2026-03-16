@@ -17,7 +17,7 @@ public final class D {
 	// private static final int MOD = 1_000_000_007;
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
-	private static final FastScanner sc = new FastScanner();
+	private static final FastScanner sc = new FastScanner(128);
 	private static final FastPrinter out = new FastPrinter(64);
 	// endregion
 
