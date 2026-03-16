@@ -9,7 +9,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class B {
+public final class E {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG = true;
@@ -17,30 +17,42 @@ public final class B {
 	// private static final int MOD = 1_000_000_007;
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
-	private static final FastScanner sc = new FastScanner(4096);
+	private static final FastScanner sc = new FastScanner(64);
 	private static final FastPrinter out = new FastPrinter(64);
 	// endregion
 
+	private static final int inv5 = iModPow(5, MOD - 2, MOD);
+
 	private static void solve() {
-		int h = sc.nextInt();
-		int w = sc.nextInt();
-		char[][] a = sc.nextCharMat(h, w);
-		char[][] b = sc.nextCharMat(h, w);
-		boolean flag = false;
-		outer:
-		for (int s = 0; s < h; s++) {
-			inner:
-			for (int t = 0; t < w; t++) {
-				for (int i = 0; i < h; i++) {
-					for (int j = 0; j < w; j++) {
-						if (a[(i + s) % h][(j + t) % w] != b[i][j]) continue inner;
-					}
-				}
-				flag = true;
-				break outer;
-			}
+		long n = sc.nextLong();
+		int cnt2 = 0, cnt3 = 0, cnt5 = 0;
+		while (n % 2 == 0) {
+			n /= 2;
+			cnt2++;
 		}
-		out.println(flag);
+		while (n % 3 == 0) {
+			n /= 3;
+			cnt3++;
+		}
+		while (n % 5 == 0) {
+			n /= 5;
+			cnt5++;
+		}
+		out.println(n != 1 ? 0 : dfs(cnt2, cnt3, cnt5, new int[cnt2 + 1][cnt3 + 1][cnt5 + 1]));
+	}
+
+	private static int dfs(int c2, int c3, int c5, int[][][] memo) {
+		// p(v) = (p(v) + p(v/2) + p(v/3) + p(v/4) + p(v/5) + p(v/6)) / 6
+		// p(v) = (p(v/2) + p(v/3) + p(v/4) + p(v/5) + p(v/6)) / 5
+		if ((c2 | c3 | c5) == 0) return 1;
+		if (memo[c2][c3][c5] != 0) return memo[c2][c3][c5];
+		long p = 0;
+		if (c2 >= 1) p += dfs(c2 - 1, c3, c5, memo);
+		if (c3 >= 1) p += dfs(c2, c3 - 1, c5, memo);
+		if (c2 >= 2) p += dfs(c2 - 2, c3, c5, memo);
+		if (c5 >= 1) p += dfs(c2, c3, c5 - 1, memo);
+		if (c2 >= 1 && c3 >= 1) p += dfs(c2 - 1, c3 - 1, c5, memo);
+		return memo[c2][c3][c5] = (int) (p * inv5 % MOD);
 	}
 
 	// region < Utility Methods >
