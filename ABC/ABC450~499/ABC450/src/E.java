@@ -34,16 +34,16 @@ public final class E {
 			parallelPrefix(cntX[i], Integer::sum);
 			parallelPrefix(cntY[i], Integer::sum);
 		}
-		ArrayList<Long> fib = new ArrayList<>();
-		fib.add((long) xLen);
-		fib.add((long) yLen);
+		int size = 0;
+		long[] fib = new long[90];
+		fib[size++] = xLen;
+		fib[size++] = yLen;
 		for (long p1 = xLen, p2 = yLen; p1 < 1_000_000_000_000_000_001L; ) {
 			long n = p1 + p2;
-			fib.add(n);
+			fib[size++] = n;
 			p1 = p2;
 			p2 = n;
 		}
-		int size = fib.size();
 		long[][] cnt = new long[26][size];
 		for (int i = 0; i < 26; i++) {
 			cnt[i][0] = cntX[i][xLen - 1];
@@ -62,11 +62,11 @@ public final class E {
 		}
 	}
 
-	private static long dfs(int[] cntX, int[] cntY, long[] cnt, int i, ArrayList<Long> al, long len) {
+	private static long dfs(int[] cntX, int[] cntY, long[] cnt, int i, long[] al, long len) {
 		if (len == 0) return 0;
 		if (i <= 2) return i == 1 ? cntX[(int) len - 1] : cntY[(int) len - 1];
-		long left = len >= al.get(i - 2) ? cnt[i - 2] : dfs(cntX, cntY, cnt, i - 1, al, len);
-		long right = al.get(i - 2) < len ? dfs(cntX, cntY, cnt, i - 2, al, len - al.get(i - 2)) : 0;
+		long left = len >= al[i - 2] ? cnt[i - 2] : dfs(cntX, cntY, cnt, i - 1, al, len);
+		long right = al[i - 2] < len ? dfs(cntX, cntY, cnt, i - 2, al, len - al[i - 2]) : 0;
 		return left + right;
 	}
 
