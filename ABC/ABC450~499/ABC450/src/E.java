@@ -62,12 +62,24 @@ public final class E {
 		}
 	}
 
-	private static long dfs(int[] cntX, int[] cntY, long[] cnt, int i, long[] al, long len) {
+	private static long dfs(int[] cntX, int[] cntY, long[] cnt, int i, long[] fib, long len) {
 		if (len == 0) return 0;
-		if (i <= 2) return i == 1 ? cntX[(int) len - 1] : cntY[(int) len - 1];
-		long left = len >= al[i - 2] ? cnt[i - 2] : dfs(cntX, cntY, cnt, i - 1, al, len);
-		long right = al[i - 2] < len ? dfs(cntX, cntY, cnt, i - 2, al, len - al[i - 2]) : 0;
-		return left + right;
+		long ans = 0;
+		while (len > 0) {
+			if (i <= 2) {
+				ans += i == 1 ? cntX[(int) len - 1] : cntY[(int) len - 1];
+				break;
+			}
+			long l = fib[i - 2];
+			if (l <= len) {
+				ans += cnt[i - 2];
+				len -= l;
+				i -= 2;
+			} else {
+				i--;
+			}
+		}
+		return ans;
 	}
 
 	// region < Utility Methods >
