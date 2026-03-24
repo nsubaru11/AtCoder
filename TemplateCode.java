@@ -206,8 +206,6 @@ public final class ${NAME} {
 	public static void main(final String[] args) {
 		try {
 			solve();
-		} catch (final Throwable e) {
-			e.printStackTrace();
 		} finally {
 			sc.close();
 			out.close();
