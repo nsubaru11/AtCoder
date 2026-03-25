@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        AtCoder Easy Test for Java
 // @namespace    https://github.com/nsubaru11/AtCoder/AtCoder_Scripts
-// @version     1.5.0
+// @version     1.5.1
 // @description Make testing sample cases easy (Modified by nsubaru11)
 // @author      magurofly (original), nsubaru11 (modified)
 // @license     MIT
