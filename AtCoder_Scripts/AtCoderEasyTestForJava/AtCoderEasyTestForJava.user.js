@@ -1964,6 +1964,8 @@ def __run():
 	const pattern = /^https?:\/\//;
 	let runners$1 = {};
 	const currentLocalRunners = [];
+	let localRunnerCacheURL = "";
+	let localRunnerCacheSignature = "";
 
 	class LocalRunner extends CodeRunner {
 		compilerName;
@@ -1974,12 +1976,18 @@ def __run():
 
 		static async update() {
 			const apiURL = config.getString("codeRunner.localRunnerURL", "");
-			for (const key of currentLocalRunners) {
-				delete runners$1[key];
+			if (!apiURL) {
+				if (currentLocalRunners.length === 0 && localRunnerCacheURL === "") {
+					return false;
+				}
+				for (const key of currentLocalRunners) {
+					delete runners$1[key];
+				}
+				currentLocalRunners.length = 0;
+				localRunnerCacheURL = "";
+				localRunnerCacheSignature = "";
+				return true;
 			}
-			currentLocalRunners.length = 0;
-			// 未設定の場合は登録済みrunnerを削除し即return（例外を投げない）
-			if (!apiURL) return;
 			if (!pattern.test(apiURL)) throw "LocalRunner: invalid localRunnerURL";
 			try {
 				const res = await fetch(apiURL, {
@@ -1992,14 +2000,29 @@ def __run():
 						mode: "list",
 					}),
 				}).then(r => r.json());
+				const nextEntries = [];
 				for (const {language, compilerName, label} of res) {
 					const key = `${language} ${compilerName} ${label}`;
+					nextEntries.push({key, compilerName, label});
+				}
+				const nextSignature = nextEntries.map(({key}) => key).join("\n");
+				if (localRunnerCacheURL === apiURL && localRunnerCacheSignature === nextSignature) {
+					return false;
+				}
+				for (const key of currentLocalRunners) {
+					delete runners$1[key];
+				}
+				currentLocalRunners.length = 0;
+				for (const {key, compilerName, label} of nextEntries) {
 					runners$1[key] = new LocalRunner(compilerName, label);
 					currentLocalRunners.push(key);
 				}
+				localRunnerCacheURL = apiURL;
+				localRunnerCacheSignature = nextSignature;
+				return true;
 			} catch (e) {
-				// fetch失敗したらreturn（例外を投げない）
 				console.error("LocalRunner:", e);
+				return false;
 			}
 		}
 
@@ -2268,11 +2291,12 @@ def __run():
 		},
 		// 環境の名前の一覧を取得する
 		// @return runnerIdとラベルのペアの配列
-		async getEnvironment(languageId) {
+		async getEnvironment(languageId, options = {}) {
+			const {refreshLocalRunner = true} = options;
 			ensureWandboxCompilersLoaded(); // wandboxAPI がコンパイラ情報を取ってくるのを待つ
 			await localRunnerPromise; // LocalRunner がコンパイラ情報を取ってくるのを待つ
 			// リロード時・言語変更時にローカルサーバーの起動状態を再チェック
-			await LocalRunner.update();
+			if (refreshLocalRunner) await LocalRunner.update();
 			let langs = similarLangs(languageId, Object.keys(runners));
 			// Java 系のときだけ、実行環境の優先順位を調整する
 			// - Local Server が起動していれば LocalRunner を優先
@@ -2847,6 +2871,9 @@ def __run():
 			}
 			// 言語選択関係
 			{
+				let latestSetLanguageToken = 0;
+				let isLocalServerPolling = false;
+
 				async function onEnvChange() {
 					const langSelection = config.get("langSelection", {});
 					langSelection[site$1.language.value] = eLanguage.value;
@@ -2860,33 +2887,54 @@ def __run():
 					eLanguage.addEventListener("change", onEnvChange);
 				}
 
-				async function setLanguage() {
+				async function setLanguage(refreshLocalRunner = true) {
+					const currentToken = ++latestSetLanguageToken;
 					const languageId = site$1.language.value;
-					while (eLanguage.firstChild)
-						eLanguage.removeChild(eLanguage.firstChild);
 					try {
 						if (!languageId) throw new Error("AtCoder Easy Test: language not set");
-						const langs = await codeRunner.getEnvironment(languageId);
+						const langs = await codeRunner.getEnvironment(languageId, {refreshLocalRunner});
+						if (currentToken !== latestSetLanguageToken) return;
 						log.debug("getEnvironment:", languageId, `(${langs.length} candidates)`);
-						// add <option>
-						for (const [languageId, label] of langs) {
-							const option = document.createElement("option");
-							option.value = languageId;
-							option.textContent = label;
-							eLanguage.appendChild(option);
-						}
-						// load
-						const langSelection = config.get("langSelection", {});
-						if (languageId in langSelection) {
-							const prev = langSelection[languageId];
-							if (langs.some(([lang, _]) => lang === prev)) {
-								eLanguage.value = prev;
+						const previousValue = eLanguage.value;
+						const nextSignature = langs.map(([runnerId, label]) => `${runnerId}\u0000${label}`).join("\u0001");
+						if (eLanguage.dataset.envSignature !== nextSignature) {
+							while (eLanguage.firstChild)
+								eLanguage.removeChild(eLanguage.firstChild);
+							const fragment = document.createDocumentFragment();
+							for (const [runnerId, label] of langs) {
+								const option = document.createElement("option");
+								option.value = runnerId;
+								option.textContent = label;
+								fragment.appendChild(option);
 							}
+							eLanguage.appendChild(fragment);
+							eLanguage.dataset.envSignature = nextSignature;
+						}
+						let nextValue = previousValue;
+						const langSelection = config.get("langSelection", {});
+						if (!langs.some(([runnerId, _]) => runnerId === nextValue)) {
+							nextValue = "";
+						}
+						if (!nextValue && languageId in langSelection) {
+							const prev = langSelection[languageId];
+							if (langs.some(([runnerId, _]) => runnerId === prev)) {
+								nextValue = prev;
+							}
+						}
+						if (!nextValue && langs.length > 0) {
+							nextValue = langs[0][0];
+						}
+						if (nextValue && eLanguage.value !== nextValue) {
+							eLanguage.value = nextValue;
 						}
 						events.trig("enable");
 					} catch (error) {
+						if (currentToken !== latestSetLanguageToken) return;
 						log.debug("getEnvironment failed:", languageId);
 						log.error(error);
+						eLanguage.dataset.envSignature = "";
+						while (eLanguage.firstChild)
+							eLanguage.removeChild(eLanguage.firstChild);
 						const option = document.createElement("option");
 						option.className = "fg-danger";
 						option.textContent = error;
@@ -2899,21 +2947,18 @@ def __run():
 
 				// --- LocalServer定期チェック機能 ---
 				setInterval(async () => {
-					// 現在の言語IDを取得
-					const currentLangId = site$1.language.value;
-					if (!currentLangId) return;
-					await LocalRunner.update();
-					await setLanguage();
-					if (eLanguage.options.length > 0) {
-						const firstOption = eLanguage.options[0];
-						if (eLanguage.value !== firstOption.value) {
-							eLanguage.value = firstOption.value;
-							if (unsafeWindow["jQuery"]) {
-								unsafeWindow["jQuery"](eLanguage).trigger("change");
-							} else {
-								eLanguage.dispatchEvent(new Event("change"));
-							}
+					if (isLocalServerPolling) return;
+					isLocalServerPolling = true;
+					try {
+						// 現在の言語IDを取得
+						const currentLangId = site$1.language.value;
+						if (!currentLangId) return;
+						const updated = await LocalRunner.update();
+						if (updated) {
+							await setLanguage(false);
 						}
+					} finally {
+						isLocalServerPolling = false;
 					}
 				}, 5000);
 
