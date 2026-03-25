@@ -258,8 +258,6 @@ public final class E {
 	public static void main(final String[] args) {
 		try {
 			solve();
-		} catch (final Throwable e) {
-			e.printStackTrace();
 		} finally {
 			sc.close();
 			out.close();
