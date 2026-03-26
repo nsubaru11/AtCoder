@@ -9,7 +9,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class C {
+public final class E {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG = true;
@@ -18,39 +18,42 @@ public final class C {
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
 	private static final FastScanner sc = new FastScanner();
-	private static final FastPrinter out = new FastPrinter(64);
+	private static final FastPrinter out = new FastPrinter();
 	// endregion
 
 	private static void solve() {
-		Map<Character, Integer> map = Map.of('R', 2, 'L', 0, 'U', 3, 'D', 1);
 		int n = sc.nextInt();
-		int m = sc.nextInt();
-		int h = sc.nextInt();
-		int k = sc.nextInt();
-		char[] s = sc.nextChars(n);
-		HashMap<Integer, HashSet<Integer>> heal = new HashMap<>();
-		while (m-- > 0) {
-			int x = sc.nextInt();
-			int y = sc.nextInt();
-			heal.computeIfAbsent(x, _ -> new HashSet<>()).add(y);
+		int[] deg = new int[n];
+		for (int i = 1; i < n; i++) {
+			int u = sc.nextInt0();
+			int v = sc.nextInt0();
+			deg[u]++;
+			deg[v]++;
 		}
-		int x = 0, y = 0;
-		for (char c : s) {
-			int d = map.get(c);
-			x += dj[d];
-			y += di[d];
-			h--;
-			if (h < 0) {
-				out.println(false);
-				return;
-			}
-			if (heal.containsKey(x) && heal.get(x).contains(y) && h < k) {
-				h = k;
-				heal.get(x).remove(y);
-				if (heal.get(x).isEmpty()) heal.remove(x);
+		int[] ans = new int[n];
+		int cnt = n;
+		for (int d : deg) {
+			if (d < 3) continue;
+			ans[d]++;
+			cnt -= d + 1;
+		}
+		ans[2] += cnt / 3;
+		boolean f = true;
+		for (int i = 2; i < n; i++) {
+			if (ans[i] == 0) continue;
+			if (f) {
+				out.print(i);
+				for (int j = 1; j < ans[i]; j++) {
+					out.print(' ').print(i);
+				}
+				f = false;
+			} else {
+				for (int j = 0; j < ans[i]; j++) {
+					out.print(' ').print(i);
+				}
 			}
 		}
-		out.println(true);
+		out.println();
 	}
 
 	// region < Utility Methods >

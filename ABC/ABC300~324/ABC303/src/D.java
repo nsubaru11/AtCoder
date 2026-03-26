@@ -9,7 +9,7 @@ import java.util.function.*;
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class C {
+public final class D {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG = true;
@@ -22,35 +22,18 @@ public final class C {
 	// endregion
 
 	private static void solve() {
-		Map<Character, Integer> map = Map.of('R', 2, 'L', 0, 'U', 3, 'D', 1);
-		int n = sc.nextInt();
-		int m = sc.nextInt();
-		int h = sc.nextInt();
-		int k = sc.nextInt();
-		char[] s = sc.nextChars(n);
-		HashMap<Integer, HashSet<Integer>> heal = new HashMap<>();
-		while (m-- > 0) {
-			int x = sc.nextInt();
-			int y = sc.nextInt();
-			heal.computeIfAbsent(x, _ -> new HashSet<>()).add(y);
-		}
-		int x = 0, y = 0;
+		int x = sc.nextInt();
+		int y = sc.nextInt();
+		int z = sc.nextInt();
+		char[] s = sc.nextChars();
+		long normal = 0, locked = z;
+		// x < y を前提でコードを作成したがACだった。
 		for (char c : s) {
-			int d = map.get(c);
-			x += dj[d];
-			y += di[d];
-			h--;
-			if (h < 0) {
-				out.println(false);
-				return;
-			}
-			if (heal.containsKey(x) && heal.get(x).contains(y) && h < k) {
-				h = k;
-				heal.get(x).remove(y);
-				if (heal.get(x).isEmpty()) heal.remove(x);
-			}
+			long tNormal = normal, tLocked = locked;
+			normal = c == 'A' ? min(tNormal + y, tLocked + x + z) : min(tNormal + x, tLocked + y + z);
+			locked = c == 'A' ? min(tNormal + y + z, tLocked + x) : min(tNormal + x + z, tLocked + y);
 		}
-		out.println(true);
+		out.println(min(normal, locked));
 	}
 
 	// region < Utility Methods >
