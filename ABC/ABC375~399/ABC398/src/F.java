@@ -1,15 +1,27 @@
 import java.io.*;
+import java.lang.invoke.*;
 import java.math.*;
+import java.nio.*;
+import java.nio.charset.*;
 import java.util.*;
-import java.util.ArrayList;
 import java.util.function.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public class F {
+public final class F {
 
-	private static void solve(final FastScanner sc, final FastPrinter out) {
+	// region < Constants & Globals >
+	private static final boolean DEBUG = true;
+	private static final int MOD = 998244353;
+	// private static final int MOD = 1_000_000_007;
+	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
+	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
+	private static final FastScanner sc = new FastScanner();
+	private static final FastPrinter out = new FastPrinter();
+	// endregion
+
+	private static void solve() {
 		char[] chars = sc.nextChars();
 		Manacher p = new Manacher(chars);
 		int pos = 0;
@@ -30,33 +42,214 @@ public class F {
 		out.println();
 	}
 
-	public static void main(String[] args) {
-		try (final FastScanner sc = new FastScanner();
-		     final FastPrinter out = new FastPrinter()) {
-			solve(sc, out);
-		} catch (Exception e) {
-			System.err.println(e.getMessage());
+	// region < Utility Methods >
+	private static boolean isValidRange(final int i, final int from, final int to) {
+		return ((i - from) | (to - 1 - i)) >= 0;
+	}
+
+	private static boolean isValidRange(final int i, final int j, final int h, final int w) {
+		return ((i | j | (h - 1 - i) | (w - 1 - j)) >>> 31) == 0;
+	}
+
+	private static void swap(final char[] a, final int i, final int j) {
+		final char tmp = a[i];
+		a[i] = a[j];
+		a[j] = tmp;
+	}
+
+	private static void swap(final int[] a, final int i, final int j) {
+		final int tmp = a[i];
+		a[i] = a[j];
+		a[j] = tmp;
+	}
+
+	private static void swap(final long[] a, final int i, final int j) {
+		final long tmp = a[i];
+		a[i] = a[j];
+		a[j] = tmp;
+	}
+
+	private static boolean chmin(final char[] a, final int i, final char v) {
+		if (a[i] <= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmin(final int[] a, final int i, final int v) {
+		if (a[i] <= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmin(final long[] a, final int i, final long v) {
+		if (a[i] <= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmax(final char[] a, final int i, final char v) {
+		if (a[i] >= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmax(final int[] a, final int i, final int v) {
+		if (a[i] >= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmax(final long[] a, final int i, final long v) {
+		if (a[i] >= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static int min(int... a) {
+		int len = a.length;
+		int min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static int max(int... a) {
+		int len = a.length;
+		int max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
+	}
+
+	private static long min(long... a) {
+		int len = a.length;
+		long min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static long max(long... a) {
+		int len = a.length;
+		long max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
+	}
+
+	private static double min(double... a) {
+		int len = a.length;
+		double min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static double max(double... a) {
+		int len = a.length;
+		double max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
+	}
+
+	private static long lModPow(long a, long b, final long mod) {
+		if (b == 0) return 1;
+		long ans = 1;
+		for (a %= mod; b > 1; b >>= 1) {
+			if ((b & 1) == 1) ans = ans * a % mod;
+			a = a * a % mod;
+		}
+		return ans * a % mod;
+	}
+
+	private static int iModPow(int a, int b, final int mod) {
+		if (b == 0) return 1;
+		int ans = 1;
+		for (a %= mod; b > 1; b >>= 1) {
+			if ((b & 1) == 1) ans = (int) ((long) ans * a % mod);
+			a = (int) ((long) a * a % mod);
+		}
+		return (int) ((long) ans * a % mod);
+	}
+
+	private static long lcmLong(final long x, final long y) {
+		return x == 0 || y == 0 ? 0 : x / gcdLong(x, y) * y;
+	}
+
+	private static int lcmInt(final int x, final int y) {
+		return x == 0 || y == 0 ? 0 : x / gcdInt(x, y) * y;
+	}
+
+	private static long gcdLong(long a, long b) {
+		a = abs(a);
+		b = abs(b);
+		if (a == 0) return b;
+		if (b == 0) return a;
+		int commonShift = Long.numberOfTrailingZeros(a | b);
+		a >>= Long.numberOfTrailingZeros(a);
+		while (b != 0) {
+			b >>= Long.numberOfTrailingZeros(b);
+			if (a > b) {
+				long tmp = a;
+				a = b;
+				b = tmp;
+			}
+			b -= a;
+		}
+		return a << commonShift;
+	}
+
+	private static int gcdInt(int a, int b) {
+		a = abs(a);
+		b = abs(b);
+		if (a == 0) return b;
+		if (b == 0) return a;
+		int commonShift = Integer.numberOfTrailingZeros(a | b);
+		a >>= Integer.numberOfTrailingZeros(a);
+		while (b != 0) {
+			b >>= Integer.numberOfTrailingZeros(b);
+			if (a > b) {
+				int tmp = a;
+				a = b;
+				b = tmp;
+			}
+			b -= a;
+		}
+		return a << commonShift;
+	}
+	// endregion
+
+	// region < I/O & Debug >
+	public static void main(final String[] args) {
+		try {
+			solve();
+		} finally {
+			sc.close();
+			out.close();
+		}
+	}
+
+	private static void debug(final Object... args) {
+		if (DEBUG) {
+			out.flush();
+			System.err.println(deepToString(args));
 		}
 	}
 
 	/**
-	 * Manacherアルゴリズムに基づいて文字列内の回文情報を計算するクラス。
-	 * 主に最長回文部分文字列の取得や、任意区間が回文かどうかの判定に利用される。
+	 * Manacher'sアルゴリズムに基づいて文字列内の回文情報を計算するクラス。
+	 * 主に最長回文部分文字列の取得や、任意区間が回文かどうかの判定に利用する。
+	 * 時間計算量O(n)で全ての回文を検出可能。
 	 */
 	@SuppressWarnings("unused")
 	private static final class Manacher {
-		public final int[] radii;
-		private final int len;
+		private final int[] palindromeLengths;
 		private final char[] chars;
-		private int maxOddLength, maxEvenLength;
+		private int maxOddLen, maxEvenLen;
+		private int maxOddCtr, maxEvenCtr;
 
 		/**
-		 * 指定された文字列に対してManacherアルゴリズムを実行し、回文情報を初期化します。
+		 * 指定された文字列に対してManacher'sアルゴリズムを実行し、回文情報を初期化します。
 		 *
-		 * @param str 対象となる文字列
+		 * @param s 対象となる文字列
 		 */
-		Manacher(String str) {
-			this(str.toCharArray());
+		public Manacher(String s) {
+			this(s.toCharArray());
 		}
 
 		/**
@@ -64,40 +257,63 @@ public class F {
 		 *
 		 * @param chr 対象となる文字配列
 		 */
-		Manacher(char[] chr) {
+		public Manacher(char[] chr) {
 			chars = chr;
-			len = (chr.length << 1) - 1;
-			radii = new int[len];
-			radii[0] = radii[len - 1] = 1;
-			computePalindromicRadii();
+			int len = (chr.length << 1) - 1;
+			palindromeLengths = new int[len];
+			palindromeLengths[0] = palindromeLengths[len - 1] = 1;
+			computePalindromicLengths();
 		}
 
 		/**
-		 * Manacherアルゴリズムに基づき、各仮想中心における回文半径をO(n)で計算します。
-		 * 各中心i (0 <= i < 2n - 1) に対して、回文区間[l, r)の長さ (r - l) を radii[i] として保存します。
+		 * Manacher'sアルゴリズムに基づき、各仮想中心における回文長さをO(n)で計算します。
+		 * 各中心i (0 <= i < 2n - 1) に対して、回文区間[l, r)の長さ (r - l) を palindromeLengths[i] として保存します。
 		 */
-		private void computePalindromicRadii() {
-			int clen = chars.length;
-			for (int pos = 1, radius = 0; pos < len - 1; ) {
-				int l = (pos - radii[pos] >> 1);
-				int r = (pos + radii[pos] >> 1) + 1;
+		private void computePalindromicLengths() {
+			final char[] chars = this.chars;
+			final int clen = chars.length;
+			final int len = (clen << 1) - 1;
+
+			for (int pos = 1, length = 0; pos < len - 1; ) {
+				int l = (pos - length >> 1);
+				int r = (pos + length >> 1) + 1;
+
 				while (0 <= l && r < clen && chars[l--] == chars[r++]) {
-					radius += 2;
+					length += 2;
 				}
-				radii[pos] = radius;
-				if ((radius & 1) == 0) {
-					maxEvenLength = max(radius, maxEvenLength);
+
+				palindromeLengths[pos] = length;
+
+				if ((length & 1) == 0) {
+					if (length > maxEvenLen) {
+						maxEvenLen = length;
+						maxEvenCtr = pos;
+					}
 				} else {
-					maxOddLength = max(radius, maxOddLength);
+					if (length > maxOddLen) {
+						maxOddLen = length;
+						maxOddCtr = pos;
+					}
 				}
+
 				int k = 1;
-				while (k <= pos && k + radii[pos - k] < radius) {
-					radii[pos + k] = radii[pos - k];
+				while (k <= pos && k + palindromeLengths[pos - k] < length) {
+					palindromeLengths[pos + k] = palindromeLengths[pos - k];
 					k++;
 				}
-				radius = max(radius - k, pos & 1);
+
+				length = Math.max(length - k, pos & 1);
 				pos += k;
 			}
+		}
+
+		/**
+		 * 内部で計算された回文長さの配列を返します。
+		 *
+		 * @return 各仮想中心における回文長さの配列
+		 */
+		public int[] getPalindromeLengths() {
+			return palindromeLengths;
 		}
 
 		/**
@@ -108,7 +324,8 @@ public class F {
 		 * @return 区間が回文であれば true、そうでなければ false
 		 */
 		public boolean isPalindromeRange(int l, int r) {
-			return (radii[l + r - 1] + r - l & 1) == 0 && radii[l + r - 1] >= r - l;
+			if (l < 0 || r > chars.length || l >= r) return false;
+			return ((palindromeLengths[l + r - 1] + r - l) & 1) == 0 && palindromeLengths[l + r - 1] >= r - l;
 		}
 
 		/**
@@ -117,7 +334,7 @@ public class F {
 		 * @return 最長回文の長さ
 		 */
 		public int getLongestLen() {
-			return max(maxEvenLength, maxOddLength);
+			return max(maxEvenLen, maxOddLen);
 		}
 
 		/**
@@ -126,7 +343,7 @@ public class F {
 		 * @return 最長回文の長さ
 		 */
 		public int getOddLongestLen() {
-			return maxOddLength;
+			return maxOddLen;
 		}
 
 		/**
@@ -135,7 +352,44 @@ public class F {
 		 * @return 最長回文の長さ
 		 */
 		public int getEvenLongestLen() {
-			return maxEvenLength;
+			return maxEvenLen;
+		}
+
+		/**
+		 * 最長回文部分文字列を返します。
+		 *
+		 * @return 最長回文部分文字列
+		 */
+		public String getLongestPalindrome() {
+			if (maxOddLen >= maxEvenLen) {
+				return getLongestOddPalindrome();
+			} else {
+				return getLongestEvenPalindrome();
+			}
+		}
+
+		/**
+		 * 最長の奇数長の回文部分文字列を返します。
+		 *
+		 * @return 最長の奇数長の回文部分文字列
+		 */
+		public String getLongestOddPalindrome() {
+			int ctr = maxOddCtr >> 1;
+			int len = maxOddLen;
+			int from = ctr - (len >> 1);
+			return slice(from, from + len);
+		}
+
+		/**
+		 * 最長の偶数長の回文部分文字列を返します。
+		 *
+		 * @return 最長の偶数長の回文部分文字列
+		 */
+		public String getLongestEvenPalindrome() {
+			int ctr = maxEvenCtr >> 1;
+			int len = maxEvenLen;
+			int from = ctr - ((len - 1) >> 1);
+			return slice(from, from + len);
 		}
 
 		/**
@@ -143,9 +397,13 @@ public class F {
 		 *
 		 * @param center 元の文字列上の中心インデックス
 		 * @return 該当する奇数長回文の長さ
+		 * @throws IllegalArgumentException インデックスが範囲外の場合
 		 */
 		public int getOddPalindromeLengthAt(int center) {
-			return radii[center << 1];
+			if (center < 0 || center >= chars.length) {
+				throw new IllegalArgumentException("Center index out of bounds: " + center);
+			}
+			return palindromeLengths[center << 1];
 		}
 
 		/**
@@ -153,15 +411,62 @@ public class F {
 		 *
 		 * @param center 元の文字列上の中心インデックス
 		 * @return 該当する偶数長回文の長さ
+		 * @throws IllegalArgumentException インデックスが範囲外の場合
 		 */
 		public int getEvenPalindromeLengthAt(int center) {
-			return radii[center << 1 + 1];
+			if (center < 0 || center >= chars.length - 1) {
+				throw new IllegalArgumentException("Center index out of bounds: " + center);
+			}
+			return palindromeLengths[(center << 1) + 1];
+		}
+
+		/**
+		 * 指定した文字位置を中心とする奇数長の回文部分文字列を返します。
+		 *
+		 * @param center 元の文字列上の中心インデックス
+		 * @return 該当する奇数長回文部分文字列
+		 * @throws IllegalArgumentException インデックスが範囲外の場合
+		 */
+		public String getOddPalindromeAt(int center) {
+			if (center < 0 || center >= chars.length) {
+				throw new IllegalArgumentException("Center index out of bounds: " + center);
+			}
+			int len = getOddPalindromeLengthAt(center);
+			int start = center - (len >> 1);
+			return slice(start, start + len);
+		}
+
+		/**
+		 * 指定した文字位置の直後を中心とする偶数長の回文部分文字列を返します。
+		 *
+		 * @param center 元の文字列上の中心インデックス
+		 * @return 該当する偶数長回文部分文字列
+		 * @throws IllegalArgumentException インデックスが範囲外の場合
+		 */
+		public String getEvenPalindromeAt(int center) {
+			if (center < 0 || center >= chars.length - 1) {
+				throw new IllegalArgumentException("Center index out of bounds: " + center);
+			}
+			int length = getEvenPalindromeLengthAt(center);
+			int start = center - ((length - 1) >> 1);
+			return slice(start, start + length);
+		}
+
+		/**
+		 * 文字配列の指定範囲を文字列として効率的に取得します。
+		 *
+		 * @param l 開始インデックス（含む）
+		 * @param r 終了インデックス（含まない）
+		 * @return 指定範囲の文字列
+		 */
+		private String slice(int l, int r) {
+			return CharBuffer.wrap(chars, l, r - l).toString();
 		}
 	}
 
 	@SuppressWarnings("unused")
 	private static final class FastScanner implements AutoCloseable {
-		private static final int DEFAULT_BUFFER_SIZE = 65536;
+		private static final int DEFAULT_BUFFER_SIZE = 1 << 20;
 		private final InputStream in;
 		private final byte[] buffer;
 		private int pos = 0, bufferLength = 0;
@@ -183,106 +488,367 @@ public class F {
 			this.buffer = new byte[bufferSize];
 		}
 
-		private static boolean isWhitespace(final int c) {
-			return c == ' ' || c == '\n' || c == '\r' || c == '\t';
+		private int skipSpaces() {
+			final byte[] buf = buffer;
+			int p = pos, len = bufferLength, b;
+			do {
+				if (p >= len) {
+					try {
+						len = in.read(buf);
+						p = 0;
+					} catch (final IOException e) {
+						throw new RuntimeException(e);
+					}
+					if (len <= 0) throw new NoSuchElementException();
+					if (len < buf.length) buf[len] = 32;
+				}
+				b = buf[p++];
+			} while (b <= 32);
+			pos = p;
+			bufferLength = len;
+			return b;
 		}
 
 		@Override
-		public void close() throws IOException {
-			if (in != System.in)
+		public void close() {
+			try {
 				in.close();
+			} catch (final IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
 
-		public byte read() {
-			if (pos >= bufferLength) {
-				try {
-					bufferLength = in.read(buffer, pos = 0, buffer.length);
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
-				if (bufferLength < 0)
-					throw new RuntimeException(new IOException("End of input reached"));
+		private boolean hasNextByte() {
+			if (pos < bufferLength) return true;
+			pos = 0;
+			try {
+				bufferLength = in.read(buffer);
+				if (bufferLength > 0 && bufferLength < buffer.length) buffer[bufferLength] = 32;
+			} catch (final IOException e) {
+				throw new RuntimeException(e);
 			}
-			return buffer[pos++];
+			return bufferLength > 0;
 		}
 
-		public int nextInt() {
-			int b = read();
-			while (isWhitespace(b)) b = read();
-			boolean negative = b == '-';
-			if (negative) b = read();
-			int result = 0;
-			while ('0' <= b && b <= '9') {
-				result = result * 10 + b - '0';
-				b = read();
+		public boolean hasNext() {
+			while (hasNextByte()) {
+				if (buffer[pos] > 32) return true;
+				pos++;
 			}
-			return negative ? -result : result;
-		}
-
-		public long nextLong() {
-			int b = read();
-			while (isWhitespace(b)) b = read();
-			boolean negative = b == '-';
-			if (negative) b = read();
-			long result = 0;
-			while ('0' <= b && b <= '9') {
-				result = result * 10 + b - '0';
-				b = read();
-			}
-			return negative ? -result : result;
-		}
-
-		public double nextDouble() {
-			int b = read();
-			while (isWhitespace(b)) b = read();
-			boolean negative = b == '-';
-			if (negative) b = read();
-			double result = 0;
-			while ('0' <= b && b <= '9') {
-				result = result * 10 + b - '0';
-				b = read();
-			}
-			if (b == '.') {
-				b = read();
-				double factor = 10;
-				while ('0' <= b && b <= '9') {
-					result += (b - '0') / factor;
-					factor *= 10;
-					b = read();
-				}
-			}
-			return negative ? -result : result;
+			return false;
 		}
 
 		public char nextChar() {
-			byte b = read();
-			while (isWhitespace(b)) b = read();
-			return (char) b;
+			if (!hasNext()) throw new NoSuchElementException();
+			return (char) buffer[pos++];
+		}
+
+		public int nextInt() {
+			int b = skipSpaces();
+			boolean negative = false;
+			if (b == '-') {
+				negative = true;
+				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
+				b = buffer[pos++];
+			}
+			return pos + 10 <= bufferLength ? nextIntFast(b, negative) : nextIntSlow(b, negative);
+		}
+
+		private int nextIntFast(int b, final boolean negative) {
+			final byte[] buf = buffer;
+			int p = pos, n = 0;
+			long a = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			long check = a & 0xF0F0F0F0F0F0F0F0L;
+			if (check == 0) {
+				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
+				a = (a * 100 + (a >>> 16)) & 0x0000FFFF0000FFFFL;
+				a = (a * 10000 + (a >>> 32)) & 0x00000000FFFFFFFFL;
+				n = (int) a;
+				p += 7;
+				b = buf[p++];
+			}
+			while (b > 32) {
+				n = (n << 3) + (n << 1) + (b & 15);
+				b = buf[p++];
+			}
+			pos = p;
+			return negative ? -n : n;
+		}
+
+		private int nextIntSlow(int b, final boolean negative) {
+			int p = pos, len = bufferLength;
+			int n = 0;
+			do {
+				n = (n << 3) + (n << 1) + (b & 15);
+				if (p == len) {
+					pos = p;
+					if (!hasNextByte()) {
+						p = pos;
+						break;
+					}
+					p = pos;
+					len = bufferLength;
+				}
+				b = buffer[p++];
+			} while (b > 32);
+			pos = p;
+			return negative ? -n : n;
+		}
+
+		public long nextLong() {
+			int b = skipSpaces();
+			boolean negative = false;
+			if (b == '-') {
+				negative = true;
+				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
+				b = buffer[pos++];
+			}
+			return pos + 20 <= bufferLength ? nextLongFast(b, negative) : nextLongSlow(b, negative);
+		}
+
+		private long nextLongFast(int b, final boolean negative) {
+			final byte[] buf = buffer;
+			int p = pos;
+			long n = 0;
+			long a = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			long check = a & 0xF0F0F0F0F0F0F0F0L;
+			if (check == 0) {
+				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
+				a = (a * 100 + (a >>> 16)) & 0x0000FFFF0000FFFFL;
+				a = (a * 10000 + (a >>> 32)) & 0x00000000FFFFFFFFL;
+				n = a;
+				p += 7;
+				b = buf[p++];
+				long a2 = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+				long check2 = a2 & 0xF0F0F0F0F0F0F0F0L;
+				if (check2 == 0) {
+					a2 = (a2 * 10 + (a2 >>> 8)) & 0x00FF00FF00FF00FFL;
+					a2 = (a2 * 100 + (a2 >>> 16)) & 0x0000FFFF0000FFFFL;
+					a2 = (a2 * 10000 + (a2 >>> 32)) & 0x00000000FFFFFFFFL;
+					n = n * 100000000L + a2;
+					p += 7;
+					b = buf[p++];
+				}
+			}
+			while (b > 32) {
+				n = (n << 3) + (n << 1) + (b & 15);
+				b = buf[p++];
+			}
+			pos = p;
+			return negative ? -n : n;
+		}
+
+		private long nextLongSlow(int b, final boolean negative) {
+			int p = pos, len = bufferLength;
+			long n = 0;
+			do {
+				n = (n << 3) + (n << 1) + (b & 15);
+				if (p == len) {
+					pos = p;
+					if (!hasNextByte()) {
+						p = pos;
+						break;
+					}
+					p = pos;
+					len = bufferLength;
+				}
+				b = buffer[p++];
+			} while (b > 32);
+			pos = p;
+			return negative ? -n : n;
+		}
+
+		public double nextDouble() {
+			int b = skipSpaces();
+			boolean negative = false;
+			if (b == '-') {
+				negative = true;
+				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
+				b = buffer[pos++];
+			}
+			return pos + 20 <= bufferLength ? nextDoubleFast(b, negative) : nextDoubleSlow(b, negative);
+		}
+
+		private double nextDoubleFast(int b, final boolean negative) {
+			final byte[] buf = buffer;
+			int p = pos, len = bufferLength;
+			long intPart = 0;
+			do {
+				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
+				b = buf[p++];
+			} while ('0' <= b && b <= '9');
+			double result = intPart;
+			if (b == '.') result += parseFracPart(p, len, buf);
+			else pos = p;
+			return negative ? -result : result;
+		}
+
+		private double nextDoubleSlow(int b, final boolean negative) {
+			final byte[] buf = buffer;
+			int p = pos, len = bufferLength;
+			long intPart = 0;
+			do {
+				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
+				if (p == len) {
+					pos = p;
+					if (!hasNextByte()) {
+						p = pos;
+						b = -1;
+						break;
+					}
+					p = pos;
+					len = bufferLength;
+				}
+				b = buf[p++];
+			} while ('0' <= b && b <= '9');
+
+			double result = intPart;
+			if (b == '.') result += parseFracPart(p, len, buf);
+			else pos = p;
+			return negative ? -result : result;
+		}
+
+		private double parseFracPart(int p, int len, final byte[] buf) {
+			if (p == len) {
+				pos = p;
+				hasNextByte();
+				p = pos;
+				len = bufferLength;
+			}
+			int b = buf[p++];
+			long fracPart = 0, divisor = 1;
+			if (p + 20 <= len) {
+				do {
+					fracPart = fracPart * 10 + (b & 15);
+					divisor *= 10;
+					b = buf[p++];
+				} while ('0' <= b && b <= '9');
+			} else {
+				do {
+					fracPart = fracPart * 10 + (b & 15);
+					divisor *= 10;
+					if (p == len) {
+						pos = p;
+						if (!hasNextByte()) {
+							p = pos;
+							break;
+						}
+						p = pos;
+						len = bufferLength;
+					}
+					b = buf[p++];
+				} while ('0' <= b && b <= '9');
+			}
+			pos = p;
+			return (double) fracPart / divisor;
 		}
 
 		public String next() {
-			return nextStringBuilder().toString();
+			skipSpaces();
+			final byte[] buf = buffer;
+			int p = pos, len = bufferLength;
+			final int start = p - 1;
+			while (p < len && buf[p] > 32) p++;
+			if (p < len) {
+				final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
+				pos = p + 1;
+				return s;
+			}
+			final StringBuilder sb = new StringBuilder(len - start + 16);
+			for (int i = start; i < len; i++) sb.append((char) buf[i]);
+			while (true) {
+				if (p == len) {
+					pos = p;
+					if (!hasNextByte()) {
+						p = pos;
+						break;
+					}
+					p = pos;
+					len = bufferLength;
+				}
+				final int b = buf[p++];
+				if (b <= 32) break;
+				sb.append((char) b);
+			}
+			pos = p;
+			return sb.toString();
 		}
 
 		public StringBuilder nextStringBuilder() {
-			StringBuilder sb = new StringBuilder();
-			byte b = read();
-			while (isWhitespace(b)) b = read();
-			while (!isWhitespace(b)) {
-				sb.appendCodePoint(b);
-				b = read();
-			}
+			final StringBuilder sb = new StringBuilder();
+			int b = skipSpaces(), p = pos, len = bufferLength;
+			do {
+				sb.append((char) b);
+				if (p == len) {
+					pos = p;
+					if (!hasNextByte()) {
+						p = pos;
+						break;
+					}
+					p = pos;
+					len = bufferLength;
+				}
+				b = buffer[p++];
+			} while (b > 32);
+			pos = p;
 			return sb;
 		}
 
 		public String nextLine() {
-			StringBuilder sb = new StringBuilder();
-			int b = read();
-			while (b != 0 && b != '\r' && b != '\n') {
-				sb.appendCodePoint(b);
-				b = read();
+			if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
+			final byte[] buf = buffer;
+			int p = pos, len = bufferLength;
+			final int start = p;
+			while (p < len) {
+				final int b = buf[p];
+				if (b == '\n' || b == '\r') {
+					final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
+					p++;
+					if (b == '\r') {
+						if (p == len) {
+							pos = p;
+							hasNextByte();
+							p = pos;
+							len = bufferLength;
+						}
+						if (p < len && buf[p] == '\n') p++;
+					}
+					pos = p;
+					return s;
+				}
+				p++;
 			}
-			return sb.toString();
+
+			final StringBuilder sb = new StringBuilder();
+			for (int i = start; i < len; i++) sb.append((char) buf[i]);
+			while (true) {
+				pos = len;
+				if (!hasNextByte()) {
+					pos = len;
+					return sb.toString();
+				}
+				p = pos;
+				len = bufferLength;
+				while (p < len) {
+					final int b = buf[p];
+					if (b == '\n' || b == '\r') {
+						p++;
+						if (b == '\r') {
+							if (p == len) {
+								pos = p;
+								hasNextByte();
+								p = pos;
+								len = bufferLength;
+							}
+							if (p < len && buf[p] == '\n') p++;
+						}
+						pos = p;
+						return sb.toString();
+					}
+					sb.append((char) b);
+					p++;
+				}
+			}
 		}
 
 		public BigInteger nextBigInteger() {
@@ -295,19 +861,39 @@ public class F {
 
 		public int[] nextInt(final int n) {
 			final int[] a = new int[n];
-			setAll(a, i -> nextInt());
+			for (int i = 0; i < n; i++) a[i] = nextInt();
 			return a;
 		}
 
 		public long[] nextLong(final int n) {
 			final long[] a = new long[n];
-			setAll(a, i -> nextLong());
+			for (int i = 0; i < n; i++) a[i] = nextLong();
 			return a;
 		}
 
 		public double[] nextDouble(final int n) {
 			final double[] a = new double[n];
-			setAll(a, i -> nextDouble());
+			for (int i = 0; i < n; i++) a[i] = nextDouble();
+			return a;
+		}
+
+		public int nextInt0() {
+			return nextInt() - 1;
+		}
+
+		public long nextLong0() {
+			return nextLong() - 1;
+		}
+
+		public int[] nextInt0(final int n) {
+			final int[] a = new int[n];
+			for (int i = 0; i < n; i++) a[i] = nextInt() - 1;
+			return a;
+		}
+
+		public long[] nextLong0(final int n) {
+			final long[] a = new long[n];
+			for (int i = 0; i < n; i++) a[i] = nextLong() - 1;
 			return a;
 		}
 
@@ -317,41 +903,43 @@ public class F {
 
 		public char[] nextChars(final int n) {
 			final char[] c = new char[n];
-			for (int i = 0; i < n; i++)
-				c[i] = nextChar();
+			for (int i = 0; i < n; i++) c[i] = nextChar();
 			return c;
 		}
 
 		public String[] nextStrings(final int n) {
 			final String[] s = new String[n];
-			setAll(s, i -> next());
+			for (int i = 0; i < n; i++) s[i] = next();
 			return s;
 		}
 
 		public int[][] nextIntMat(final int h, final int w) {
 			final int[][] a = new int[h][w];
 			for (int i = 0; i < h; i++)
-				setAll(a[i], j -> nextInt());
+				for (int j = 0; j < w; j++)
+					a[i][j] = nextInt();
 			return a;
 		}
 
 		public long[][] nextLongMat(final int h, final int w) {
 			final long[][] a = new long[h][w];
 			for (int i = 0; i < h; i++)
-				setAll(a[i], j -> nextLong());
+				for (int j = 0; j < w; j++)
+					a[i][j] = nextLong();
 			return a;
 		}
 
 		public double[][] nextDoubleMat(final int h, final int w) {
 			final double[][] a = new double[h][w];
 			for (int i = 0; i < h; i++)
-				setAll(a[i], j -> nextDouble());
+				for (int j = 0; j < w; j++)
+					a[i][j] = nextDouble();
 			return a;
 		}
 
 		public char[][] nextCharMat(final int n) {
 			final char[][] c = new char[n][];
-			setAll(c, j -> nextChars());
+			for (int i = 0; i < n; i++) c[i] = nextChars();
 			return c;
 		}
 
@@ -366,7 +954,8 @@ public class F {
 		public String[][] nextStringMat(final int h, final int w) {
 			final String[][] s = new String[h][w];
 			for (int i = 0; i < h; i++)
-				setAll(s[i], j -> next());
+				for (int j = 0; j < w; j++)
+					s[i][j] = next();
 			return s;
 		}
 
@@ -426,217 +1015,158 @@ public class F {
 
 		public int[] nextIntPrefixSum(final int n) {
 			final int[] ps = new int[n];
-			setAll(ps, i -> i > 0 ? nextInt() + ps[i - 1] : nextInt());
+			ps[0] = nextInt();
+			for (int i = 1; i < n; i++) ps[i] = nextInt() + ps[i - 1];
 			return ps;
 		}
 
 		public long[] nextLongPrefixSum(final int n) {
 			final long[] ps = new long[n];
-			setAll(ps, i -> i > 0 ? nextLong() + ps[i - 1] : nextLong());
+			ps[0] = nextLong();
+			for (int i = 1; i < n; i++) ps[i] = nextLong() + ps[i - 1];
 			return ps;
 		}
 
 		public int[][] nextIntPrefixSum(final int h, final int w) {
 			final int[][] ps = new int[h + 1][w + 1];
-			for (int i = 1; i <= h; i++) {
-				final int j = i;
-				setAll(ps[i], k -> k > 0 ? nextInt() + ps[j - 1][k] + ps[j][k - 1] - ps[j - 1][k - 1] : 0);
-			}
+			for (int i = 1; i <= h; i++)
+				for (int j = 1; j <= w; j++)
+					ps[i][j] = nextInt() + ps[i - 1][j] + ps[i][j - 1] - ps[i - 1][j - 1];
 			return ps;
 		}
 
 		public long[][] nextLongPrefixSum(final int h, final int w) {
 			final long[][] ps = new long[h + 1][w + 1];
-			for (int i = 1; i <= h; i++) {
-				final int j = i;
-				setAll(ps[i], k -> k > 0 ? nextLong() + ps[j - 1][k] + ps[j][k - 1] - ps[j - 1][k - 1] : 0);
-			}
+			for (int i = 1; i <= h; i++)
+				for (int j = 1; j <= w; j++)
+					ps[i][j] = nextLong() + ps[i - 1][j] + ps[i][j - 1] - ps[i - 1][j - 1];
 			return ps;
 		}
 
 		public int[][][] nextIntPrefixSum(final int x, final int y, final int z) {
 			final int[][][] ps = new int[x + 1][y + 1][z + 1];
 			for (int a = 1; a <= x; a++)
-				for (int b = 1; b <= y; b++) {
-					final int A = a, B = b;
-					setAll(ps[A][B], c -> c > 0 ? nextInt() + ps[A - 1][B][c] + ps[A][B - 1][c] + ps[A][B][c - 1]
-							- ps[A - 1][B - 1][c] - ps[A - 1][B][c - 1] - ps[A][B - 1][c - 1] + ps[A - 1][B - 1][c - 1] : 0);
-				}
+				for (int b = 1; b <= y; b++)
+					for (int c = 1; c <= z; c++)
+						ps[a][b][c] = nextInt() + ps[a - 1][b][c] + ps[a][b - 1][c] + ps[a][b][c - 1] - ps[a - 1][b - 1][c]
+								- ps[a - 1][b][c - 1] - ps[a][b - 1][c - 1] + ps[a - 1][b - 1][c - 1];
 			return ps;
 		}
 
 		public long[][][] nextLongPrefixSum(final int x, final int y, final int z) {
 			final long[][][] ps = new long[x + 1][y + 1][z + 1];
 			for (int a = 1; a <= x; a++)
-				for (int b = 1; b <= y; b++) {
-					final int A = a, B = b;
-					setAll(ps[A][B], c -> c > 0 ? nextLong() + ps[A - 1][B][c] + ps[A][B - 1][c] + ps[A][B][c - 1]
-							- ps[A - 1][B - 1][c] - ps[A - 1][B][c - 1] - ps[A][B - 1][c - 1] + ps[A - 1][B - 1][c - 1] : 0);
-				}
+				for (int b = 1; b <= y; b++)
+					for (int c = 1; c <= z; c++)
+						ps[a][b][c] = nextLong() + ps[a - 1][b][c] + ps[a][b - 1][c] + ps[a][b][c - 1] - ps[a - 1][b - 1][c]
+								- ps[a - 1][b][c - 1] - ps[a][b - 1][c - 1] + ps[a - 1][b - 1][c - 1];
 			return ps;
 		}
 
 		public int[] nextIntInverseMapping(final int n) {
 			final int[] inv = new int[n];
-			for (int i = 0; i < n; i++)
-				inv[nextInt() - 1] = i;
+			for (int i = 0; i < n; i++) inv[nextInt() - 1] = i;
 			return inv;
 		}
 
-		private <T extends Collection<Integer>> T nextIntCollection(int n, final Supplier<T> supplier) {
-			final T collection = supplier.get();
-			while (n-- > 0) {
-				collection.add(nextInt());
-			}
-			return collection;
-		}
-
 		public ArrayList<Integer> nextIntAL(final int n) {
-			return nextIntCollection(n, () -> new ArrayList<>(n));
+			return nextCollection(n, this::nextInt, () -> new ArrayList<>(n));
 		}
 
 		public HashSet<Integer> nextIntHS(final int n) {
-			return nextIntCollection(n, () -> new HashSet<>(n));
+			return nextCollection(n, this::nextInt, () -> new HashSet<>(n));
 		}
 
 		public TreeSet<Integer> nextIntTS(final int n) {
-			return nextIntCollection(n, TreeSet::new);
-		}
-
-		private <T extends Collection<Long>> T nextLongCollection(int n, final Supplier<T> supplier) {
-			final T collection = supplier.get();
-			while (n-- > 0) {
-				collection.add(nextLong());
-			}
-			return collection;
+			return nextCollection(n, this::nextInt, TreeSet::new);
 		}
 
 		public ArrayList<Long> nextLongAL(final int n) {
-			return nextLongCollection(n, () -> new ArrayList<>(n));
+			return nextCollection(n, this::nextLong, () -> new ArrayList<>(n));
 		}
 
 		public HashSet<Long> nextLongHS(final int n) {
-			return nextLongCollection(n, () -> new HashSet<>(n));
+			return nextCollection(n, this::nextLong, () -> new HashSet<>(n));
 		}
 
 		public TreeSet<Long> nextLongTS(final int n) {
-			return nextLongCollection(n, TreeSet::new);
-		}
-
-		private <T extends Collection<Character>> T nextCharacterCollection(int n, final Supplier<T> supplier) {
-			final T collection = supplier.get();
-			while (n-- > 0) {
-				collection.add(nextChar());
-			}
-			return collection;
+			return nextCollection(n, this::nextLong, TreeSet::new);
 		}
 
 		public ArrayList<Character> nextCharacterAL(final int n) {
-			return nextCharacterCollection(n, () -> new ArrayList<>(n));
+			return nextCollection(n, this::nextChar, () -> new ArrayList<>(n));
 		}
 
 		public HashSet<Character> nextCharacterHS(final int n) {
-			return nextCharacterCollection(n, () -> new HashSet<>(n));
+			return nextCollection(n, this::nextChar, () -> new HashSet<>(n));
 		}
 
 		public TreeSet<Character> nextCharacterTS(final int n) {
-			return nextCharacterCollection(n, TreeSet::new);
-		}
-
-		private <T extends Collection<String>> T nextStringCollection(int n, final Supplier<T> supplier) {
-			final T collection = supplier.get();
-			while (n-- > 0) {
-				collection.add(next());
-			}
-			return collection;
+			return nextCollection(n, this::nextChar, TreeSet::new);
 		}
 
 		public ArrayList<String> nextStringAL(final int n) {
-			return nextStringCollection(n, () -> new ArrayList<>(n));
+			return nextCollection(n, this::next, () -> new ArrayList<>(n));
 		}
 
 		public HashSet<String> nextStringHS(final int n) {
-			return nextStringCollection(n, () -> new HashSet<>(n));
+			return nextCollection(n, this::next, () -> new HashSet<>(n));
 		}
 
 		public TreeSet<String> nextStringTS(final int n) {
-			return nextStringCollection(n, TreeSet::new);
+			return nextCollection(n, this::next, TreeSet::new);
 		}
 
-		private <T extends Map<Integer, Integer>> T nextIntMultiset(int n, final Supplier<T> supplier) {
-			final T collection = supplier.get();
-			while (n-- > 0) {
-				final int i = nextInt();
-				collection.put(i, collection.getOrDefault(i, 0) + 1);
-			}
-			return collection;
+		private <S, T extends Collection<S>> T nextCollection(int n, final Supplier<S> input, final Supplier<T> collection) {
+			final T t = collection.get();
+			while (n-- > 0) t.add(input.get());
+			return t;
 		}
 
 		public HashMap<Integer, Integer> nextIntMultisetHM(final int n) {
-			return nextIntMultiset(n, () -> new HashMap<>(n));
+			return nextMultiset(n, this::nextInt, () -> new HashMap<>(n));
 		}
 
 		public TreeMap<Integer, Integer> nextIntMultisetTM(final int n) {
-			return nextIntMultiset(n, TreeMap::new);
-		}
-
-		private <T extends Map<Long, Integer>> T nextLongMultiset(int n, final Supplier<T> supplier) {
-			final T multiSet = supplier.get();
-			while (n-- > 0) {
-				final long l = nextLong();
-				multiSet.put(l, multiSet.getOrDefault(l, 0) + 1);
-			}
-			return multiSet;
+			return nextMultiset(n, this::nextInt, TreeMap::new);
 		}
 
 		public HashMap<Long, Integer> nextLongMultisetHM(final int n) {
-			return nextLongMultiset(n, () -> new HashMap<>(n));
+			return nextMultiset(n, this::nextLong, () -> new HashMap<>(n));
 		}
 
 		public TreeMap<Long, Integer> nextLongMultisetTM(final int n) {
-			return nextLongMultiset(n, TreeMap::new);
-		}
-
-		private <T extends Map<Character, Integer>> T nextCharMultiset(int n, final Supplier<T> supplier) {
-			final T multiSet = supplier.get();
-			while (n-- > 0) {
-				final char c = nextChar();
-				multiSet.put(c, multiSet.getOrDefault(c, 0) + 1);
-			}
-			return multiSet;
+			return nextMultiset(n, this::nextLong, TreeMap::new);
 		}
 
 		public HashMap<Character, Integer> nextCharMultisetHM(final int n) {
-			return nextCharMultiset(n, () -> new HashMap<>(n));
+			return nextMultiset(n, this::nextChar, () -> new HashMap<>(n));
 		}
 
 		public TreeMap<Character, Integer> nextCharMultisetTM(final int n) {
-			return nextCharMultiset(n, TreeMap::new);
-		}
-
-		private <T extends Map<String, Integer>> T nextStringMultiset(int n, final Supplier<T> supplier) {
-			final T multiSet = supplier.get();
-			while (n-- > 0) {
-				final String s = next();
-				multiSet.put(next(), multiSet.getOrDefault(s, 0) + 1);
-			}
-			return multiSet;
+			return nextMultiset(n, this::nextChar, TreeMap::new);
 		}
 
 		public HashMap<String, Integer> nextStringMultisetHM(final int n) {
-			return nextStringMultiset(n, () -> new HashMap<>(n));
+			return nextMultiset(n, this::next, () -> new HashMap<>(n));
 		}
 
 		public TreeMap<String, Integer> nextStringMultisetTM(final int n) {
-			return nextStringMultiset(n, TreeMap::new);
+			return nextMultiset(n, this::next, TreeMap::new);
+		}
+
+		private <S, T extends Map<S, Integer>> T nextMultiset(int n, final Supplier<S> input, final Supplier<T> map) {
+			final T multiSet = map.get();
+			while (n-- > 0) {
+				final S i = input.get();
+				multiSet.put(i, multiSet.getOrDefault(i, 0) + 1);
+			}
+			return multiSet;
 		}
 
 		public int[] nextIntMultiset(final int n, final int m) {
 			final int[] multiset = new int[m];
-			for (int i = 0; i < n; i++) {
-				final int value = nextInt() - 1;
-				multiset[value] = multiset[value] + 1;
-			}
+			for (int i = 0; i < n; i++) multiset[nextInt() - 1]++;
 			return multiset;
 		}
 
@@ -656,31 +1186,27 @@ public class F {
 			}
 			return multiset;
 		}
+
+		private static final class Handles {
+			private static final VarHandle LONG_HANDLE = MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
+		}
 	}
 
 	@SuppressWarnings("unused")
 	private static final class FastPrinter implements AutoCloseable {
 		private static final int MAX_INT_DIGITS = 11;
 		private static final int MAX_LONG_DIGITS = 20;
-		private static final int DEFAULT_BUFFER_SIZE = 65536;
-		private static final byte[] TWO_DIGIT_NUMBERS = new byte[200];
-
-		static {
-			byte tens = '0', ones = '0';
-			for (int i = 0; i < 100; i++) {
-				TWO_DIGIT_NUMBERS[i << 1] = tens;
-				TWO_DIGIT_NUMBERS[(i << 1) + 1] = ones;
-				if (++ones > '9') {
-					ones = '0';
-					tens++;
-				}
-			}
-		}
-
-		private final byte[] buffer;
-		private final boolean autoFlush;
+		private static final int MAX_BOOL_DIGITS = 3;
+		private static final int DEFAULT_BUFFER_SIZE = 1 << 20;
+		private static final byte LINE = '\n';
+		private static final byte SPACE = ' ';
+		private static final byte HYPHEN = '-';
+		private static final byte PERIOD = '.';
+		private static final byte ZERO = '0';
 		private final OutputStream out;
-		private int pos = 0;
+		private final boolean autoFlush;
+		private byte[] buffer;
+		private int pos;
 
 		public FastPrinter() {
 			this(System.out, DEFAULT_BUFFER_SIZE, false);
@@ -712,737 +1238,1393 @@ public class F {
 
 		public FastPrinter(final OutputStream out, final int bufferSize, final boolean autoFlush) {
 			this.out = out;
-			this.buffer = new byte[max(bufferSize, 64)];
+			this.buffer = new byte[bufferSize(bufferSize)];
 			this.autoFlush = autoFlush;
 		}
 
+		private static int countDigits(final int i) {
+			if (i > -100000) {
+				if (i > -100) {
+					return i > -10 ? 1 : 2;
+				} else {
+					if (i > -10000) return i > -1000 ? 3 : 4;
+					else return 5;
+				}
+			} else {
+				if (i > -10000000) {
+					return i > -1000000 ? 6 : 7;
+				} else {
+					if (i > -1000000000) return i > -100000000 ? 8 : 9;
+					else return 10;
+				}
+			}
+		}
+
+		private static int countDigits(final long l) {
+			if (l > -1000000000) {
+				if (l > -10000) {
+					if (l > -100) {
+						return l > -10 ? 1 : 2;
+					} else {
+						return l > -1000 ? 3 : 4;
+					}
+				} else {
+					if (l > -1000000) {
+						return l > -100000 ? 5 : 6;
+					} else {
+						if (l > -100000000) return l > -10000000 ? 7 : 8;
+						else return 9;
+					}
+				}
+			} else {
+				if (l > -10000000000000L) {
+					if (l > -100000000000L) {
+						return l > -10000000000L ? 10 : 11;
+					} else {
+						return l > -1000000000000L ? 12 : 13;
+					}
+				} else {
+					if (l > -10000000000000000L) {
+						if (l > -1000000000000000L) return l > -100000000000000L ? 14 : 15;
+						else return 16;
+					} else {
+						if (l > -1000000000000000000L) return l > -100000000000000000L ? 17 : 18;
+						else return 19;
+					}
+				}
+			}
+		}
+
+		private static int bufferSize(int x) {
+			return x <= 64 ? 64 : 1 << (32 - Integer.numberOfLeadingZeros(x - 1));
+		}
+
 		@Override
-		public void close() throws IOException {
-			flush();
-			if (out != System.out)
+		public void close() {
+			try {
+				flush();
 				out.close();
+			} catch (final IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
 
 		public void flush() {
+			if (pos == 0) return;
 			try {
-				if (pos > 0)
-					out.write(buffer, 0, pos);
-				out.flush();
-			} catch (IOException e) {
+				out.write(buffer, 0, pos);
+				pos = 0;
+			} catch (final IOException e) {
 				throw new RuntimeException(e);
 			}
-			pos = 0;
 		}
 
-		public void println() {
-			ensureBufferSpace(1);
-			buffer[pos++] = '\n';
+		public FastPrinter println() {
+			ensureCapacity(1);
+			buffer[pos++] = LINE;
 			if (autoFlush) flush();
+			return this;
 		}
 
-		public void println(final int i) {
-			ensureBufferSpace(MAX_INT_DIGITS + 1);
-			fillBuffer(i);
-			buffer[pos++] = '\n';
+		public FastPrinter println(final boolean b) {
+			ensureCapacity(MAX_BOOL_DIGITS + 1);
+			final int p = write(b, pos);
+			buffer[p] = LINE;
+			pos = p + 1;
 			if (autoFlush) flush();
+			return this;
 		}
 
-		public void println(final long l) {
-			ensureBufferSpace(MAX_LONG_DIGITS + 1);
-			fillBuffer(l);
-			buffer[pos++] = '\n';
+		public FastPrinter println(final byte b) {
+			ensureCapacity(2);
+			final byte[] buf = buffer;
+			final int p = pos;
+			buf[p] = b;
+			buf[p + 1] = LINE;
+			pos = p + 2;
 			if (autoFlush) flush();
+			return this;
 		}
 
-		public void println(final double d) {
-			print(Double.toString(d), true);
+		public FastPrinter println(final char c) {
+			ensureCapacity(2);
+			final byte[] buf = buffer;
+			final int p = pos;
+			buf[p] = (byte) c;
+			buf[p + 1] = LINE;
+			pos = p + 2;
+			if (autoFlush) flush();
+			return this;
 		}
 
-		public void println(final char c) {
-			ensureBufferSpace(2);
+		public FastPrinter println(final int i) {
+			ensureCapacity(MAX_INT_DIGITS + 1);
+			final int p = write(i, pos);
+			buffer[p] = LINE;
+			pos = p + 1;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter println(final long l) {
+			ensureCapacity(MAX_LONG_DIGITS + 1);
+			final int p = write(l, pos);
+			buffer[p] = LINE;
+			pos = p + 1;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter println(final double d) {
+			return println(Double.toString(d));
+		}
+
+		public FastPrinter println(final BigInteger bi) {
+			return println(bi.toString());
+		}
+
+		public FastPrinter println(final BigDecimal bd) {
+			return println(bd.toString());
+		}
+
+		public FastPrinter println(final String s) {
+			ensureCapacity(s.length() + 1);
+			final int p = write(s, pos);
+			buffer[p] = LINE;
+			pos = p + 1;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter println(final StringBuilder s) {
+			ensureCapacity(s.length() + 1);
+			final int p = write(s, pos);
+			buffer[p] = LINE;
+			pos = p + 1;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter println(final Object o) {
+			return switch (o) {
+				case null -> println();
+				case Boolean b -> println(b.booleanValue());
+				case Byte b -> println(b.byteValue());
+				case Character c -> println(c.charValue());
+				case Integer i -> println(i.intValue());
+				case Long l -> println(l.longValue());
+				case Double d -> println(d.toString());
+				case BigInteger bi -> println(bi.toString());
+				case BigDecimal bd -> println(bd.toString());
+				case String s -> println(s);
+				case boolean[] arr -> println(arr);
+				case char[] arr -> println(arr);
+				case int[] arr -> println(arr);
+				case long[] arr -> println(arr);
+				case double[] arr -> println(arr);
+				case String[] arr -> println(arr);
+				case Object[] arr -> println(arr);
+				default -> println(o.toString());
+			};
+		}
+
+		public FastPrinter print(final boolean b) {
+			ensureCapacity(MAX_BOOL_DIGITS);
+			pos = write(b, pos);
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter print(final byte b) {
+			ensureCapacity(1);
+			buffer[pos++] = b;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter print(final char c) {
+			ensureCapacity(1);
 			buffer[pos++] = (byte) c;
-			buffer[pos++] = '\n';
 			if (autoFlush) flush();
+			return this;
 		}
 
-		public void println(final boolean b) {
-			ensureBufferSpace(4);
-			fillBuffer(b);
-			buffer[pos++] = '\n';
+		public FastPrinter print(final int i) {
+			ensureCapacity(MAX_INT_DIGITS);
+			pos = write(i, pos);
 			if (autoFlush) flush();
+			return this;
 		}
 
-		public void println(final String s) {
-			print(s, true);
+		public FastPrinter print(final long l) {
+			ensureCapacity(MAX_LONG_DIGITS);
+			pos = write(l, pos);
+			if (autoFlush) flush();
+			return this;
 		}
 
-		public void println(final Object o) {
-			if (o == null) return;
-			if (o instanceof String s) {
-				print(s, true);
-			} else if (o instanceof Long l) {
-				println(l.longValue());
-			} else if (o instanceof Integer i) {
-				println(i.intValue());
-			} else if (o instanceof Double d) {
-				print(d.toString(), true);
-			} else if (o instanceof Boolean b) {
-				println(b.booleanValue());
-			} else if (o instanceof Character c) {
-				println(c.charValue());
-			} else {
-				print(o.toString(), true);
+		public FastPrinter print(final double d) {
+			return print(Double.toString(d));
+		}
+
+		public FastPrinter print(final BigInteger bi) {
+			return print(bi.toString());
+		}
+
+		public FastPrinter print(final BigDecimal bd) {
+			return print(bd.toString());
+		}
+
+		public FastPrinter print(final String s) {
+			ensureCapacity(s.length());
+			pos = write(s, pos);
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter print(final StringBuilder s) {
+			ensureCapacity(s.length());
+			pos = write(s, pos);
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter print(final Object o) {
+			return switch (o) {
+				case null -> this;
+				case Boolean b -> print(b.booleanValue());
+				case Byte b -> print(b.byteValue());
+				case Character c -> print(c.charValue());
+				case Integer i -> print(i.intValue());
+				case Long l -> print(l.longValue());
+				case Double d -> print(d.toString());
+				case BigInteger bi -> print(bi.toString());
+				case BigDecimal bd -> print(bd.toString());
+				case String s -> print(s);
+				case boolean[] arr -> print(arr);
+				case char[] arr -> print(arr);
+				case int[] arr -> print(arr);
+				case long[] arr -> print(arr);
+				case double[] arr -> print(arr);
+				case String[] arr -> print(arr);
+				case Object[] arr -> print(arr);
+				default -> print(o.toString());
+			};
+		}
+
+		public FastPrinter printf(final String format, final Object... args) {
+			return print(String.format(format, args));
+		}
+
+		public FastPrinter printf(final Locale locale, final String format, final Object... args) {
+			return print(String.format(locale, format, args));
+		}
+
+		private void ensureCapacity(final int additional) {
+			final int required = pos + additional;
+			final int bufferLength = buffer.length;
+			if (required <= bufferLength) return;
+			flush();
+			if (additional > bufferLength) buffer = new byte[bufferSize(additional)];
+		}
+
+		private int write(final boolean b, int p) {
+			final byte[] src = b ? Cache.TRUE_BYTES : Cache.FALSE_BYTES;
+			final int len = src.length;
+			System.arraycopy(src, 0, buffer, p, len);
+			return p + len;
+		}
+
+		private int write(int i, int p) {
+			final byte[] buf = buffer;
+			final VarHandle shortHandle = Cache.SHORT_HANDLE;
+			final VarHandle intHandle = Cache.INT_HANDLE;
+			final short[] digits2 = Cache.DIGITS_2;
+			final int[] digits4 = Cache.DIGITS_4;
+			if (i >= 0) i = -i;
+			else buf[p++] = HYPHEN;
+			final int digits = countDigits(i);
+			int writePos = p + digits;
+			if (i <= -100000000) {
+				final int q = i / 100000000;
+				final int r = (q * 100000000) - i;
+				final int hi = r / 10000;
+				intHandle.set(buf, writePos - 8, digits4[hi]);
+				intHandle.set(buf, writePos - 4, digits4[r - hi * 10000]);
+				writePos -= 8;
+				i = q;
 			}
-		}
-
-		public void println(final BigInteger bi) {
-			print(bi.toString(), true);
-		}
-
-		public void println(final BigDecimal bd) {
-			print(bd.toString(), true);
-		}
-
-		public void print(final int i) {
-			ensureBufferSpace(MAX_INT_DIGITS);
-			fillBuffer(i);
-			if (autoFlush) flush();
-		}
-
-		public void print(final long l) {
-			ensureBufferSpace(MAX_LONG_DIGITS);
-			fillBuffer(l);
-			if (autoFlush) flush();
-		}
-
-		public void print(final double d) {
-			print(Double.toString(d), false);
-		}
-
-		public void print(final char c) {
-			ensureBufferSpace(1);
-			buffer[pos++] = (byte) c;
-			if (autoFlush) flush();
-		}
-
-		public void print(final boolean b) {
-			ensureBufferSpace(3);
-			fillBuffer(b);
-			if (autoFlush) flush();
-		}
-
-		public void print(final String s) {
-			print(s, false);
-		}
-
-		public void print(final Object o) {
-			if (o == null) return;
-			if (o instanceof String s) {
-				print(s, false);
-			} else if (o instanceof Long l) {
-				print(l.longValue());
-			} else if (o instanceof Integer i) {
-				print(i.intValue());
-			} else if (o instanceof Double d) {
-				print(d.toString(), false);
-			} else if (o instanceof Boolean b) {
-				print(b.booleanValue());
-			} else if (o instanceof Character c) {
-				print(c.charValue());
-			} else {
-				print(o.toString(), false);
+			if (i <= -10000) {
+				final int q = i / 10000;
+				final int r = (q * 10000) - i;
+				intHandle.set(buf, writePos - 4, digits4[r]);
+				writePos -= 4;
+				i = q;
 			}
+			if (i <= -100) {
+				final int q = i / 100;
+				final int r = (q * 100) - i;
+				shortHandle.set(buf, writePos - 2, digits2[r]);
+				writePos -= 2;
+				i = q;
+			}
+			final int r = -i;
+			if (r >= 10) shortHandle.set(buf, writePos - 2, digits2[r]);
+			else buf[writePos - 1] = (byte) (r + ZERO);
+			return p + digits;
 		}
 
-		public void print(final BigInteger bi) {
-			print(bi.toString(), false);
-		}
-
-		public void print(final BigDecimal bd) {
-			print(bd.toString(), false);
-		}
-
-		public void printf(final String format, final Object... args) {
-			print(String.format(format, args), false);
-		}
-
-		public void printf(final Locale locale, final String format, final Object... args) {
-			print(String.format(locale, format, args), false);
-		}
-
-		private void ensureBufferSpace(final int size) {
-			if (pos + size > buffer.length) {
-				try {
-					out.write(buffer, 0, pos);
-				} catch (IOException e) {
-					throw new RuntimeException(e);
+		private int write(long l, int p) {
+			final byte[] buf = buffer;
+			final VarHandle shortHandle = Cache.SHORT_HANDLE;
+			final VarHandle intHandle = Cache.INT_HANDLE;
+			final short[] digits2 = Cache.DIGITS_2;
+			final int[] digits4 = Cache.DIGITS_4;
+			if (l >= 0) l = -l;
+			else buf[p++] = HYPHEN;
+			final int digits = countDigits(l);
+			int writePos = p + digits;
+			if (l <= -100000000L) {
+				long q = l / 100000000L;
+				int r = (int) ((q * 100000000L) - l);
+				int hi = r / 10000;
+				intHandle.set(buf, writePos - 8, digits4[hi]);
+				intHandle.set(buf, writePos - 4, digits4[r - hi * 10000]);
+				writePos -= 8;
+				l = q;
+				if (l <= -100000000L) {
+					q = l / 100000000L;
+					r = (int) ((q * 100000000L) - l);
+					hi = r / 10000;
+					intHandle.set(buf, writePos - 8, digits4[hi]);
+					intHandle.set(buf, writePos - 4, digits4[r - hi * 10000]);
+					writePos -= 8;
+					l = q;
 				}
-				pos = 0;
 			}
+			if (l <= -10000) {
+				final long q = l / 10000;
+				final int r = (int) ((q * 10000) - l);
+				intHandle.set(buf, writePos - 4, digits4[r]);
+				writePos -= 4;
+				l = q;
+			}
+			if (l <= -100) {
+				final long q = l / 100;
+				final int r = (int) ((q * 100) - l);
+				shortHandle.set(buf, writePos - 2, digits2[r]);
+				writePos -= 2;
+				l = q;
+			}
+			final int r = (int) -l;
+			if (r >= 10) shortHandle.set(buf, writePos - 2, digits2[r]);
+			else buf[writePos - 1] = (byte) (r + ZERO);
+			return p + digits;
 		}
 
-		private void print(final String s, final boolean newline) {
-			fillBuffer(s);
-			if (newline) {
-				ensureBufferSpace(1);
-				buffer[pos++] = '\n';
-			}
-			if (autoFlush) flush();
-		}
-
-		private void fillBuffer(final String s) {
-			if (s == null) return;
+		private int write(final CharSequence s, int p) {
 			final int len = s.length();
-			for (int i = 0; i < len; ) {
-				ensureBufferSpace(1);
-				int limit = min(buffer.length - pos, len - i);
-				while (limit-- > 0) {
-					buffer[pos++] = (byte) s.charAt(i++);
-				}
+			final byte[] buf = buffer;
+			int i = 0;
+			final int limit = len & ~7;
+			while (i < limit) {
+				buf[p] = (byte) s.charAt(i);
+				buf[p + 1] = (byte) s.charAt(i + 1);
+				buf[p + 2] = (byte) s.charAt(i + 2);
+				buf[p + 3] = (byte) s.charAt(i + 3);
+				buf[p + 4] = (byte) s.charAt(i + 4);
+				buf[p + 5] = (byte) s.charAt(i + 5);
+				buf[p + 6] = (byte) s.charAt(i + 6);
+				buf[p + 7] = (byte) s.charAt(i + 7);
+				p += 8;
+				i += 8;
 			}
+			while (i < len) buf[p++] = (byte) s.charAt(i++);
+			return p;
 		}
 
-		private void fillBuffer(final boolean b) {
-			if (b) {
-				buffer[pos++] = 'Y';
-				buffer[pos++] = 'e';
-				buffer[pos++] = 's';
-			} else {
-				buffer[pos++] = 'N';
-				buffer[pos++] = 'o';
-			}
+		public FastPrinter println(final int a, final int b) {
+			return println(a, b, '\n');
 		}
 
-		private void fillBuffer(int i) {
-			if (i == Integer.MIN_VALUE) {
-				buffer[pos++] = '-';
-				buffer[pos++] = '2';
-				buffer[pos++] = '1';
-				buffer[pos++] = '4';
-				buffer[pos++] = '7';
-				buffer[pos++] = '4';
-				buffer[pos++] = '8';
-				buffer[pos++] = '3';
-				buffer[pos++] = '6';
-				buffer[pos++] = '4';
-				buffer[pos++] = '8';
-				return;
-			}
-			boolean negative = (i < 0);
-			if (negative) {
-				i = -i;
-				buffer[pos++] = '-';
-			}
-			final int numOfDigits = countDigits(i);
-			int writePos = pos + numOfDigits;
-			while (i >= 100) {
-				int quotient = i / 100;
-				int remainder = (i - quotient * 100) << 1;
-				buffer[--writePos] = TWO_DIGIT_NUMBERS[remainder + 1];
-				buffer[--writePos] = TWO_DIGIT_NUMBERS[remainder];
-				i = quotient;
-			}
-			if (i < 10) {
-				buffer[--writePos] = (byte) ('0' + i);
-			} else {
-				buffer[--writePos] = TWO_DIGIT_NUMBERS[(i << 1) + 1];
-				buffer[--writePos] = TWO_DIGIT_NUMBERS[i << 1];
-			}
-			pos += numOfDigits;
+		public FastPrinter println(final int a, final long b) {
+			return println(a, b, '\n');
 		}
 
-		private void fillBuffer(long l) {
-			if ((int) l == l) {
-				fillBuffer((int) l);
-				return;
-			}
-			if (l == Long.MIN_VALUE) {
-				buffer[pos++] = '-';
-				buffer[pos++] = '9';
-				buffer[pos++] = '2';
-				buffer[pos++] = '2';
-				buffer[pos++] = '3';
-				buffer[pos++] = '3';
-				buffer[pos++] = '7';
-				buffer[pos++] = '2';
-				buffer[pos++] = '0';
-				buffer[pos++] = '3';
-				buffer[pos++] = '6';
-				buffer[pos++] = '8';
-				buffer[pos++] = '5';
-				buffer[pos++] = '4';
-				buffer[pos++] = '7';
-				buffer[pos++] = '7';
-				buffer[pos++] = '5';
-				buffer[pos++] = '8';
-				buffer[pos++] = '0';
-				buffer[pos++] = '8';
-				return;
-			}
-			boolean negative = (l < 0);
-			if (negative) {
-				l = -l;
-				buffer[pos++] = '-';
-			}
-			final int numOfDigits = countDigits(l);
-			int writePos = pos + numOfDigits;
-			while (l >= 100) {
-				long quotient = l / 100;
-				int remainder = (int) (l - quotient * 100) << 1;
-				buffer[--writePos] = TWO_DIGIT_NUMBERS[remainder + 1];
-				buffer[--writePos] = TWO_DIGIT_NUMBERS[remainder];
-				l = quotient;
-			}
-			if (l < 10) {
-				buffer[--writePos] = (byte) ('0' + l);
-			} else {
-				buffer[--writePos] = TWO_DIGIT_NUMBERS[(int) (l << 1) + 1];
-				buffer[--writePos] = TWO_DIGIT_NUMBERS[(int) l << 1];
-			}
-			pos += numOfDigits;
+		public FastPrinter println(final long a, final int b) {
+			return println(a, b, '\n');
 		}
 
-		private int countDigits(final int i) {
-			if (i < 10) return 1;
-			if (i < 100) return 2;
-			if (i < 1000) return 3;
-			if (i < 10000) return 4;
-			if (i < 100000) return 5;
-			if (i < 1000000) return 6;
-			if (i < 10000000) return 7;
-			if (i < 100000000) return 8;
-			if (i < 1000000000) return 9;
-			return 10;
+		public FastPrinter println(final long a, final long b) {
+			return println(a, b, '\n');
 		}
 
-		private int countDigits(final long l) {
-			if (l < 10000000000L) return 10;
-			if (l < 100000000000L) return 11;
-			if (l < 1000000000000L) return 12;
-			if (l < 10000000000000L) return 13;
-			if (l < 100000000000000L) return 14;
-			if (l < 1000000000000000L) return 15;
-			if (l < 10000000000000000L) return 16;
-			if (l < 100000000000000000L) return 17;
-			if (l < 1000000000000000000L) return 18;
-			return 19;
-		}
-
-		public void println(final int a, final int b) {
-			println(a, b, '\n');
-		}
-
-		public void println(final int a, final long b) {
-			println(a, b, '\n');
-		}
-
-		public void println(final long a, final int b) {
-			println(a, b, '\n');
-		}
-
-		public void println(final long a, final long b) {
-			println(a, b, '\n');
-		}
-
-		public void println(final long a, final long b, final char delimiter) {
-			ensureBufferSpace((MAX_LONG_DIGITS << 1) + 2);
-			fillBuffer(a);
-			buffer[pos++] = (byte) delimiter;
-			fillBuffer(b);
-			buffer[pos++] = '\n';
+		public FastPrinter println(final long a, final long b, final char delimiter) {
+			ensureCapacity((MAX_LONG_DIGITS << 1) + 2);
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(a, p);
+			buf[p] = (byte) delimiter;
+			p = write(b, p + 1);
+			buf[p] = LINE;
+			pos = p + 1;
 			if (autoFlush) flush();
+			return this;
 		}
 
-		public void print(final int a, final int b) {
-			print(a, b, ' ');
+		public FastPrinter print(final int a, final int b) {
+			return print(a, b, ' ');
 		}
 
-		public void print(final int a, final long b) {
-			print(a, b, ' ');
+		public FastPrinter print(final int a, final long b) {
+			return print(a, b, ' ');
 		}
 
-		public void print(final long a, final int b) {
-			print(a, b, ' ');
+		public FastPrinter print(final long a, final int b) {
+			return print(a, b, ' ');
 		}
 
-		public void print(final long a, final long b) {
-			print(a, b, ' ');
+		public FastPrinter print(final long a, final long b) {
+			return print(a, b, ' ');
 		}
 
-		public void print(final long a, final long b, final char delimiter) {
-			ensureBufferSpace((MAX_LONG_DIGITS << 1) + 1);
-			fillBuffer(a);
-			buffer[pos++] = (byte) delimiter;
-			fillBuffer(b);
+		public FastPrinter print(final long a, final long b, final char delimiter) {
+			ensureCapacity((MAX_LONG_DIGITS << 1) + 1);
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(a, p);
+			buf[p] = (byte) delimiter;
+			pos = write(b, p + 1);
 			if (autoFlush) flush();
+			return this;
 		}
 
-		public void println(final double d, final int n) {
-			print(d, n);
-			println();
+		public FastPrinter println(final double d, final int n) {
+			return print(d, n).println();
 		}
 
-		public void print(double d, int n) {
-			if (n == 0) {
-				print(round(d));
-				return;
-			}
+		public FastPrinter print(double d, int n) {
+			if (n <= 0) return print(round(d));
+			ensureCapacity(MAX_LONG_DIGITS + n + 2);
+			final byte[] buf = buffer;
+			int p = pos;
 			if (d < 0) {
-				ensureBufferSpace(1);
-				buffer[pos++] = '-';
+				buf[p++] = HYPHEN;
 				d = -d;
 			}
-			d += pow(10, -n) / 2;
-			print((long) d);
-			ensureBufferSpace(n + 1);
-			buffer[pos++] = '.';
-			d -= (long) d;
-			while (n-- > 0) {
-				d *= 10;
-				buffer[pos++] = (byte) ((int) d + '0');
-				d -= (int) d;
-			}
+			if (n > 18) n = 18;
+			final long intPart = (long) d;
+			final long fracPart = (long) ((d - intPart) * Cache.POW10[n]);
+			p = write(intPart, p);
+			buf[p++] = PERIOD;
+			int leadingZeros = n - countDigits(-fracPart);
+			fill(buf, p, p + leadingZeros, ZERO);
+			pos = write(fracPart, p + leadingZeros);
 			if (autoFlush) flush();
+			return this;
 		}
 
-		public void println(final int[] arr) {
-			println(arr, '\n');
+		public FastPrinter println(final boolean[] arr) {
+			return print(arr, 0, arr.length, '\n').println();
 		}
 
-		public void println(final long[] arr) {
-			println(arr, '\n');
+		public FastPrinter println(final char[] arr) {
+			return print(arr, 0, arr.length, '\n').println();
 		}
 
-		public void println(final char[] arr) {
-			println(arr, '\n');
+		public FastPrinter println(final int[] arr) {
+			return print(arr, 0, arr.length, '\n').println();
 		}
 
-		public void println(final boolean[] arr) {
-			println(arr, '\n');
+		public FastPrinter println(final long[] arr) {
+			return print(arr, 0, arr.length, '\n').println();
 		}
 
-		public void println(final String[] arr) {
-			println(arr, '\n');
+		public FastPrinter println(final double[] arr) {
+			return print(arr, 0, arr.length, '\n').println();
 		}
 
-		public void println(final Object... arr) {
-			if (arr == null) return;
-			for (final Object o : arr)
-				println(o);
+		public FastPrinter println(final String[] arr) {
+			return print(arr, 0, arr.length, '\n').println();
 		}
 
-		public void println(final int[] arr, final char delimiter) {
-			print(arr, delimiter);
-			println();
+		public FastPrinter println(final Object... arr) {
+			for (final Object o : arr) println(o);
+			return this;
 		}
 
-		public void println(final long[] arr, final char delimiter) {
-			print(arr, delimiter);
-			println();
+		public FastPrinter println(final boolean[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter).println();
 		}
 
-		public void println(final char[] arr, final char delimiter) {
-			print(arr, delimiter);
-			println();
+		public FastPrinter println(final char[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter).println();
 		}
 
-		public void println(final boolean[] arr, final char delimiter) {
-			print(arr, delimiter);
-			println();
+		public FastPrinter println(final int[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter).println();
 		}
 
-		public void println(final String[] arr, final char delimiter) {
-			print(arr, delimiter);
-			println();
+		public FastPrinter println(final long[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter).println();
 		}
 
-		public void print(final int[] arr) {
-			print(arr, ' ');
+		public FastPrinter println(final double[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter).println();
 		}
 
-		public void print(final long[] arr) {
-			print(arr, ' ');
+		public FastPrinter println(final String[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter).println();
 		}
 
-		public void print(final char[] arr) {
-			print(arr, ' ');
+		public FastPrinter println(final boolean[] arr, final int from, final int to) {
+			return print(arr, from, to, '\n').println();
 		}
 
-		public void print(final boolean[] arr) {
-			print(arr, ' ');
+		public FastPrinter println(final char[] arr, final int from, final int to) {
+			return print(arr, from, to, '\n').println();
 		}
 
-		public void print(final String[] arr) {
-			print(arr, ' ');
+		public FastPrinter println(final int[] arr, final int from, final int to) {
+			return print(arr, from, to, '\n').println();
 		}
 
-		public void print(final Object... arr) {
-			if (arr == null) return;
+		public FastPrinter println(final long[] arr, final int from, final int to) {
+			return print(arr, from, to, '\n').println();
+		}
+
+		public FastPrinter println(final double[] arr, final int from, final int to) {
+			return print(arr, from, to, '\n').println();
+		}
+
+		public FastPrinter println(final String[] arr, final int from, final int to) {
+			return print(arr, from, to, '\n').println();
+		}
+
+		public FastPrinter println(final boolean[] arr, final int from, final int to, final char delimiter) {
+			return print(arr, from, to, delimiter).println();
+		}
+
+		public FastPrinter println(final char[] arr, final int from, final int to, final char delimiter) {
+			return print(arr, from, to, delimiter).println();
+		}
+
+		public FastPrinter println(final int[] arr, final int from, final int to, final char delimiter) {
+			return print(arr, from, to, delimiter).println();
+		}
+
+		public FastPrinter println(final long[] arr, final int from, final int to, final char delimiter) {
+			return print(arr, from, to, delimiter).println();
+		}
+
+		public FastPrinter println(final double[] arr, final int from, final int to, final char delimiter) {
+			return print(arr, from, to, delimiter).println();
+		}
+
+		public FastPrinter println(final String[] arr, final int from, final int to, final char delimiter) {
+			return print(arr, from, to, delimiter).println();
+		}
+
+		public FastPrinter print(final boolean[] arr) {
+			return print(arr, 0, arr.length, ' ');
+		}
+
+		public FastPrinter print(final char[] arr) {
+			return print(arr, 0, arr.length, ' ');
+		}
+
+		public FastPrinter print(final int[] arr) {
+			return print(arr, 0, arr.length, ' ');
+		}
+
+		public FastPrinter print(final long[] arr) {
+			return print(arr, 0, arr.length, ' ');
+		}
+
+		public FastPrinter print(final double[] arr) {
+			return print(arr, 0, arr.length, ' ');
+		}
+
+		public FastPrinter print(final String[] arr) {
+			return print(arr, 0, arr.length, ' ');
+		}
+
+		public FastPrinter print(final Object... arr) {
 			final int len = arr.length;
-			if (len == 0) return;
-			print(arr[0]);
+			if (len > 0) print(arr[0]);
 			for (int i = 1; i < len; i++) {
-				print(' ');
+				ensureCapacity(1);
+				buffer[pos++] = SPACE;
 				print(arr[i]);
 			}
+			return this;
 		}
 
-		public void print(final int[] arr, final char delimiter) {
-			if (arr == null) return;
-			final int len = arr.length;
-			if (len == 0) return;
-			print(arr[0]);
-			for (int i = 1; i < len; i++) {
-				ensureBufferSpace(MAX_INT_DIGITS + 1);
-				buffer[pos++] = (byte) delimiter;
-				fillBuffer(arr[i]);
+		public FastPrinter print(final boolean[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter);
+		}
+
+		public FastPrinter print(final char[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter);
+		}
+
+		public FastPrinter print(final int[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter);
+		}
+
+		public FastPrinter print(final long[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter);
+		}
+
+		public FastPrinter print(final double[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter);
+		}
+
+		public FastPrinter print(final String[] arr, final char delimiter) {
+			return print(arr, 0, arr.length, delimiter);
+		}
+
+		public FastPrinter print(final boolean[] arr, final int from, final int to) {
+			return print(arr, from, to, ' ');
+		}
+
+		public FastPrinter print(final char[] arr, final int from, final int to) {
+			return print(arr, from, to, ' ');
+		}
+
+		public FastPrinter print(final int[] arr, final int from, final int to) {
+			return print(arr, from, to, ' ');
+		}
+
+		public FastPrinter print(final long[] arr, final int from, final int to) {
+			return print(arr, from, to, ' ');
+		}
+
+		public FastPrinter print(final double[] arr, final int from, final int to) {
+			return print(arr, from, to, ' ');
+		}
+
+		public FastPrinter print(final String[] arr, final int from, final int to) {
+			return print(arr, from, to, ' ');
+		}
+
+		public FastPrinter print(final boolean[] arr, final int from, final int to, final char delimiter) {
+			if (from >= to) return this;
+			ensureCapacity((to - from) * (MAX_BOOL_DIGITS + 1));
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[from], p);
+			final byte d = (byte) delimiter;
+			for (int i = from + 1; i < to; i++) {
+				buf[p] = d;
+				p = write(arr[i], p + 1);
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter print(final char[] arr, final int from, final int to, final char delimiter) {
+			if (from >= to) return this;
+			ensureCapacity(((to - from) << 1) - 1);
+			final byte[] buf = buffer;
+			int p = pos;
+			buf[p++] = (byte) arr[from];
+			final byte d = (byte) delimiter;
+			for (int i = from + 1; i < to; i++) {
+				buf[p] = d;
+				buf[p + 1] = (byte) arr[i];
+				p += 2;
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter print(final int[] arr, final int from, final int to, final char delimiter) {
+			if (from >= to) return this;
+			ensureCapacity((to - from) * (MAX_INT_DIGITS + 1));
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[from], p);
+			final byte d = (byte) delimiter;
+			for (int i = from + 1; i < to; i++) {
+				buf[p] = d;
+				p = write(arr[i], p + 1);
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter print(final long[] arr, final int from, final int to, final char delimiter) {
+			if (from >= to) return this;
+			ensureCapacity((to - from) * (MAX_LONG_DIGITS + 1));
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[from], p);
+			final byte d = (byte) delimiter;
+			for (int i = from + 1; i < to; i++) {
+				buf[p] = d;
+				p = write(arr[i], p + 1);
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter print(final double[] arr, final int from, final int to, final char delimiter) {
+			if (from >= to) return this;
+			print(arr[from]);
+			final byte d = (byte) delimiter;
+			for (int i = from + 1; i < to; i++) {
+				print(d);
+				print(arr[i]);
 			}
 			if (autoFlush) flush();
+			return this;
 		}
 
-		public void print(final long[] arr, final char delimiter) {
-			if (arr == null) return;
-			final int len = arr.length;
-			if (len == 0) return;
-			print(arr[0]);
-			for (int i = 1; i < len; i++) {
-				ensureBufferSpace(MAX_LONG_DIGITS + 1);
-				buffer[pos++] = (byte) delimiter;
-				fillBuffer(arr[i]);
+		public FastPrinter print(final String[] arr, final int from, final int to, final char delimiter) {
+			if (from >= to) return this;
+			int totalLen = 0;
+			for (int i = from; i < to; i++) totalLen += arr[i].length();
+			ensureCapacity(totalLen + (to - from - 1));
+
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[from], p);
+			final byte d = (byte) delimiter;
+			for (int i = from + 1; i < to; i++) {
+				buf[p] = d;
+				p = write(arr[i], p + 1);
 			}
+			pos = p;
 			if (autoFlush) flush();
+			return this;
 		}
 
-		public void print(final char[] arr, final char delimiter) {
-			if (arr == null) return;
-			final int len = arr.length;
-			if (len == 0) return;
-			print(arr[0]);
-			int i = 1;
-			while (i < len) {
-				ensureBufferSpace(2);
-				int limit = min(buffer.length - pos, len - i);
-				while (limit-- > 0) {
-					buffer[pos++] = (byte) delimiter;
-					buffer[pos++] = (byte) arr[i++];
-				}
-			}
-			if (autoFlush) flush();
+		public <T> FastPrinter println(final boolean[] arr, final Function<Boolean, T> function) {
+			for (final boolean b : arr) println(function.apply(b));
+			return this;
 		}
 
-		public void print(final boolean[] arr, final char delimiter) {
-			if (arr == null) return;
+		public <T> FastPrinter println(final char[] arr, final IntFunction<T> function) {
+			for (final char c : arr) println(function.apply(c));
+			return this;
+		}
+
+		public <T> FastPrinter println(final int[] arr, final IntFunction<T> function) {
+			for (final int i : arr) println(function.apply(i));
+			return this;
+		}
+
+		public <T> FastPrinter println(final long[] arr, final LongFunction<T> function) {
+			for (final long l : arr) println(function.apply(l));
+			return this;
+		}
+
+		public <T> FastPrinter println(final double[] arr, final DoubleFunction<T> function) {
+			for (final double l : arr) println(function.apply(l));
+			return this;
+		}
+
+		public <T> FastPrinter println(final String[] arr, final Function<String, T> function) {
+			for (final String s : arr) println(function.apply(s));
+			return this;
+		}
+
+		public <T> FastPrinter print(final boolean[] arr, final Function<Boolean, T> function) {
 			final int len = arr.length;
-			if (len == 0) return;
-			print(arr[0]);
+			if (len > 0) print(function.apply(arr[0]));
 			for (int i = 1; i < len; i++) {
-				ensureBufferSpace(4);
-				buffer[pos++] = (byte) delimiter;
-				fillBuffer(arr[i]);
-			}
-			if (autoFlush) flush();
-		}
-
-		public void print(final String[] arr, final char delimiter) {
-			if (arr == null) return;
-			final int len = arr.length;
-			if (len == 0) return;
-			print(arr[0], false);
-			for (int i = 1; i < len; i++) {
-				print(delimiter);
-				print(arr[i], false);
-			}
-		}
-
-		public <T> void println(final int[] arr, final IntFunction<T> function) {
-			if (arr == null) return;
-			for (final int i : arr)
-				println(function.apply(i));
-		}
-
-		public <T> void println(final long[] arr, final LongFunction<T> function) {
-			if (arr == null) return;
-			for (final long l : arr)
-				println(function.apply(l));
-		}
-
-		public <T> void println(final char[] arr, final Function<Character, T> function) {
-			if (arr == null) return;
-			for (final char c : arr)
-				println(function.apply(c));
-		}
-
-		public <T> void println(final boolean[] arr, final Function<Boolean, T> function) {
-			if (arr == null) return;
-			for (final boolean b : arr)
-				println(function.apply(b));
-		}
-
-		public <T> void println(final String[] arr, final Function<String, T> function) {
-			if (arr == null) return;
-			for (final String s : arr)
-				println(function.apply(s));
-		}
-
-		public <T> void print(final int[] arr, final IntFunction<T> function) {
-			if (arr == null) return;
-			final int len = arr.length;
-			if (len == 0) return;
-			print(function.apply(arr[0]));
-			for (int i = 1; i < len; i++) {
-				print(' ');
+				print(SPACE);
 				print(function.apply(arr[i]));
 			}
+			return this;
 		}
 
-		public <T> void print(final long[] arr, final LongFunction<T> function) {
-			if (arr == null) return;
+		public <T> FastPrinter print(final char[] arr, final IntFunction<T> function) {
 			final int len = arr.length;
-			if (len == 0) return;
-			print(function.apply(arr[0]));
+			if (len > 0) print(function.apply(arr[0]));
 			for (int i = 1; i < len; i++) {
-				print(' ');
+				print(SPACE);
 				print(function.apply(arr[i]));
 			}
+			return this;
 		}
 
-		public <T> void print(final char[] arr, final Function<Character, T> function) {
-			if (arr == null) return;
+		public <T> FastPrinter print(final int[] arr, final IntFunction<T> function) {
 			final int len = arr.length;
-			if (len == 0) return;
-			print(function.apply(arr[0]));
+			if (len > 0) print(function.apply(arr[0]));
 			for (int i = 1; i < len; i++) {
-				print(' ');
+				print(SPACE);
 				print(function.apply(arr[i]));
 			}
+			return this;
 		}
 
-		public <T> void print(final boolean[] arr, final Function<Boolean, T> function) {
-			if (arr == null) return;
+		public <T> FastPrinter print(final long[] arr, final LongFunction<T> function) {
 			final int len = arr.length;
-			if (len == 0) return;
-			print(function.apply(arr[0]));
+			if (len > 0) print(function.apply(arr[0]));
 			for (int i = 1; i < len; i++) {
-				print(' ');
+				print(SPACE);
 				print(function.apply(arr[i]));
 			}
+			return this;
 		}
 
-		public <T> void print(final String[] arr, final Function<String, T> function) {
-			if (arr == null) return;
+		public <T> FastPrinter print(final double[] arr, final DoubleFunction<T> function) {
 			final int len = arr.length;
-			if (len == 0) return;
-			print(function.apply(arr[0]));
+			if (len > 0) print(function.apply(arr[0]));
 			for (int i = 1; i < len; i++) {
-				print(' ');
+				print(SPACE);
 				print(function.apply(arr[i]));
 			}
+			return this;
 		}
 
-		public void println(final int[][] arr2d) {
-			println(arr2d, ' ');
+		public <T> FastPrinter print(final String[] arr, final Function<String, T> function) {
+			final int len = arr.length;
+			if (len > 0) print(function.apply(arr[0]));
+			for (int i = 1; i < len; i++) {
+				print(SPACE);
+				print(function.apply(arr[i]));
+			}
+			return this;
 		}
 
-		public void println(final long[][] arr2d) {
-			println(arr2d, ' ');
+		public FastPrinter println(final boolean[][] arr2d) {
+			return println(arr2d, ' ');
 		}
 
-		public void println(final char[][] arr2d) {
-			println(arr2d, ' ');
+		public FastPrinter println(final char[][] arr2d) {
+			return println(arr2d, ' ');
 		}
 
-		public void println(final boolean[][] arr2d) {
-			println(arr2d, ' ');
+		public FastPrinter println(final int[][] arr2d) {
+			return println(arr2d, ' ');
 		}
 
-		public void println(final String[][] arr2d) {
-			println(arr2d, ' ');
+		public FastPrinter println(final long[][] arr2d) {
+			return println(arr2d, ' ');
 		}
 
-		public void println(final Object[][] arr2d) {
-			println(arr2d, ' ');
+		public FastPrinter println(final double[][] arr2d) {
+			return println(arr2d, ' ');
 		}
 
-		public void println(final int[][] arr2d, final char delimiter) {
-			if (arr2d == null) return;
-			for (final int[] arr : arr2d)
-				println(arr, delimiter);
+		public FastPrinter println(final String[][] arr2d) {
+			return println(arr2d, ' ');
 		}
 
-		public void println(final long[][] arr2d, final char delimiter) {
-			if (arr2d == null) return;
-			for (final long[] arr : arr2d)
-				println(arr, delimiter);
+		public FastPrinter println(final Object[][] arr2d) {
+			return println(arr2d, ' ');
 		}
 
-		public void println(final char[][] arr2d, final char delimiter) {
-			if (arr2d == null) return;
-			for (final char[] arr : arr2d)
-				println(arr, delimiter);
+		public FastPrinter println(final boolean[][] arr2d, final char delimiter) {
+			for (final boolean[] arr : arr2d) println(arr, delimiter);
+			return this;
 		}
 
-		public void println(final boolean[][] arr2d, final char delimiter) {
-			if (arr2d == null) return;
-			for (final boolean[] arr : arr2d)
-				println(arr, delimiter);
+		public FastPrinter println(final char[][] arr2d, final char delimiter) {
+			for (final char[] arr : arr2d) println(arr, delimiter);
+			return this;
 		}
 
-		public void println(final String[][] arr2d, final char delimiter) {
-			if (arr2d == null) return;
-			for (final String[] arr : arr2d)
-				println(arr, delimiter);
+		public FastPrinter println(final int[][] arr2d, final char delimiter) {
+			for (final int[] arr : arr2d) println(arr, delimiter);
+			return this;
 		}
 
-		public void println(final Object[][] arr2d, final char delimiter) {
-			if (arr2d == null) return;
+		public FastPrinter println(final long[][] arr2d, final char delimiter) {
+			for (final long[] arr : arr2d) println(arr, delimiter);
+			return this;
+		}
+
+		public FastPrinter println(final double[][] arr2d, final char delimiter) {
+			for (final double[] arr : arr2d) println(arr, delimiter);
+			return this;
+		}
+
+		public FastPrinter println(final String[][] arr2d, final char delimiter) {
+			for (final String[] arr : arr2d) println(arr, delimiter);
+			return this;
+		}
+
+		public FastPrinter println(final Object[][] arr2d, final char delimiter) {
 			for (final Object[] arr : arr2d) {
-				print(arr[0]);
-				for (int i = 1; i < arr.length; i++) {
+				final int len = arr.length;
+				if (len > 0) print(arr[0]);
+				for (int i = 1; i < len; i++) {
 					print(delimiter);
 					print(arr[i]);
 				}
 				println();
 			}
+			return this;
 		}
 
-		public <T> void println(final int[][] arr2d, final IntFunction<T> function) {
-			if (arr2d == null) return;
-			for (final int[] arr : arr2d) {
-				print(arr, function);
-				println();
+		public <T> FastPrinter println(final boolean[][] arr2d, final Function<Boolean, T> function) {
+			for (final boolean[] arr : arr2d) print(arr, function).println();
+			return this;
+		}
+
+		public <T> FastPrinter println(final char[][] arr2d, final IntFunction<T> function) {
+			for (final char[] arr : arr2d) print(arr, function).println();
+			return this;
+		}
+
+		public <T> FastPrinter println(final int[][] arr2d, final IntFunction<T> function) {
+			for (final int[] arr : arr2d) print(arr, function).println();
+			return this;
+		}
+
+		public <T> FastPrinter println(final long[][] arr2d, final LongFunction<T> function) {
+			for (final long[] arr : arr2d) print(arr, function).println();
+			return this;
+		}
+
+		public <T> FastPrinter println(final double[][] arr2d, final DoubleFunction<T> function) {
+			for (final double[] arr : arr2d) print(arr, function).println();
+			return this;
+		}
+
+		public <T> FastPrinter println(final String[][] arr2d, final Function<String, T> function) {
+			for (final String[] arr : arr2d) print(arr, function).println();
+			return this;
+		}
+
+		public FastPrinter printChars(final char[] arr) {
+			return printChars(arr, 0, arr.length);
+		}
+
+		public FastPrinter printChars(final char[] arr, final int from, final int to) {
+			final int len = to - from;
+			ensureCapacity(len);
+			final byte[] buf = buffer;
+			int p = pos, i = from;
+			final int limit8 = from + (len & ~7);
+			while (i < limit8) {
+				buf[p] = (byte) arr[i];
+				buf[p + 1] = (byte) arr[i + 1];
+				buf[p + 2] = (byte) arr[i + 2];
+				buf[p + 3] = (byte) arr[i + 3];
+				buf[p + 4] = (byte) arr[i + 4];
+				buf[p + 5] = (byte) arr[i + 5];
+				buf[p + 6] = (byte) arr[i + 6];
+				buf[p + 7] = (byte) arr[i + 7];
+				p += 8;
+				i += 8;
 			}
+			while (i < to) buf[p++] = (byte) arr[i++];
+			pos = p;
+			if (autoFlush) flush();
+			return this;
 		}
 
-		public <T> void println(final long[][] arr2d, final LongFunction<T> function) {
-			if (arr2d == null) return;
-			for (final long[] arr : arr2d) {
-				print(arr, function);
-				println();
+		public FastPrinter printChars(final char[] arr, final IntUnaryOperator function) {
+			final int len = arr.length;
+			ensureCapacity(len);
+			final byte[] buf = buffer;
+			int p = pos, i = 0;
+			final int limit = len & ~7;
+			while (i < limit) {
+				buf[p] = (byte) function.applyAsInt(arr[i]);
+				buf[p + 1] = (byte) function.applyAsInt(arr[i + 1]);
+				buf[p + 2] = (byte) function.applyAsInt(arr[i + 2]);
+				buf[p + 3] = (byte) function.applyAsInt(arr[i + 3]);
+				buf[p + 4] = (byte) function.applyAsInt(arr[i + 4]);
+				buf[p + 5] = (byte) function.applyAsInt(arr[i + 5]);
+				buf[p + 6] = (byte) function.applyAsInt(arr[i + 6]);
+				buf[p + 7] = (byte) function.applyAsInt(arr[i + 7]);
+				p += 8;
+				i += 8;
 			}
+			while (i < len) buf[p++] = (byte) function.applyAsInt(arr[i++]);
+			pos = p;
+			if (autoFlush) flush();
+			return this;
 		}
 
-		public <T> void println(final char[][] arr2d, final LongFunction<T> function) {
-			if (arr2d == null) return;
-			for (final char[] arr : arr2d) {
-				print(arr, function);
-				println();
+		public FastPrinter printChars(final char[][] arr2d) {
+			for (final char[] arr : arr2d) printChars(arr).println();
+			return this;
+		}
+
+		public FastPrinter printChars(final char[][] arr2d, final IntUnaryOperator function) {
+			for (final char[] arr : arr2d) printChars(arr, function).println();
+			return this;
+		}
+
+		public <T> FastPrinter println(final Iterable<T> iter) {
+			return print(iter, '\n').println();
+		}
+
+		public <T> FastPrinter println(final Iterable<T> iter, final char delimiter) {
+			return print(iter, delimiter).println();
+		}
+
+		public <T> FastPrinter print(final Iterable<T> iter) {
+			return print(iter, ' ');
+		}
+
+		public <T> FastPrinter print(final Iterable<T> iter, final char delimiter) {
+			final Iterator<T> it = iter.iterator();
+			if (it.hasNext()) print(it.next());
+			while (it.hasNext()) {
+				print(delimiter);
+				print(it.next());
 			}
+			return this;
 		}
 
-		public <T> void println(final boolean[][] arr2d, final Function<Boolean, T> function) {
-			if (arr2d == null) return;
-			for (final boolean[] arr : arr2d) {
-				print(arr, function);
-				println();
+		public <T, U> FastPrinter println(final Iterable<T> iter, final Function<T, U> function) {
+			return print(iter, function, '\n').println();
+		}
+
+		public <T, U> FastPrinter println(final Iterable<T> iter, final Function<T, U> function, final char delimiter) {
+			return print(iter, function, delimiter).println();
+		}
+
+		public <T, U> FastPrinter print(final Iterable<T> iter, final Function<T, U> function) {
+			return print(iter, function, ' ');
+		}
+
+		public <T, U> FastPrinter print(final Iterable<T> iter, final Function<T, U> function, final char delimiter) {
+			final Iterator<T> it = iter.iterator();
+			if (it.hasNext()) print(function.apply(it.next()));
+			while (it.hasNext()) {
+				print(delimiter);
+				print(function.apply(it.next()));
 			}
+			return this;
 		}
 
-		public <T> void println(final String[][] arr2d, final Function<String, T> function) {
-			if (arr2d == null) return;
-			for (final String[] arr : arr2d) {
-				print(arr, function);
-				println();
+		public FastPrinter printRepeat(final char c, final int cnt) {
+			if (cnt <= 0) return this;
+			ensureCapacity(cnt);
+			final byte[] buf = buffer;
+			final int p = pos;
+			fill(buf, p, p + cnt, (byte) c);
+			pos = p + cnt;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printRepeat(final String s, final int cnt) {
+			if (cnt <= 0) return this;
+			final int len = s.length();
+			if (len == 0) return this;
+			final int total = len * cnt;
+			ensureCapacity(total);
+			final byte[] buf = buffer;
+			final int origPos = pos;
+			int p = write(s, origPos);
+			int copied = 1;
+			while (copied << 1 <= cnt) {
+				System.arraycopy(buf, origPos, buf, p, copied * len);
+				p += copied * len;
+				copied <<= 1;
+			}
+			final int remain = cnt - copied;
+			if (remain > 0) {
+				System.arraycopy(buf, origPos, buf, p, remain * len);
+				p += remain * len;
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printlnRepeat(final char c, final int cnt) {
+			if (cnt <= 0) return this;
+			final int total = cnt << 1;
+			ensureCapacity(total);
+			final byte[] buf = buffer;
+			final byte b = (byte) c;
+			final int origPos = pos;
+			buf[origPos] = b;
+			buf[origPos + 1] = LINE;
+			int p = origPos + 2;
+			int copied = 2;
+			while (copied << 1 <= total) {
+				System.arraycopy(buf, origPos, buf, p, copied);
+				p += copied;
+				copied <<= 1;
+			}
+			final int remain = total - copied;
+			if (remain > 0) {
+				System.arraycopy(buf, origPos, buf, p, remain);
+				p += remain;
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printlnRepeat(final String s, final int cnt) {
+			if (cnt <= 0) return this;
+			final int len = s.length();
+			if (len == 0) return this;
+			final int unitLen = len + 1;
+			ensureCapacity(unitLen * cnt);
+			final byte[] buf = buffer;
+			final int origPos = pos;
+			int p = write(s, origPos);
+			buf[p++] = LINE;
+			int copied = 1;
+			while (copied << 1 <= cnt) {
+				System.arraycopy(buf, origPos, buf, p, copied * unitLen);
+				p += copied * unitLen;
+				copied <<= 1;
+			}
+			final int remain = cnt - copied;
+			if (remain > 0) {
+				System.arraycopy(buf, origPos, buf, p, remain * unitLen);
+				p += remain * unitLen;
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printlnReverse(final boolean[] arr) {
+			final int len = arr.length;
+			if (len == 0) return this;
+			ensureCapacity(len * (MAX_BOOL_DIGITS + 1));
+			final byte[] buf = buffer;
+			int p = pos;
+			for (int i = len - 1; i >= 0; i--) {
+				p = write(arr[i], p);
+				buf[p++] = LINE;
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printlnReverse(final char[] arr) {
+			final int len = arr.length;
+			if (len == 0) return this;
+			ensureCapacity(len << 1);
+			final byte[] buf = buffer;
+			int p = pos;
+			for (int i = len - 1; i >= 0; i--) {
+				buf[p] = (byte) arr[i];
+				buf[p + 1] = LINE;
+				p += 2;
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printlnReverse(final int[] arr) {
+			final int len = arr.length;
+			if (len == 0) return this;
+			ensureCapacity(len * (MAX_INT_DIGITS + 1));
+			final byte[] buf = buffer;
+			int p = pos;
+			for (int i = len - 1; i >= 0; i--) {
+				p = write(arr[i], p);
+				buf[p++] = LINE;
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printlnReverse(final long[] arr) {
+			final int len = arr.length;
+			if (len == 0) return this;
+			ensureCapacity(len * (MAX_LONG_DIGITS + 1));
+			final byte[] buf = buffer;
+			int p = pos;
+			for (int i = len - 1; i >= 0; i--) {
+				p = write(arr[i], p);
+				buf[p++] = LINE;
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printlnReverse(final double[] arr) {
+			final int len = arr.length;
+			for (int i = len - 1; i >= 0; i--) {
+				final String s = Double.toString(arr[i]);
+				ensureCapacity(s.length() + 1);
+				pos = write(s, pos);
+				buffer[pos++] = LINE;
+			}
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printlnReverse(final String[] arr) {
+			final int len = arr.length;
+			for (int i = len - 1; i >= 0; i--) {
+				final String s = arr[i];
+				ensureCapacity(s.length() + 1);
+				pos = write(s, pos);
+				buffer[pos++] = LINE;
+			}
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printlnReverse(final Object[] arr) {
+			final int len = arr.length;
+			for (int i = len - 1; i >= 0; i--) println(arr[i]);
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printReverse(final boolean[] arr) {
+			final int len = arr.length;
+			if (len == 0) return this;
+			ensureCapacity(len * (MAX_BOOL_DIGITS + 1) - 1);
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[len - 1], p);
+			for (int i = len - 2; i >= 0; i--) {
+				buf[p] = SPACE;
+				p = write(arr[i], p + 1);
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printReverse(final char[] arr) {
+			final int len = arr.length;
+			if (len == 0) return this;
+			ensureCapacity((len << 1) - 1);
+			final byte[] buf = buffer;
+			int p = pos;
+			buf[p++] = (byte) arr[len - 1];
+			for (int i = len - 2; i >= 0; i--) {
+				buf[p] = SPACE;
+				buf[p + 1] = (byte) arr[i];
+				p += 2;
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printReverse(final int[] arr) {
+			final int len = arr.length;
+			if (len == 0) return this;
+			ensureCapacity(len * (MAX_INT_DIGITS + 1) - 1);
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[len - 1], p);
+			for (int i = len - 2; i >= 0; i--) {
+				buf[p] = SPACE;
+				p = write(arr[i], p + 1);
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printReverse(final long[] arr) {
+			final int len = arr.length;
+			if (len == 0) return this;
+			ensureCapacity(len * (MAX_LONG_DIGITS + 1) - 1);
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[len - 1], p);
+			for (int i = len - 2; i >= 0; i--) {
+				buf[p] = SPACE;
+				p = write(arr[i], p + 1);
+			}
+			pos = p;
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printReverse(final double[] arr) {
+			final int len = arr.length;
+			if (len == 0) return this;
+			final String s0 = Double.toString(arr[len - 1]);
+			ensureCapacity(s0.length());
+			pos = write(s0, pos);
+			for (int i = len - 2; i >= 0; i--) {
+				final String s = Double.toString(arr[i]);
+				ensureCapacity(s.length() + 1);
+				buffer[pos] = SPACE;
+				pos = write(s, pos + 1);
+			}
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printReverse(final String[] arr) {
+			final int len = arr.length;
+			if (len == 0) return this;
+			ensureCapacity(arr[len - 1].length());
+			pos = write(arr[len - 1], pos);
+			for (int i = len - 2; i >= 0; i--) {
+				ensureCapacity(arr[i].length() + 1);
+				buffer[pos] = SPACE;
+				pos = write(arr[i], pos + 1);
+			}
+			if (autoFlush) flush();
+			return this;
+		}
+
+		public FastPrinter printReverse(final Object[] arr) {
+			final int len = arr.length;
+			if (len == 0) return this;
+			print(arr[len - 1]);
+			for (int i = len - 2; i >= 0; i--) {
+				ensureCapacity(1);
+				buffer[pos++] = SPACE;
+				print(arr[i]);
+			}
+			if (autoFlush) flush();
+			return this;
+		}
+
+		private static final class Cache {
+			private static final VarHandle SHORT_HANDLE = MethodHandles.byteArrayViewVarHandle(short[].class, ByteOrder.LITTLE_ENDIAN);
+			private static final VarHandle INT_HANDLE = MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.LITTLE_ENDIAN);
+			private static final byte[] TRUE_BYTES = {'Y', 'e', 's'};
+			private static final byte[] FALSE_BYTES = {'N', 'o'};
+			private static final short[] DIGITS_2 = {
+					12336, 12592, 12848, 13104, 13360, 13616, 13872, 14128, 14384, 14640,
+					12337, 12593, 12849, 13105, 13361, 13617, 13873, 14129, 14385, 14641,
+					12338, 12594, 12850, 13106, 13362, 13618, 13874, 14130, 14386, 14642,
+					12339, 12595, 12851, 13107, 13363, 13619, 13875, 14131, 14387, 14643,
+					12340, 12596, 12852, 13108, 13364, 13620, 13876, 14132, 14388, 14644,
+					12341, 12597, 12853, 13109, 13365, 13621, 13877, 14133, 14389, 14645,
+					12342, 12598, 12854, 13110, 13366, 13622, 13878, 14134, 14390, 14646,
+					12343, 12599, 12855, 13111, 13367, 13623, 13879, 14135, 14391, 14647,
+					12344, 12600, 12856, 13112, 13368, 13624, 13880, 14136, 14392, 14648,
+					12345, 12601, 12857, 13113, 13369, 13625, 13881, 14137, 14393, 14649,
+			};
+			private static final int[] DIGITS_4 = new int[10000];
+			private static final long[] POW10 = {
+					1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000,
+					1_000_000_000, 10_000_000_000L, 100_000_000_000L, 1_000_000_000_000L,
+					10_000_000_000_000L, 100_000_000_000_000L, 1_000_000_000_000_000L,
+					10_000_000_000_000_000L, 100_000_000_000_000_000L, 1_000_000_000_000_000_000L
+			};
+
+			static {
+				int idx4 = 0;
+				for (int i = 0; i < 100; i++) {
+					final int hi = DIGITS_2[i] & 0xFFFF;
+					for (int j = 0; j < 100; j++) {
+						final int lo = DIGITS_2[j] & 0xFFFF;
+						DIGITS_4[idx4++] = (lo << 16) | hi;
+					}
+				}
 			}
 		}
 	}
+	// endregion
 }
