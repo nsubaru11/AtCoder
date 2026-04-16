@@ -201,6 +201,62 @@ public final class ${NAME} {
 		}
 		return a << commonShift;
 	}
+
+	private static void compression(final int[] a, final int len) {
+		final int[] b = copyOf(a, len);
+		sort(b);
+		int n = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[n++] = b[i];
+		}
+		for (int i = 0; i < len; i++) {
+			a[i] = binarySearch(b, 0, n, a[i]);
+		}
+	}
+
+	private static void compression(final int[][] a, final int n, final int m) {
+		final int len = n * m;
+		final int[] b = new int[len];
+		for (int i = 0, j = 0; i < n; i++, j += m) {
+			System.arraycopy(a[i], 0, b, j, m);
+		}
+		sort(b);
+		int nm = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[nm++] = b[i];
+		}
+		for (int i = 0; i < n; i++) {
+			int[] ai = a[i];
+			for (int j = 0; j < m; j++) {
+				ai[j] = binarySearch(b, 0, nm, ai[j]);
+			}
+		}
+	}
+
+	private static void compression(final int[][] a, final int n) {
+		int len = 0;
+		for (int i = 0; i < n; i++) len += a[i].length;
+		final int[] b = new int[len];
+		for (int i = 0, j = 0; i < n; i++) {
+			int m = a[i].length;
+			System.arraycopy(a[i], 0, b, j, m);
+			j += m;
+		}
+		sort(b);
+		int nm = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[nm++] = b[i];
+		}
+		for (int i = 0; i < n; i++) {
+			int[] ai = a[i];
+			for (int j = 0, m = ai.length; j < m; j++) {
+				ai[j] = binarySearch(b, 0, nm, ai[j]);
+			}
+		}
+	}
 	// endregion
 
 	// region < I/O & Debug >
