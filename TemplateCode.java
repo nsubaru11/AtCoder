@@ -20,6 +20,7 @@ public final class ${NAME} {
 	private static final boolean DEBUG = true;
 	private static final int MOD = 998244353;
 	// private static final int MOD = 1_000_000_007;
+	private static final char[] op = new char[]{'L', 'U', 'R', 'D'};
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
 	private static final FastScanner sc = new FastScanner();
@@ -263,7 +264,6 @@ public final class ${NAME} {
 		try {
 			solve();
 		} finally {
-			sc.close();
 			out.close();
 		}
 	}
@@ -276,73 +276,37 @@ public final class ${NAME} {
 	}
 
 	@SuppressWarnings("unused")
-	private static final class FastScanner implements AutoCloseable {
-		private static final int DEFAULT_BUFFER_SIZE = 1 << 20;
-		private final InputStream in;
+	private static final class FastScanner {
+		private static final VarHandle LONG_HANDLE = MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
 		private final byte[] buffer;
-		private int pos = 0, bufferLength = 0;
+		private final int bufferLength;
+		private int pos = 0;
 
 		public FastScanner() {
-			this(System.in, DEFAULT_BUFFER_SIZE);
+			this(System.in);
 		}
 
 		public FastScanner(final InputStream in) {
-			this(in, DEFAULT_BUFFER_SIZE);
-		}
-
-		public FastScanner(final int bufferSize) {
-			this(System.in, bufferSize);
-		}
-
-		public FastScanner(final InputStream in, final int bufferSize) {
-			this.in = in;
-			this.buffer = new byte[bufferSize];
+			try {
+				int capacity = in.available() + 64;
+				buffer = new byte[capacity];
+				bufferLength = in.read(buffer, 0, capacity);
+			} catch (final IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
 
 		private int skipSpaces() {
-			final byte[] buf = buffer;
-			int p = pos, len = bufferLength, b;
+			int p = pos, b;
 			do {
-				if (p >= len) {
-					try {
-						len = in.read(buf);
-						p = 0;
-					} catch (final IOException e) {
-						throw new RuntimeException(e);
-					}
-					if (len <= 0) throw new NoSuchElementException();
-					if (len < buf.length) buf[len] = 32;
-				}
-				b = buf[p++];
+				b = buffer[p++];
 			} while (b <= 32);
 			pos = p;
-			bufferLength = len;
 			return b;
 		}
 
-		@Override
-		public void close() {
-			try {
-				in.close();
-			} catch (final IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
-
-		private boolean hasNextByte() {
-			if (pos < bufferLength) return true;
-			pos = 0;
-			try {
-				bufferLength = in.read(buffer);
-				if (bufferLength > 0 && bufferLength < buffer.length) buffer[bufferLength] = 32;
-			} catch (final IOException e) {
-				throw new RuntimeException(e);
-			}
-			return bufferLength > 0;
-		}
-
 		public boolean hasNext() {
-			while (hasNextByte()) {
+			while (pos < bufferLength) {
 				if (buffer[pos] > 32) return true;
 				pos++;
 			}
@@ -356,20 +320,12 @@ public final class ${NAME} {
 
 		public int nextInt() {
 			int b = skipSpaces();
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
-				b = buffer[pos++];
-			}
-			return pos + 10 <= bufferLength ? nextIntFast(b, negative) : nextIntSlow(b, negative);
-		}
-
-		private int nextIntFast(int b, final boolean negative) {
+			boolean negative = b == '-';
 			final byte[] buf = buffer;
 			int p = pos, n = 0;
-			long a = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
-			long check = a & 0xF0F0F0F0F0F0F0F0L;
+			if (negative) b = buf[p++];
+			long a = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			final long check = a & 0xF0F0F0F0F0F0F0F0L;
 			if (check == 0) {
 				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
 				a = (a * 100 + (a >>> 16)) & 0x0000FFFF0000FFFFL;
@@ -386,43 +342,15 @@ public final class ${NAME} {
 			return negative ? -n : n;
 		}
 
-		private int nextIntSlow(int b, final boolean negative) {
-			int p = pos, len = bufferLength;
-			int n = 0;
-			do {
-				n = (n << 3) + (n << 1) + (b & 15);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buffer[p++];
-			} while (b > 32);
-			pos = p;
-			return negative ? -n : n;
-		}
-
 		public long nextLong() {
 			int b = skipSpaces();
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
-				b = buffer[pos++];
-			}
-			return pos + 20 <= bufferLength ? nextLongFast(b, negative) : nextLongSlow(b, negative);
-		}
-
-		private long nextLongFast(int b, final boolean negative) {
+			boolean negative = b == '-';
 			final byte[] buf = buffer;
 			int p = pos;
+			if (negative) b = buf[p++];
 			long n = 0;
-			long a = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
-			long check = a & 0xF0F0F0F0F0F0F0F0L;
+			long a = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			final long check = a & 0xF0F0F0F0F0F0F0F0L;
 			if (check == 0) {
 				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
 				a = (a * 100 + (a >>> 16)) & 0x0000FFFF0000FFFFL;
@@ -430,8 +358,8 @@ public final class ${NAME} {
 				n = a;
 				p += 7;
 				b = buf[p++];
-				long a2 = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
-				long check2 = a2 & 0xF0F0F0F0F0F0F0F0L;
+				long a2 = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+				final long check2 = a2 & 0xF0F0F0F0F0F0F0F0L;
 				if (check2 == 0) {
 					a2 = (a2 * 10 + (a2 >>> 8)) & 0x00FF00FF00FF00FFL;
 					a2 = (a2 * 100 + (a2 >>> 16)) & 0x0000FFFF0000FFFFL;
@@ -449,107 +377,31 @@ public final class ${NAME} {
 			return negative ? -n : n;
 		}
 
-		private long nextLongSlow(int b, final boolean negative) {
-			int p = pos, len = bufferLength;
-			long n = 0;
-			do {
-				n = (n << 3) + (n << 1) + (b & 15);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buffer[p++];
-			} while (b > 32);
-			pos = p;
-			return negative ? -n : n;
-		}
-
 		public double nextDouble() {
 			int b = skipSpaces();
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
-				b = buffer[pos++];
-			}
-			return pos + 20 <= bufferLength ? nextDoubleFast(b, negative) : nextDoubleSlow(b, negative);
-		}
-
-		private double nextDoubleFast(int b, final boolean negative) {
+			final boolean negative = b == '-';
 			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
+			int p = pos;
+			if (negative) b = buf[p++];
 			long intPart = 0;
 			do {
 				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
 				b = buf[p++];
 			} while ('0' <= b && b <= '9');
 			double result = intPart;
-			if (b == '.') result += parseFracPart(p, len, buf);
+			if (b == '.') result += parseFracPart(p, buf);
 			else pos = p;
 			return negative ? -result : result;
 		}
 
-		private double nextDoubleSlow(int b, final boolean negative) {
-			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
-			long intPart = 0;
-			do {
-				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						b = -1;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buf[p++];
-			} while ('0' <= b && b <= '9');
-
-			double result = intPart;
-			if (b == '.') result += parseFracPart(p, len, buf);
-			else pos = p;
-			return negative ? -result : result;
-		}
-
-		private double parseFracPart(int p, int len, final byte[] buf) {
-			if (p == len) {
-				pos = p;
-				hasNextByte();
-				p = pos;
-				len = bufferLength;
-			}
+		private double parseFracPart(int p, final byte[] buf) {
 			int b = buf[p++];
 			long fracPart = 0, divisor = 1;
-			if (p + 20 <= len) {
-				do {
-					fracPart = fracPart * 10 + (b & 15);
-					divisor *= 10;
-					b = buf[p++];
-				} while ('0' <= b && b <= '9');
-			} else {
-				do {
-					fracPart = fracPart * 10 + (b & 15);
-					divisor *= 10;
-					if (p == len) {
-						pos = p;
-						if (!hasNextByte()) {
-							p = pos;
-							break;
-						}
-						p = pos;
-						len = bufferLength;
-					}
-					b = buf[p++];
-				} while ('0' <= b && b <= '9');
-			}
+			do {
+				fracPart = fracPart * 10 + (b & 15);
+				divisor *= 10;
+				b = buf[p++];
+			} while ('0' <= b && b <= '9');
 			pos = p;
 			return (double) fracPart / divisor;
 		}
@@ -557,109 +409,29 @@ public final class ${NAME} {
 		public String next() {
 			skipSpaces();
 			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
+			int p = pos;
 			final int start = p - 1;
-			while (p < len && buf[p] > 32) p++;
-			if (p < len) {
-				final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
-				pos = p + 1;
-				return s;
-			}
-			final StringBuilder sb = new StringBuilder(len - start + 16);
-			for (int i = start; i < len; i++) sb.append((char) buf[i]);
-			while (true) {
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				final int b = buf[p++];
-				if (b <= 32) break;
-				sb.append((char) b);
-			}
-			pos = p;
-			return sb.toString();
+			while (buf[p] > 32) p++;
+			final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
+			pos = p + 1;
+			return s;
 		}
 
 		public StringBuilder nextStringBuilder() {
-			final StringBuilder sb = new StringBuilder();
-			int b = skipSpaces(), p = pos, len = bufferLength;
-			do {
-				sb.append((char) b);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buffer[p++];
-			} while (b > 32);
-			pos = p;
-			return sb;
+			return new StringBuilder(next());
 		}
 
 		public String nextLine() {
-			if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
 			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
+			int p = pos;
 			final int start = p;
-			while (p < len) {
+			while (p < bufferLength) {
 				final int b = buf[p];
-				if (b == '\n' || b == '\r') {
-					final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
-					p++;
-					if (b == '\r') {
-						if (p == len) {
-							pos = p;
-							hasNextByte();
-							p = pos;
-							len = bufferLength;
-						}
-						if (p < len && buf[p] == '\n') p++;
-					}
-					pos = p;
-					return s;
-				}
+				if (b == '\n' || b == '\r') break;
 				p++;
 			}
-
-			final StringBuilder sb = new StringBuilder();
-			for (int i = start; i < len; i++) sb.append((char) buf[i]);
-			while (true) {
-				pos = len;
-				if (!hasNextByte()) {
-					pos = len;
-					return sb.toString();
-				}
-				p = pos;
-				len = bufferLength;
-				while (p < len) {
-					final int b = buf[p];
-					if (b == '\n' || b == '\r') {
-						p++;
-						if (b == '\r') {
-							if (p == len) {
-								pos = p;
-								hasNextByte();
-								p = pos;
-								len = bufferLength;
-							}
-							if (p < len && buf[p] == '\n') p++;
-						}
-						pos = p;
-						return sb.toString();
-					}
-					sb.append((char) b);
-					p++;
-				}
-			}
+			pos = p + (buf[p] == '\r' && buf[p + 1] == '\n' ? 2 : 1);
+			return new String(buf, start, p - start, StandardCharsets.US_ASCII);
 		}
 
 		public BigInteger nextBigInteger() {
@@ -709,7 +481,17 @@ public final class ${NAME} {
 		}
 
 		public char[] nextChars() {
-			return next().toCharArray();
+			skipSpaces();
+			int p = pos;
+			final int start = p - 1;
+			while (buffer[p] > 32) p++;
+			final int len = p - start;
+			final char[] c = new char[len];
+			for (int i = 0; i < len; i++) {
+				c[i] = (char) buffer[start + i];
+			}
+			pos = p + 1;
+			return c;
 		}
 
 		public char[] nextChars(final int n) {
@@ -998,9 +780,6 @@ public final class ${NAME} {
 			return multiset;
 		}
 
-		private static final class Handles {
-			private static final VarHandle LONG_HANDLE = MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
-		}
 	}
 
 	@SuppressWarnings("unused")
