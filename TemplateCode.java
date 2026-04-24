@@ -2,6 +2,10 @@
 #end
 #parse("File Header.java")
 
+import static java.lang.Math.*;
+import static java.util.Arrays.*;
+import static java.util.Comparator.*;
+
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
@@ -9,10 +13,6 @@ import java.nio.*;
 import java.nio.charset.*;
 import java.util.*;
 import java.util.function.*;
-
-import static java.lang.Math.*;
-import static java.util.Arrays.*;
-import static java.util.Comparator.*;
 
 public final class ${NAME} {
 

@@ -2,7 +2,9 @@
 #end
 #parse("File Header.java")
 
-import sun.misc.*;
+import static java.lang.Math.*;
+import static java.util.Arrays.*;
+import static java.util.Comparator.*;
 
 import java.io.*;
 import java.lang.reflect.*;
@@ -11,9 +13,7 @@ import java.nio.charset.*;
 import java.util.*;
 import java.util.function.*;
 
-import static java.lang.Math.*;
-import static java.util.Arrays.*;
-import static java.util.Comparator.*;
+import sun.misc.*;
 
 public final class ${NAME} {
 
