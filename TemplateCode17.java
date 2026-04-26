@@ -94,11 +94,27 @@ public final class ${NAME} {
 		return true;
 	}
 
+	private static int min(final int a, final int b) {
+		return Math.min(a, b);
+	}
+
+	private static int min(final int a, final int b, final int c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
 	private static int min(int... a) {
 		int len = a.length;
 		int min = a[0];
 		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
 		return min;
+	}
+
+	private static int max(final int a, final int b) {
+		return Math.max(a, b);
+	}
+
+	private static int max(final int a, final int b, final int c) {
+		return Math.max(a, Math.max(b, c));
 	}
 
 	private static int max(int... a) {
@@ -108,11 +124,27 @@ public final class ${NAME} {
 		return max;
 	}
 
+	private static long min(final long a, final long b) {
+		return Math.min(a, b);
+	}
+
+	private static long min(final long a, final long b, final long c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
 	private static long min(long... a) {
 		int len = a.length;
 		long min = a[0];
 		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
 		return min;
+	}
+
+	private static long max(final long a, final long b) {
+		return Math.max(a, b);
+	}
+
+	private static long max(final long a, final long b, final long c) {
+		return Math.max(a, Math.max(b, c));
 	}
 
 	private static long max(long... a) {
@@ -122,11 +154,27 @@ public final class ${NAME} {
 		return max;
 	}
 
+	private static double min(final double a, final double b) {
+		return Math.min(a, b);
+	}
+
+	private static double min(final double a, final double b, final double c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
 	private static double min(double... a) {
 		int len = a.length;
 		double min = a[0];
 		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
 		return min;
+	}
+
+	private static double max(final double a, final double b) {
+		return Math.max(a, b);
+	}
+
+	private static double max(final double a, final double b, final double c) {
+		return Math.max(a, Math.max(b, c));
 	}
 
 	private static double max(double... a) {
