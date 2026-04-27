@@ -312,7 +312,6 @@ public final class ${NAME} {
 		try {
 			solve();
 		} finally {
-			sc.close();
 			out.close();
 		}
 	}
