@@ -1,92 +1,247 @@
+import static java.lang.Math.*;
+import static java.util.Arrays.*;
+
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
 import java.nio.*;
+import java.nio.charset.*;
 import java.util.*;
-import java.util.ArrayList;
 import java.util.function.*;
 
-import static java.lang.Math.*;
-import static java.util.Arrays.*;
-
-public final class C {
+public final class E {
 
 	// region < Constants & Globals >
-	private static final boolean DEBUG;
-	private static final int MOD;
-	private static final int[] di;
-	private static final int[] dj;
-	private static final FastScanner sc;
-	private static final FastPrinter out;
-
-	static {
-		DEBUG = true;
-		MOD = 998244353;
-		// MOD = 1_000_000_007;
-		di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
-		dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
-		sc = new FastScanner();
-		out = new FastPrinter();
-	}
+	private static final boolean DEBUG = true;
+	private static final int MOD = 998244353;
+	// private static final int MOD = 1_000_000_007;
+	private static final char[] op = new char[]{'L', 'U', 'R', 'D'};
+	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
+	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
+	private static final FastScanner sc = new FastScanner();
+	private static final FastPrinter out = new FastPrinter(64);
 	// endregion
 
 	private static void solve() {
-		int a = sc.nextInt();
-		int b = sc.nextInt();
-		int k = sc.nextInt();
-		int[][] memo = new int[a][b];
-		for (int i = 0; i < a; i++) fill(memo[i], -1);
-		memo[a - 1][b - 1] = 1;
-		while (k-- > 0) {
-			int x = sc.nextInt() - 1;
-			int y = sc.nextInt() - 1;
-			memo[x][y] = 0;
-		}
-		out.println(dfs(0, 0, a, b, memo));
-	}
+		int n = sc.nextInt();
+		char[] s = sc.nextChars(n);
+		IntTripleIntMap abc = new IntTripleIntMap(n + 1);
+		IntPairIntMap ab = new IntPairIntMap(n + 1);
+		IntPairIntMap ac = new IntPairIntMap(n + 1);
+		IntPairIntMap bc = new IntPairIntMap(n + 1);
+		abc.put(0, 0, 0, 1);
+		ab.put(0, 0, 1);
+		ac.put(0, 0, 1);
+		bc.put(0, 0, 1);
+		int pa = 0, pb = 0, pc = 0;
+		long ans = n * (n + 1L) / 2;
+		for (int i = 1; i <= n; i++) {
+			char si = s[i - 1];
+			if (si == 'A') pa++;
+			else if (si == 'B') pb++;
+			else pc++;
 
-	private static int dfs(int x, int y, int a, int b, int[][] memo) {
-		if (memo[x][y] != -1) return memo[x][y];
-		int xd = 0, yd = 0;
-		if (x + 1 < a) xd = dfs(x + 1, y, a, b, memo);
-		if (y + 1 < b) yd = dfs(x, y + 1, a, b, memo);
-		return memo[x][y] = xd + yd;
+			int mn = min(pa, pb, pc);
+			int da = pa - mn, db = pb - mn, dc = pc - mn;
+			int dab = min(da, db), dac = min(da, dc), dbc = min(db, dc);
+
+			int tabc = abc.getOrDefault(da, db, dc, 0);
+			int tab = ab.getOrDefault(da - dab, db - dab, 0);
+			int tac = ac.getOrDefault(da - dac, dc - dac, 0);
+			int tbc = bc.getOrDefault(db - dbc, dc - dbc, 0);
+
+			ans -= tab + tac + tbc - tabc * 2L;
+
+			abc.increment(da, db, dc);
+			ab.increment(da - dab, db - dab);
+			ac.increment(da - dac, dc - dac);
+			bc.increment(db - dbc, dc - dbc);
+		}
+		out.println(ans);
 	}
 
 	// region < Utility Methods >
+	private static boolean isValidRange(final int i, final int from, final int to) {
+		return ((i - from) | (to - 1 - i)) >= 0;
+	}
+
 	private static boolean isValidRange(final int i, final int j, final int h, final int w) {
-		return 0 <= i && i < h && 0 <= j && j < w;
+		return ((i | j | (h - 1 - i) | (w - 1 - j)) >>> 31) == 0;
 	}
 
-	private static long modPow(long a, long b, final long mod) {
+	private static void swap(final char[] a, final int i, final int j) {
+		final char tmp = a[i];
+		a[i] = a[j];
+		a[j] = tmp;
+	}
+
+	private static void swap(final int[] a, final int i, final int j) {
+		final int tmp = a[i];
+		a[i] = a[j];
+		a[j] = tmp;
+	}
+
+	private static void swap(final long[] a, final int i, final int j) {
+		final long tmp = a[i];
+		a[i] = a[j];
+		a[j] = tmp;
+	}
+
+	private static boolean chmin(final char[] a, final int i, final char v) {
+		if (a[i] <= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmin(final int[] a, final int i, final int v) {
+		if (a[i] <= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmin(final long[] a, final int i, final long v) {
+		if (a[i] <= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmax(final char[] a, final int i, final char v) {
+		if (a[i] >= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmax(final int[] a, final int i, final int v) {
+		if (a[i] >= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static boolean chmax(final long[] a, final int i, final long v) {
+		if (a[i] >= v) return false;
+		a[i] = v;
+		return true;
+	}
+
+	private static int min(final int a, final int b) {
+		return Math.min(a, b);
+	}
+
+	private static int min(final int a, final int b, final int c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
+	private static int min(int... a) {
+		int len = a.length;
+		int min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static int max(final int a, final int b) {
+		return Math.max(a, b);
+	}
+
+	private static int max(final int a, final int b, final int c) {
+		return Math.max(a, Math.max(b, c));
+	}
+
+	private static int max(int... a) {
+		int len = a.length;
+		int max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
+	}
+
+	private static long min(final long a, final long b) {
+		return Math.min(a, b);
+	}
+
+	private static long min(final long a, final long b, final long c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
+	private static long min(long... a) {
+		int len = a.length;
+		long min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static long max(final long a, final long b) {
+		return Math.max(a, b);
+	}
+
+	private static long max(final long a, final long b, final long c) {
+		return Math.max(a, Math.max(b, c));
+	}
+
+	private static long max(long... a) {
+		int len = a.length;
+		long max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
+	}
+
+	private static double min(final double a, final double b) {
+		return Math.min(a, b);
+	}
+
+	private static double min(final double a, final double b, final double c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
+	private static double min(double... a) {
+		int len = a.length;
+		double min = a[0];
+		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
+		return min;
+	}
+
+	private static double max(final double a, final double b) {
+		return Math.max(a, b);
+	}
+
+	private static double max(final double a, final double b, final double c) {
+		return Math.max(a, Math.max(b, c));
+	}
+
+	private static double max(double... a) {
+		int len = a.length;
+		double max = a[0];
+		for (int i = 1; i < len; i++) if (max < a[i]) max = a[i];
+		return max;
+	}
+
+	private static long lModPow(long a, long b, final long mod) {
+		if (b == 0) return 1;
 		long ans = 1;
-		for (a %= mod; b > 0; a = a * a % mod, b >>= 1) {
+		for (a %= mod; b > 1; b >>= 1) {
 			if ((b & 1) == 1) ans = ans * a % mod;
+			a = a * a % mod;
 		}
-		return ans;
+		return ans * a % mod;
 	}
 
-	private static long floorLong(final long a, final long b) {
-		return a < 0 ? (a - b + 1) / b : a / b;
+	private static int iModPow(int a, int b, final int mod) {
+		if (b == 0) return 1;
+		int ans = 1;
+		for (a %= mod; b > 1; b >>= 1) {
+			if ((b & 1) == 1) ans = (int) ((long) ans * a % mod);
+			a = (int) ((long) a * a % mod);
+		}
+		return (int) ((long) ans * a % mod);
 	}
 
-	private static int floorInt(final int a, final int b) {
-		return a < 0 ? (a - b + 1) / b : a / b;
+	private static long lcmLong(final long x, final long y) {
+		return x == 0 || y == 0 ? 0 : x / gcdLong(x, y) * y;
 	}
 
-	private static long ceilLong(final long a, final long b) {
-		return a < 0 ? a / b : (a + b - 1) / b;
+	private static int lcmInt(final int x, final int y) {
+		return x == 0 || y == 0 ? 0 : x / gcdInt(x, y) * y;
 	}
 
-	private static long ceilInt(final int a, final int b) {
-		return a < 0 ? a / b : (a + b - 1) / b;
-	}
-
-	private static long LCM(final long x, final long y) {
-		return x == 0 || y == 0 ? 0 : x * (y / GCD(x, y));
-	}
-
-	public static long GCD(long a, long b) {
+	private static long gcdLong(long a, long b) {
 		a = abs(a);
 		b = abs(b);
 		if (a == 0) return b;
@@ -104,16 +259,88 @@ public final class C {
 		}
 		return a << commonShift;
 	}
+
+	private static int gcdInt(int a, int b) {
+		a = abs(a);
+		b = abs(b);
+		if (a == 0) return b;
+		if (b == 0) return a;
+		int commonShift = Integer.numberOfTrailingZeros(a | b);
+		a >>= Integer.numberOfTrailingZeros(a);
+		while (b != 0) {
+			b >>= Integer.numberOfTrailingZeros(b);
+			if (a > b) {
+				int tmp = a;
+				a = b;
+				b = tmp;
+			}
+			b -= a;
+		}
+		return a << commonShift;
+	}
+
+	private static void compression(final int[] a, final int len) {
+		final int[] b = copyOf(a, len);
+		sort(b);
+		int n = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[n++] = b[i];
+		}
+		for (int i = 0; i < len; i++) {
+			a[i] = binarySearch(b, 0, n, a[i]);
+		}
+	}
+
+	private static void compression(final int[][] a, final int n, final int m) {
+		final int len = n * m;
+		final int[] b = new int[len];
+		for (int i = 0, j = 0; i < n; i++, j += m) {
+			System.arraycopy(a[i], 0, b, j, m);
+		}
+		sort(b);
+		int nm = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[nm++] = b[i];
+		}
+		for (int i = 0; i < n; i++) {
+			int[] ai = a[i];
+			for (int j = 0; j < m; j++) {
+				ai[j] = binarySearch(b, 0, nm, ai[j]);
+			}
+		}
+	}
+
+	private static void compression(final int[][] a, final int n) {
+		int len = 0;
+		for (int i = 0; i < n; i++) len += a[i].length;
+		final int[] b = new int[len];
+		for (int i = 0, j = 0; i < n; i++) {
+			int m = a[i].length;
+			System.arraycopy(a[i], 0, b, j, m);
+			j += m;
+		}
+		sort(b);
+		int nm = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[nm++] = b[i];
+		}
+		for (int i = 0; i < n; i++) {
+			int[] ai = a[i];
+			for (int j = 0, m = ai.length; j < m; j++) {
+				ai[j] = binarySearch(b, 0, nm, ai[j]);
+			}
+		}
+	}
 	// endregion
 
 	// region < I/O & Debug >
 	public static void main(final String[] args) {
 		try {
 			solve();
-		} catch (final Exception e) {
-			e.printStackTrace();
 		} finally {
-			sc.close();
 			out.close();
 		}
 	}
@@ -126,68 +353,554 @@ public final class C {
 	}
 
 	@SuppressWarnings("unused")
-	private static final class FastScanner implements AutoCloseable {
-		private static final int DEFAULT_BUFFER_SIZE = 65536;
-		private final InputStream in;
+	private static final class IntPairIntMap {
+		private static final long MASK = 0xFFFFFFFFL;
+		private final BaseLongIntMap baseMap;
+
+		public IntPairIntMap(final int initialCapacity) {
+			baseMap = new BaseLongIntMap(initialCapacity);
+		}
+
+		private static long pack(final int a, final int b) {
+			return ((long) a << 32) | (b & MASK);
+		}
+
+		public int put(final int a, final int b, final int value) {
+			return baseMap.put(pack(a, b), value);
+		}
+
+		public int get(final int a, final int b) {
+			return baseMap.get(pack(a, b));
+		}
+
+		public int getOrDefault(final int a, final int b, final int defaultValue) {
+			return baseMap.getOrDefault(pack(a, b), defaultValue);
+		}
+
+		public int increment(final int a, final int b) {
+			return addOrDefault(a, b, 1, 1);
+		}
+
+		public int decrement(final int a, final int b) {
+			return addOrDefault(a, b, -1, -1);
+		}
+
+		public int add(final int a, final int b, final int delta) {
+			return addOrDefault(a, b, delta, delta);
+		}
+
+		public int addOrDefault(final int a, final int b, final int delta, final int defaultValue) {
+			return baseMap.addOrDefault(pack(a, b), delta, defaultValue);
+		}
+
+		public boolean remove(final int a, final int b) {
+			return baseMap.remove(pack(a, b));
+		}
+
+		public boolean containsKey(final int a, final int b) {
+			return baseMap.containsKey(pack(a, b));
+		}
+
+		public int merge(final int a, final int b, final int value, final IntBinaryOperator op) {
+			return baseMap.merge(pack(a, b), value, op);
+		}
+
+		public int putIfAbsent(final int a, final int b, final int value) {
+			return baseMap.putIfAbsent(pack(a, b), value);
+		}
+
+		public void clear() {
+			baseMap.clear();
+		}
+
+		public int size() {
+			return baseMap.size();
+		}
+
+		public boolean isEmpty() {
+			return baseMap.isEmpty();
+		}
+
+		public void forEach(IntPairIntConsumer action) {
+			baseMap.forEach((key, value) -> {
+				int a = (int) (key >>> 32);
+				int b = (int) key;
+				action.accept(a, b, value);
+			});
+		}
+
+		public void forEachKey(IntPairConsumer action) {
+			baseMap.forEachKey(key -> {
+				int a = (int) (key >>> 32);
+				int b = (int) key;
+				action.accept(a, b);
+			});
+		}
+
+		public void forEachValue(IntConsumer action) {
+			baseMap.forEachValue(action);
+		}
+
+		public int[][] keys() {
+			int[][] res = new int[2][baseMap.size()];
+			long[] keys = baseMap.keys();
+			for (int i = 0; i < keys.length; i++) {
+				int a = (int) (keys[i] >>> 32), b = (int) keys[i];
+				res[0][i] = a;
+				res[1][i] = b;
+			}
+			return res;
+		}
+
+		public int[] values() {
+			return baseMap.values();
+		}
+
+		public int[][] entries() {
+			int[][] res = new int[3][baseMap.size()];
+			long[][] entries = baseMap.entries();
+			for (int i = 0; i < baseMap.size(); i++) {
+				int a = (int) (entries[0][i] >>> 32), b = (int) entries[0][i];
+				res[0][i] = a;
+				res[1][i] = b;
+				res[2][i] = (int) entries[1][i];
+			}
+			return res;
+		}
+
+		public interface IntPairIntConsumer {
+			void accept(int a, int b, int value);
+		}
+
+		public interface IntPairConsumer {
+			void accept(int a, int b);
+		}
+	}
+
+	@SuppressWarnings("unused")
+	private static final class BaseLongIntMap {
+		private long[] keys;
+		private int[] values, stamps;
+		private int stamp, size, capacity, occupied, resizeThreshold, mask;
+
+		public BaseLongIntMap(final int initialCapacity) {
+			capacity = normalizeCapacity(initialCapacity);
+			size = 0;
+			occupied = 0;
+			stamp = 1;
+			resizeThreshold = capacity - (capacity >>> 2);
+			stamps = new int[capacity];
+			keys = new long[capacity];
+			values = new int[capacity];
+			mask = capacity - 1;
+		}
+
+		private static int normalizeCapacity(final int c) {
+			final long required = (long) c * 4 / 3 + 1;
+			int cap = max(16, (int) required);
+			if ((cap & (cap - 1)) == 0) return cap;
+			cap--;
+			cap |= cap >>> 1;
+			cap |= cap >>> 2;
+			cap |= cap >>> 4;
+			cap |= cap >>> 8;
+			cap |= cap >>> 16;
+			return cap + 1;
+		}
+
+		public int get(final long key) {
+			for (int hash = hash(key), s = stamps[hash]; s == stamp || s == -stamp; hash = (hash + 1) & mask, s = stamps[hash]) {
+				if (s < 0 || keys[hash] != key) continue;
+				return values[hash];
+			}
+			throw new NoSuchElementException();
+		}
+
+		public int getOrDefault(final long key, final int defaultValue) {
+			for (int hash = hash(key), s = stamps[hash]; s == stamp || s == -stamp; hash = (hash + 1) & mask, s = stamps[hash]) {
+				if (s < 0 || keys[hash] != key) continue;
+				return values[hash];
+			}
+			return defaultValue;
+		}
+
+		public int increment(final long key) {
+			return addOrDefault(key, 1, 1);
+		}
+
+		public int decrement(final long key) {
+			return addOrDefault(key, -1, -1);
+		}
+
+		public int add(final long key, final int delta) {
+			return addOrDefault(key, delta, delta);
+		}
+
+		public int addOrDefault(final long key, final int delta, final int defaultValue) {
+			if (occupied >= resizeThreshold) resize();
+			int pos = -1;
+			int hash = hash(key);
+			for (int s = stamps[hash]; s == stamp || s == -stamp; hash = (hash + 1) & mask, s = stamps[hash]) {
+				if (s == -stamp) {
+					if (pos == -1) pos = hash;
+					continue;
+				} else if (keys[hash] != key) continue;
+				return values[hash] += delta;
+			}
+			if (pos == -1) {
+				pos = hash;
+				occupied++;
+			}
+			stamps[pos] = stamp;
+			keys[pos] = key;
+			size++;
+			return values[pos] = defaultValue;
+		}
+
+		public int put(final long key, final int value) {
+			if (occupied >= resizeThreshold) resize();
+			int pos = -1;
+			int hash = hash(key);
+			for (int s = stamps[hash]; s == stamp || s == -stamp; hash = (hash + 1) & mask, s = stamps[hash]) {
+				if (s == -stamp) {
+					if (pos == -1) pos = hash;
+					continue;
+				} else if (keys[hash] != key) continue;
+				return values[hash] = value;
+			}
+			if (pos == -1) {
+				pos = hash;
+				occupied++;
+			}
+			stamps[pos] = stamp;
+			keys[pos] = key;
+			size++;
+			return values[pos] = value;
+		}
+
+		public boolean remove(final long key) {
+			for (int hash = hash(key), s = stamps[hash]; s == stamp || s == -stamp; hash = (hash + 1) & mask, s = stamps[hash]) {
+				if (s < 0 || keys[hash] != key) continue;
+				stamps[hash] = -stamp;
+				size--;
+				return true;
+			}
+			return false;
+		}
+
+		public boolean containsKey(final long key) {
+			for (int hash = hash(key), s = stamps[hash]; s == stamp || s == -stamp; hash = (hash + 1) & mask, s = stamps[hash]) {
+				if (s < 0 || keys[hash] != key) continue;
+				return true;
+			}
+			return false;
+		}
+
+		public int merge(final long key, final int value, final IntBinaryOperator op) {
+			if (occupied >= resizeThreshold) resize();
+			int pos = -1;
+			int hash = hash(key);
+			for (int s = stamps[hash]; s == stamp || s == -stamp; hash = (hash + 1) & mask, s = stamps[hash]) {
+				if (s == -stamp) {
+					if (pos == -1) pos = hash;
+					continue;
+				} else if (keys[hash] != key) continue;
+				return values[hash] = op.applyAsInt(values[hash], value);
+			}
+			if (pos == -1) {
+				pos = hash;
+				occupied++;
+			}
+			stamps[pos] = stamp;
+			keys[pos] = key;
+			size++;
+			return values[pos] = value;
+		}
+
+		public int putIfAbsent(final long key, final int value) {
+			if (occupied >= resizeThreshold) resize();
+			int pos = -1;
+			int hash = hash(key);
+			for (int s = stamps[hash]; s == stamp || s == -stamp; hash = (hash + 1) & mask, s = stamps[hash]) {
+				if (s == -stamp) {
+					if (pos == -1) pos = hash;
+					continue;
+				} else if (keys[hash] != key) continue;
+				return values[hash];
+			}
+			if (pos == -1) {
+				pos = hash;
+				occupied++;
+			}
+			stamps[pos] = stamp;
+			keys[pos] = key;
+			size++;
+			return values[pos] = value;
+		}
+
+		private void resize() {
+			final int oldCapacity = capacity;
+			final long[] oldKeys = keys;
+			final int[] oldValues = values, oldStamps = stamps;
+			capacity <<= 1;
+			resizeThreshold = capacity - (capacity >>> 2);
+			keys = new long[capacity];
+			values = new int[capacity];
+			stamps = new int[capacity];
+			occupied = 0;
+			mask = capacity - 1;
+			for (int i = 0; i < oldCapacity; i++) {
+				if (oldStamps[i] != stamp) continue;
+				final long key = oldKeys[i];
+				int hash = hash(key);
+				while (stamps[hash] == stamp) hash = (hash + 1) & mask;
+				stamps[hash] = stamp;
+				keys[hash] = key;
+				values[hash] = oldValues[i];
+				occupied++;
+			}
+		}
+
+		private int hash(final long key) {
+			long h = key;
+			h ^= h >>> 33;
+			h *= 0xff51afd7ed558ccdL;
+			h ^= h >>> 33;
+			return (int) h & mask;
+		}
+
+		public void clear() {
+			size = 0;
+			occupied = 0;
+			stamp++;
+		}
+
+		public int size() {
+			return size;
+		}
+
+		public boolean isEmpty() {
+			return size == 0;
+		}
+
+
+		public void forEach(LongIntConsumer action) {
+			for (int i = 0; i < capacity; i++) {
+				if (stamps[i] != stamp) continue;
+				action.accept(keys[i], values[i]);
+			}
+		}
+
+		public void forEachKey(LongConsumer action) {
+			for (int i = 0; i < capacity; i++) {
+				if (stamps[i] != stamp) continue;
+				action.accept(keys[i]);
+			}
+		}
+
+		public void forEachValue(IntConsumer action) {
+			for (int i = 0; i < capacity; i++) {
+				if (stamps[i] != stamp) continue;
+				action.accept(values[i]);
+			}
+		}
+
+		public long[] keys() {
+			long[] res = new long[size];
+			for (int i = 0, idx = 0; i < capacity; i++) {
+				if (stamps[i] != stamp) continue;
+				res[idx++] = keys[i];
+			}
+			return res;
+		}
+
+		public int[] values() {
+			int[] res = new int[size];
+			for (int i = 0, idx = 0; i < capacity; i++) {
+				if (stamps[i] != stamp) continue;
+				res[idx++] = values[i];
+			}
+			return res;
+		}
+
+		public long[][] entries() {
+			long[][] res = new long[2][size];
+			for (int i = 0, idx = 0; i < capacity; i++) {
+				if (stamps[i] != stamp) continue;
+				res[0][idx] = keys[i];
+				res[1][idx] = values[i];
+				idx++;
+			}
+			return res;
+		}
+
+		public interface LongIntConsumer {
+			void accept(long key, int value);
+		}
+	}
+
+	@SuppressWarnings("unused")
+	private static final class IntTripleIntMap {
+		private static final long MASK = 0x1FFFFFL;
+		private final BaseLongIntMap baseMap;
+
+		public IntTripleIntMap(final int initialCapacity) {
+			baseMap = new BaseLongIntMap(initialCapacity);
+		}
+
+		private static long pack(final int a, final int b, final int c) {
+			return (((long) a & MASK) << 42) | (((long) b & MASK) << 21) | (c & MASK);
+		}
+
+		public int put(final int a, final int b, final int c, final int value) {
+			return baseMap.put(pack(a, b, c), value);
+		}
+
+		public int get(final int a, final int b, final int c) {
+			return baseMap.get(pack(a, b, c));
+		}
+
+		public int getOrDefault(final int a, final int b, final int c, final int defaultValue) {
+			return baseMap.getOrDefault(pack(a, b, c), defaultValue);
+		}
+
+		public int increment(final int a, final int b, final int c) {
+			return addOrDefault(a, b, c, 1, 1);
+		}
+
+		public int decrement(final int a, final int b, final int c) {
+			return addOrDefault(a, b, c, -1, -1);
+		}
+
+		public int add(final int a, final int b, final int c, final int delta) {
+			return addOrDefault(a, b, c, delta, delta);
+		}
+
+		public int addOrDefault(final int a, final int b, final int c, final int delta, final int defaultValue) {
+			return baseMap.addOrDefault(pack(a, b, c), delta, defaultValue);
+		}
+
+		public boolean remove(final int a, final int b, final int c) {
+			return baseMap.remove(pack(a, b, c));
+		}
+
+		public boolean containsKey(final int a, final int b, final int c) {
+			return baseMap.containsKey(pack(a, b, c));
+		}
+
+		public int merge(final int a, final int b, final int c, final int value, final IntBinaryOperator op) {
+			return baseMap.merge(pack(a, b, c), value, op);
+		}
+
+		public int putIfAbsent(final int a, final int b, final int c, final int value) {
+			return baseMap.putIfAbsent(pack(a, b, c), value);
+		}
+
+		public void clear() {
+			baseMap.clear();
+		}
+
+		public int size() {
+			return baseMap.size();
+		}
+
+		public boolean isEmpty() {
+			return baseMap.isEmpty();
+		}
+
+		public void forEach(IntTripleIntConsumer action) {
+			baseMap.forEach((key, value) -> {
+				int a = (int) (key >>> 42);
+				int b = (int) ((key >>> 21) & MASK);
+				int c = (int) (key & MASK);
+				action.accept(a, b, c, value);
+			});
+		}
+
+		public void forEachKey(IntTripleConsumer action) {
+			baseMap.forEachKey(key -> {
+				int a = (int) (key >>> 42);
+				int b = (int) ((key >>> 21) & MASK);
+				int c = (int) (key & MASK);
+				action.accept(a, b, c);
+			});
+		}
+
+		public void forEachValue(IntConsumer action) {
+			baseMap.forEachValue(action);
+		}
+
+		public int[][] keys() {
+			int[][] res = new int[3][baseMap.size()];
+			long[] keys = baseMap.keys();
+			for (int i = 0; i < keys.length; i++) {
+				int a = (int) (keys[i] >>> 42), b = (int) ((keys[i] >>> 21) & MASK), c = (int) (keys[i] & MASK);
+				res[0][i] = a;
+				res[1][i] = b;
+				res[2][i] = c;
+			}
+			return res;
+		}
+
+		public int[] values() {
+			return baseMap.values();
+		}
+
+		public int[][] entries() {
+			int[][] res = new int[4][baseMap.size()];
+			long[][] entries = baseMap.entries();
+			for (int i = 0; i < baseMap.size(); i++) {
+				int a = (int) (entries[0][i] >>> 42), b = (int) ((entries[0][i] >>> 21) & MASK), c = (int) (entries[0][i] & MASK);
+				res[0][i] = a;
+				res[1][i] = b;
+				res[2][i] = c;
+				res[3][i] = (int) entries[1][i];
+			}
+			return res;
+		}
+
+		public interface IntTripleIntConsumer {
+			void accept(int a, int b, int c, int value);
+		}
+
+		public interface IntTripleConsumer {
+			void accept(int a, int b, int c);
+		}
+
+	}
+
+	@SuppressWarnings("unused")
+	private static final class FastScanner {
+		private static final VarHandle LONG_HANDLE = MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
 		private final byte[] buffer;
-		private int pos = 0, bufferLength = 0;
+		private final int bufferLength;
+		private int pos = 0;
 
 		public FastScanner() {
-			this(new FileInputStream(FileDescriptor.in), DEFAULT_BUFFER_SIZE);
+			this(System.in);
 		}
 
 		public FastScanner(final InputStream in) {
-			this(in, DEFAULT_BUFFER_SIZE);
-		}
-
-		public FastScanner(final int bufferSize) {
-			this(new FileInputStream(FileDescriptor.in), bufferSize);
-		}
-
-		public FastScanner(final InputStream in, final int bufferSize) {
-			this.in = in;
-			this.buffer = new byte[bufferSize];
-		}
-
-		private int skipSpaces() {
-			int b;
-			do {
-				if (pos >= bufferLength) {
-					try {
-						bufferLength = in.read(buffer);
-						pos = 0;
-					} catch (final IOException e) {
-						throw new RuntimeException(e);
-					}
-					if (bufferLength <= 0) throw new NoSuchElementException();
-				}
-				b = buffer[pos++];
-			} while (b <= 32);
-			return b;
-		}
-
-		@Override
-		public void close() {
 			try {
-				in.close();
+				int capacity = in.available() + 64;
+				buffer = new byte[capacity];
+				bufferLength = in.read(buffer, 0, capacity);
 			} catch (final IOException e) {
 				throw new RuntimeException(e);
 			}
 		}
 
-		private boolean hasNextByte() {
-			if (pos < bufferLength) return true;
-			pos = 0;
-			try {
-				bufferLength = in.read(buffer);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-			return bufferLength > 0;
+		private int skipSpaces() {
+			int p = pos, b;
+			do {
+				b = buffer[p++];
+			} while (b <= 32);
+			pos = p;
+			return b;
 		}
 
 		public boolean hasNext() {
-			while (hasNextByte()) {
+			while (pos < bufferLength) {
 				if (buffer[pos] > 32) return true;
 				pos++;
 			}
@@ -201,120 +914,118 @@ public final class C {
 
 		public int nextInt() {
 			int b = skipSpaces();
-			int n = 0;
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength) hasNextByte();
-				b = buffer[pos++];
+			boolean negative = b == '-';
+			final byte[] buf = buffer;
+			int p = pos, n = 0;
+			if (negative) b = buf[p++];
+			long a = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			final long check = a & 0xF0F0F0F0F0F0F0F0L;
+			if (check == 0) {
+				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
+				a = (a * 100 + (a >>> 16)) & 0x0000FFFF0000FFFFL;
+				a = (a * 10000 + (a >>> 32)) & 0x00000000FFFFFFFFL;
+				n = (int) a;
+				p += 7;
+				b = buf[p++];
 			}
-			if (pos + 11 <= bufferLength) {
-				do {
-					n = (n << 3) + (n << 1) + (b & 15);
-					b = buffer[pos++];
-				} while (b > 32);
-			} else {
-				do {
-					n = (n << 3) + (n << 1) + (b & 15);
-					if (pos == bufferLength && !hasNextByte()) break;
-					b = buffer[pos++];
-				} while (b > 32);
+			while (b > 32) {
+				n = (n << 3) + (n << 1) + (b & 15);
+				b = buf[p++];
 			}
+			pos = p;
 			return negative ? -n : n;
 		}
 
 		public long nextLong() {
 			int b = skipSpaces();
+			boolean negative = b == '-';
+			final byte[] buf = buffer;
+			int p = pos;
+			if (negative) b = buf[p++];
 			long n = 0;
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength) hasNextByte();
-				b = buffer[pos++];
+			long a = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			final long check = a & 0xF0F0F0F0F0F0F0F0L;
+			if (check == 0) {
+				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
+				a = (a * 100 + (a >>> 16)) & 0x0000FFFF0000FFFFL;
+				a = (a * 10000 + (a >>> 32)) & 0x00000000FFFFFFFFL;
+				n = a;
+				p += 7;
+				b = buf[p++];
+				long a2 = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+				final long check2 = a2 & 0xF0F0F0F0F0F0F0F0L;
+				if (check2 == 0) {
+					a2 = (a2 * 10 + (a2 >>> 8)) & 0x00FF00FF00FF00FFL;
+					a2 = (a2 * 100 + (a2 >>> 16)) & 0x0000FFFF0000FFFFL;
+					a2 = (a2 * 10000 + (a2 >>> 32)) & 0x00000000FFFFFFFFL;
+					n = n * 100000000L + a2;
+					p += 7;
+					b = buf[p++];
+				}
 			}
-			if (pos + 20 <= bufferLength) {
-				do {
-					n = (n << 3) + (n << 1) + (b & 15);
-					b = buffer[pos++];
-				} while (b > 32);
-			} else {
-				do {
-					n = (n << 3) + (n << 1) + (b & 15);
-					if (pos == bufferLength && !hasNextByte()) break;
-					b = buffer[pos++];
-				} while (b > 32);
+			while (b > 32) {
+				n = (n << 3) + (n << 1) + (b & 15);
+				b = buf[p++];
 			}
+			pos = p;
 			return negative ? -n : n;
 		}
 
 		public double nextDouble() {
 			int b = skipSpaces();
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength) hasNextByte();
-				b = buffer[pos++];
-			}
+			final boolean negative = b == '-';
+			final byte[] buf = buffer;
+			int p = pos;
+			if (negative) b = buf[p++];
 			long intPart = 0;
 			do {
 				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
-				if (pos == bufferLength && !hasNextByte()) {
-					b = -1;
-					break;
-				}
-				b = buffer[pos++];
-			} while (b >= '0' && b <= '9');
+				b = buf[p++];
+			} while ('0' <= b && b <= '9');
 			double result = intPart;
-			if (b == '.') {
-				if (pos == bufferLength) hasNextByte();
-				b = buffer[pos++];
-				double scale = 0.1;
-				do {
-					result += (b & 15) * scale;
-					scale *= 0.1;
-					if (pos == bufferLength && !hasNextByte()) break;
-					b = buffer[pos++];
-				} while (b >= '0' && b <= '9');
-			}
+			if (b == '.') result += parseFracPart(p, buf);
+			else pos = p;
 			return negative ? -result : result;
 		}
 
+		private double parseFracPart(int p, final byte[] buf) {
+			int b = buf[p++];
+			long fracPart = 0, divisor = 1;
+			do {
+				fracPart = fracPart * 10 + (b & 15);
+				divisor *= 10;
+				b = buf[p++];
+			} while ('0' <= b && b <= '9');
+			pos = p;
+			return (double) fracPart / divisor;
+		}
+
 		public String next() {
-			return nextStringBuilder().toString();
+			skipSpaces();
+			final byte[] buf = buffer;
+			int p = pos;
+			final int start = p - 1;
+			while (buf[p] > 32) p++;
+			final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
+			pos = p + 1;
+			return s;
 		}
 
 		public StringBuilder nextStringBuilder() {
-			final StringBuilder sb = new StringBuilder();
-			int b = skipSpaces();
-			do {
-				sb.append((char) b);
-				if (pos == bufferLength && !hasNextByte()) break;
-				b = buffer[pos++];
-			} while (b > 32);
-			return sb;
+			return new StringBuilder(next());
 		}
 
 		public String nextLine() {
-			final StringBuilder sb = new StringBuilder();
-			if (pos == bufferLength && !hasNextByte()) return "";
-			int b = buffer[pos];
-			while (b != '\n' && b != '\r') {
-				sb.append((char) b);
-				pos++;
-				if (pos == bufferLength && !hasNextByte()) {
-					b = -1;
-					break;
-				}
-				b = buffer[pos];
+			final byte[] buf = buffer;
+			int p = pos;
+			final int start = p;
+			while (p < bufferLength) {
+				final int b = buf[p];
+				if (b == '\n' || b == '\r') break;
+				p++;
 			}
-			if (b == '\n' || b == '\r') {
-				pos++;
-				if (b == '\r') {
-					if (pos == bufferLength) hasNextByte();
-					if (pos < bufferLength && buffer[pos] == '\n') pos++;
-				}
-			}
-			return sb.toString();
+			pos = p + (buf[p] == '\r' && buf[p + 1] == '\n' ? 2 : 1);
+			return new String(buf, start, p - start, StandardCharsets.US_ASCII);
 		}
 
 		public BigInteger nextBigInteger() {
@@ -343,8 +1054,38 @@ public final class C {
 			return a;
 		}
 
+		public int nextInt0() {
+			return nextInt() - 1;
+		}
+
+		public long nextLong0() {
+			return nextLong() - 1;
+		}
+
+		public int[] nextInt0(final int n) {
+			final int[] a = new int[n];
+			for (int i = 0; i < n; i++) a[i] = nextInt() - 1;
+			return a;
+		}
+
+		public long[] nextLong0(final int n) {
+			final long[] a = new long[n];
+			for (int i = 0; i < n; i++) a[i] = nextLong() - 1;
+			return a;
+		}
+
 		public char[] nextChars() {
-			return next().toCharArray();
+			skipSpaces();
+			int p = pos;
+			final int start = p - 1;
+			while (buffer[p] > 32) p++;
+			final int len = p - start;
+			final char[] c = new char[len];
+			for (int i = 0; i < len; i++) {
+				c[i] = (char) buffer[start + i];
+			}
+			pos = p + 1;
+			return c;
 		}
 
 		public char[] nextChars(final int n) {
@@ -632,48 +1373,27 @@ public final class C {
 			}
 			return multiset;
 		}
+
 	}
 
 	@SuppressWarnings("unused")
 	private static final class FastPrinter implements AutoCloseable {
-		private static final VarHandle BYTE_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(byte[].class);
-		private static final VarHandle SHORT_HANDLE = MethodHandles.byteArrayViewVarHandle(short[].class, ByteOrder.LITTLE_ENDIAN);
 		private static final int MAX_INT_DIGITS = 11;
 		private static final int MAX_LONG_DIGITS = 20;
-		private static final int DEFAULT_BUFFER_SIZE = 65536;
+		private static final int MAX_BOOL_DIGITS = 3;
+		private static final int DEFAULT_BUFFER_SIZE = 1 << 20;
 		private static final byte LINE = '\n';
 		private static final byte SPACE = ' ';
 		private static final byte HYPHEN = '-';
 		private static final byte PERIOD = '.';
 		private static final byte ZERO = '0';
-		private static final byte[] TRUE_BYTES = {'Y', 'e', 's'};
-		private static final byte[] FALSE_BYTES = {'N', 'o'};
-		private static final short[] DIGIT_PAIRS = {
-				12336, 12592, 12848, 13104, 13360, 13616, 13872, 14128, 14384, 14640,
-				12337, 12593, 12849, 13105, 13361, 13617, 13873, 14129, 14385, 14641,
-				12338, 12594, 12850, 13106, 13362, 13618, 13874, 14130, 14386, 14642,
-				12339, 12595, 12851, 13107, 13363, 13619, 13875, 14131, 14387, 14643,
-				12340, 12596, 12852, 13108, 13364, 13620, 13876, 14132, 14388, 14644,
-				12341, 12597, 12853, 13109, 13365, 13621, 13877, 14133, 14389, 14645,
-				12342, 12598, 12854, 13110, 13366, 13622, 13878, 14134, 14390, 14646,
-				12343, 12599, 12855, 13111, 13367, 13623, 13879, 14135, 14391, 14647,
-				12344, 12600, 12856, 13112, 13368, 13624, 13880, 14136, 14392, 14648,
-				12345, 12601, 12857, 13113, 13369, 13625, 13881, 14137, 14393, 14649,
-		};
-
-		private static final long[] POW10 = {
-				1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000,
-				1_000_000_000, 10_000_000_000L, 100_000_000_000L, 1_000_000_000_000L,
-				10_000_000_000_000L, 100_000_000_000_000L, 1_000_000_000_000_000L,
-				10_000_000_000_000_000L, 100_000_000_000_000_000L, 1_000_000_000_000_000_000L
-		};
 		private final OutputStream out;
 		private final boolean autoFlush;
 		private byte[] buffer;
-		private int pos = 0;
+		private int pos;
 
 		public FastPrinter() {
-			this(new FileOutputStream(FileDescriptor.out), DEFAULT_BUFFER_SIZE, false);
+			this(System.out, DEFAULT_BUFFER_SIZE, false);
 		}
 
 		public FastPrinter(final OutputStream out) {
@@ -681,11 +1401,11 @@ public final class C {
 		}
 
 		public FastPrinter(final int bufferSize) {
-			this(new FileOutputStream(FileDescriptor.out), bufferSize, false);
+			this(System.out, bufferSize, false);
 		}
 
 		public FastPrinter(final boolean autoFlush) {
-			this(new FileOutputStream(FileDescriptor.out), DEFAULT_BUFFER_SIZE, autoFlush);
+			this(System.out, DEFAULT_BUFFER_SIZE, autoFlush);
 		}
 
 		public FastPrinter(final OutputStream out, final boolean autoFlush) {
@@ -693,7 +1413,7 @@ public final class C {
 		}
 
 		public FastPrinter(final int bufferSize, final boolean autoFlush) {
-			this(new FileOutputStream(FileDescriptor.out), bufferSize, autoFlush);
+			this(System.out, bufferSize, autoFlush);
 		}
 
 		public FastPrinter(final OutputStream out, final int bufferSize) {
@@ -702,7 +1422,7 @@ public final class C {
 
 		public FastPrinter(final OutputStream out, final int bufferSize, final boolean autoFlush) {
 			this.out = out;
-			this.buffer = new byte[max(64, roundUpToPowerOfTwo(bufferSize))];
+			this.buffer = new byte[bufferSize(bufferSize)];
 			this.autoFlush = autoFlush;
 		}
 
@@ -759,22 +1479,15 @@ public final class C {
 			}
 		}
 
-		private static int roundUpToPowerOfTwo(int x) {
-			if (x <= 1) return 1;
-			x--;
-			x |= x >>> 1;
-			x |= x >>> 2;
-			x |= x >>> 4;
-			x |= x >>> 8;
-			x |= x >>> 16;
-			return x + 1;
+		private static int bufferSize(int x) {
+			return x <= 64 ? 64 : 1 << (32 - Integer.numberOfLeadingZeros(x - 1));
 		}
 
 		@Override
 		public void close() {
 			try {
 				flush();
-				if (out != System.out) out.close();
+				out.close();
 			} catch (final IOException e) {
 				throw new RuntimeException(e);
 			}
@@ -792,47 +1505,56 @@ public final class C {
 
 		public FastPrinter println() {
 			ensureCapacity(1);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, LINE);
+			buffer[pos++] = LINE;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter println(final boolean b) {
-			write(b);
-			ensureCapacity(1);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, LINE);
+			ensureCapacity(MAX_BOOL_DIGITS + 1);
+			final int p = write(b, pos);
+			buffer[p] = LINE;
+			pos = p + 1;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter println(final byte b) {
 			ensureCapacity(2);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, b);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, LINE);
+			final byte[] buf = buffer;
+			final int p = pos;
+			buf[p] = b;
+			buf[p + 1] = LINE;
+			pos = p + 2;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter println(final char c) {
 			ensureCapacity(2);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) c);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, LINE);
+			final byte[] buf = buffer;
+			final int p = pos;
+			buf[p] = (byte) c;
+			buf[p + 1] = LINE;
+			pos = p + 2;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter println(final int i) {
 			ensureCapacity(MAX_INT_DIGITS + 1);
-			write(i);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, LINE);
+			final int p = write(i, pos);
+			buffer[p] = LINE;
+			pos = p + 1;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter println(final long l) {
 			ensureCapacity(MAX_LONG_DIGITS + 1);
-			write(l);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, LINE);
+			final int p = write(l, pos);
+			buffer[p] = LINE;
+			pos = p + 1;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -851,16 +1573,18 @@ public final class C {
 
 		public FastPrinter println(final String s) {
 			ensureCapacity(s.length() + 1);
-			write(s);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, LINE);
+			final int p = write(s, pos);
+			buffer[p] = LINE;
+			pos = p + 1;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter println(final StringBuilder s) {
 			ensureCapacity(s.length() + 1);
-			write(s.toString());
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, LINE);
+			final int p = write(s, pos);
+			buffer[p] = LINE;
+			pos = p + 1;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -889,35 +1613,36 @@ public final class C {
 		}
 
 		public FastPrinter print(final boolean b) {
-			write(b);
+			ensureCapacity(MAX_BOOL_DIGITS);
+			pos = write(b, pos);
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter print(final byte b) {
 			ensureCapacity(1);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, b);
+			buffer[pos++] = b;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter print(final char c) {
 			ensureCapacity(1);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) c);
+			buffer[pos++] = (byte) c;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter print(final int i) {
 			ensureCapacity(MAX_INT_DIGITS);
-			write(i);
+			pos = write(i, pos);
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter print(final long l) {
 			ensureCapacity(MAX_LONG_DIGITS);
-			write(l);
+			pos = write(l, pos);
 			if (autoFlush) flush();
 			return this;
 		}
@@ -936,14 +1661,14 @@ public final class C {
 
 		public FastPrinter print(final String s) {
 			ensureCapacity(s.length());
-			write(s);
+			pos = write(s, pos);
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter print(final StringBuilder s) {
 			ensureCapacity(s.length());
-			write(s.toString());
+			pos = write(s, pos);
 			if (autoFlush) flush();
 			return this;
 		}
@@ -981,81 +1706,125 @@ public final class C {
 
 		private void ensureCapacity(final int additional) {
 			final int required = pos + additional;
-			if (required <= buffer.length) return;
-			if (required <= 1_000_000_000) {
-				buffer = Arrays.copyOf(buffer, roundUpToPowerOfTwo(required));
-			} else {
-				flush();
-			}
+			final int bufferLength = buffer.length;
+			if (required <= bufferLength) return;
+			flush();
+			if (additional > bufferLength) buffer = new byte[bufferSize(additional)];
 		}
 
-		private void write(final boolean b) {
-			final byte[] src = b ? TRUE_BYTES : FALSE_BYTES;
+		private int write(final boolean b, int p) {
+			final byte[] src = b ? Cache.TRUE_BYTES : Cache.FALSE_BYTES;
 			final int len = src.length;
-			ensureCapacity(len);
-			System.arraycopy(src, 0, buffer, pos, len);
-			pos += len;
+			System.arraycopy(src, 0, buffer, p, len);
+			return p + len;
 		}
 
-		private void write(int i) {
+		private int write(int i, int p) {
 			final byte[] buf = buffer;
-			int p = pos;
+			final VarHandle shortHandle = Cache.SHORT_HANDLE;
+			final VarHandle intHandle = Cache.INT_HANDLE;
+			final short[] digits2 = Cache.DIGITS_2;
+			final int[] digits4 = Cache.DIGITS_4;
 			if (i >= 0) i = -i;
-			else BYTE_ARRAY_HANDLE.set(buf, p++, HYPHEN);
+			else buf[p++] = HYPHEN;
 			final int digits = countDigits(i);
 			int writePos = p + digits;
-			while (i <= -100) {
-				final int q = i / 100;
-				final int r = (q << 6) + (q << 5) + (q << 2) - i;
+			if (i <= -100000000) {
+				final int q = i / 100000000;
+				final int r = (q * 100000000) - i;
+				final int hi = r / 10000;
+				intHandle.set(buf, writePos - 8, digits4[hi]);
+				intHandle.set(buf, writePos - 4, digits4[r - hi * 10000]);
+				writePos -= 8;
 				i = q;
+			}
+			if (i <= -10000) {
+				final int q = i / 10000;
+				final int r = (q * 10000) - i;
+				intHandle.set(buf, writePos - 4, digits4[r]);
+				writePos -= 4;
+				i = q;
+			}
+			if (i <= -100) {
+				final int q = i / 100;
+				final int r = (q * 100) - i;
+				shortHandle.set(buf, writePos - 2, digits2[r]);
 				writePos -= 2;
-				SHORT_HANDLE.set(buf, writePos, DIGIT_PAIRS[r]);
+				i = q;
 			}
 			final int r = -i;
-			if (r >= 10) SHORT_HANDLE.set(buf, writePos - 2, DIGIT_PAIRS[r]);
-			else BYTE_ARRAY_HANDLE.set(buf, writePos - 1, (byte) (r + ZERO));
-			pos = p + digits;
+			if (r >= 10) shortHandle.set(buf, writePos - 2, digits2[r]);
+			else buf[writePos - 1] = (byte) (r + ZERO);
+			return p + digits;
 		}
 
-		private void write(long l) {
+		private int write(long l, int p) {
 			final byte[] buf = buffer;
-			int p = pos;
+			final VarHandle shortHandle = Cache.SHORT_HANDLE;
+			final VarHandle intHandle = Cache.INT_HANDLE;
+			final short[] digits2 = Cache.DIGITS_2;
+			final int[] digits4 = Cache.DIGITS_4;
 			if (l >= 0) l = -l;
-			else BYTE_ARRAY_HANDLE.set(buf, p++, HYPHEN);
+			else buf[p++] = HYPHEN;
 			final int digits = countDigits(l);
 			int writePos = p + digits;
-			while (l <= -100) {
-				final long q = l / 100;
-				final int r = (int) ((q << 6) + (q << 5) + (q << 2) - l);
+			if (l <= -100000000L) {
+				long q = l / 100000000L;
+				int r = (int) ((q * 100000000L) - l);
+				int hi = r / 10000;
+				intHandle.set(buf, writePos - 8, digits4[hi]);
+				intHandle.set(buf, writePos - 4, digits4[r - hi * 10000]);
+				writePos -= 8;
 				l = q;
+				if (l <= -100000000L) {
+					q = l / 100000000L;
+					r = (int) ((q * 100000000L) - l);
+					hi = r / 10000;
+					intHandle.set(buf, writePos - 8, digits4[hi]);
+					intHandle.set(buf, writePos - 4, digits4[r - hi * 10000]);
+					writePos -= 8;
+					l = q;
+				}
+			}
+			if (l <= -10000) {
+				final long q = l / 10000;
+				final int r = (int) ((q * 10000) - l);
+				intHandle.set(buf, writePos - 4, digits4[r]);
+				writePos -= 4;
+				l = q;
+			}
+			if (l <= -100) {
+				final long q = l / 100;
+				final int r = (int) ((q * 100) - l);
+				shortHandle.set(buf, writePos - 2, digits2[r]);
 				writePos -= 2;
-				SHORT_HANDLE.set(buf, writePos, DIGIT_PAIRS[r]);
+				l = q;
 			}
 			final int r = (int) -l;
-			if (r >= 10) SHORT_HANDLE.set(buf, writePos - 2, DIGIT_PAIRS[r]);
-			else BYTE_ARRAY_HANDLE.set(buf, writePos - 1, (byte) (r + ZERO));
-			pos = p + digits;
+			if (r >= 10) shortHandle.set(buf, writePos - 2, digits2[r]);
+			else buf[writePos - 1] = (byte) (r + ZERO);
+			return p + digits;
 		}
 
-		private void write(final String s) {
+		private int write(final CharSequence s, int p) {
 			final int len = s.length();
 			final byte[] buf = buffer;
-			int p = pos, i = 0;
+			int i = 0;
 			final int limit = len & ~7;
 			while (i < limit) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) s.charAt(i));
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) s.charAt(i + 1));
-				BYTE_ARRAY_HANDLE.set(buf, p + 2, (byte) s.charAt(i + 2));
-				BYTE_ARRAY_HANDLE.set(buf, p + 3, (byte) s.charAt(i + 3));
-				BYTE_ARRAY_HANDLE.set(buf, p + 4, (byte) s.charAt(i + 4));
-				BYTE_ARRAY_HANDLE.set(buf, p + 5, (byte) s.charAt(i + 5));
-				BYTE_ARRAY_HANDLE.set(buf, p + 6, (byte) s.charAt(i + 6));
-				BYTE_ARRAY_HANDLE.set(buf, p + 7, (byte) s.charAt(i + 7));
+				buf[p] = (byte) s.charAt(i);
+				buf[p + 1] = (byte) s.charAt(i + 1);
+				buf[p + 2] = (byte) s.charAt(i + 2);
+				buf[p + 3] = (byte) s.charAt(i + 3);
+				buf[p + 4] = (byte) s.charAt(i + 4);
+				buf[p + 5] = (byte) s.charAt(i + 5);
+				buf[p + 6] = (byte) s.charAt(i + 6);
+				buf[p + 7] = (byte) s.charAt(i + 7);
 				p += 8;
 				i += 8;
 			}
-			while (i < len) BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
-			pos = p;
+			while (i < len) buf[p++] = (byte) s.charAt(i++);
+			return p;
 		}
 
 		public FastPrinter println(final int a, final int b) {
@@ -1076,10 +1845,13 @@ public final class C {
 
 		public FastPrinter println(final long a, final long b, final char delimiter) {
 			ensureCapacity((MAX_LONG_DIGITS << 1) + 2);
-			write(a);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
-			write(b);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, LINE);
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(a, p);
+			buf[p] = (byte) delimiter;
+			p = write(b, p + 1);
+			buf[p] = LINE;
+			pos = p + 1;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1102,9 +1874,11 @@ public final class C {
 
 		public FastPrinter print(final long a, final long b, final char delimiter) {
 			ensureCapacity((MAX_LONG_DIGITS << 1) + 1);
-			write(a);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
-			write(b);
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(a, p);
+			buf[p] = (byte) delimiter;
+			pos = write(b, p + 1);
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1115,20 +1889,22 @@ public final class C {
 
 		public FastPrinter print(double d, int n) {
 			if (n <= 0) return print(round(d));
+			ensureCapacity(MAX_LONG_DIGITS + n + 2);
+			final byte[] buf = buffer;
+			int p = pos;
 			if (d < 0) {
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, HYPHEN);
+				buf[p++] = HYPHEN;
 				d = -d;
 			}
 			if (n > 18) n = 18;
 			final long intPart = (long) d;
-			final long fracPart = (long) ((d - intPart) * POW10[n]);
-			print(intPart);
+			final long fracPart = (long) ((d - intPart) * Cache.POW10[n]);
+			p = write(intPart, p);
+			buf[p++] = PERIOD;
 			int leadingZeros = n - countDigits(-fracPart);
-			ensureCapacity(leadingZeros + 1);
-			BYTE_ARRAY_HANDLE.set(buffer, pos++, PERIOD);
-			while (leadingZeros-- > 0) BYTE_ARRAY_HANDLE.set(buffer, pos++, ZERO);
-			print(fracPart);
+			fill(buf, p, p + leadingZeros, ZERO);
+			pos = write(fracPart, p + leadingZeros);
+			if (autoFlush) flush();
 			return this;
 		}
 
@@ -1262,7 +2038,7 @@ public final class C {
 			if (len > 0) print(arr[0]);
 			for (int i = 1; i < len; i++) {
 				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, SPACE);
+				buffer[pos++] = SPACE;
 				print(arr[i]);
 			}
 			return this;
@@ -1318,12 +2094,16 @@ public final class C {
 
 		public FastPrinter print(final boolean[] arr, final int from, final int to, final char delimiter) {
 			if (from >= to) return this;
-			print(arr[from]);
+			ensureCapacity((to - from) * (MAX_BOOL_DIGITS + 1));
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[from], p);
+			final byte d = (byte) delimiter;
 			for (int i = from + 1; i < to; i++) {
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
-				write(arr[i]);
+				buf[p] = d;
+				p = write(arr[i], p + 1);
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1331,12 +2111,13 @@ public final class C {
 		public FastPrinter print(final char[] arr, final int from, final int to, final char delimiter) {
 			if (from >= to) return this;
 			ensureCapacity(((to - from) << 1) - 1);
-			byte[] buf = buffer;
+			final byte[] buf = buffer;
 			int p = pos;
-			BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[from]);
+			buf[p++] = (byte) arr[from];
+			final byte d = (byte) delimiter;
 			for (int i = from + 1; i < to; i++) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) delimiter);
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) arr[i]);
+				buf[p] = d;
+				buf[p + 1] = (byte) arr[i];
 				p += 2;
 			}
 			pos = p;
@@ -1346,26 +2127,32 @@ public final class C {
 
 		public FastPrinter print(final int[] arr, final int from, final int to, final char delimiter) {
 			if (from >= to) return this;
-			final int len = to - from;
-			ensureCapacity(len * (MAX_INT_DIGITS + 1));
-			write(arr[from]);
+			ensureCapacity((to - from) * (MAX_INT_DIGITS + 1));
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[from], p);
+			final byte d = (byte) delimiter;
 			for (int i = from + 1; i < to; i++) {
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
-				write(arr[i]);
+				buf[p] = d;
+				p = write(arr[i], p + 1);
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter print(final long[] arr, final int from, final int to, final char delimiter) {
 			if (from >= to) return this;
-			final int len = to - from;
-			ensureCapacity(len * (MAX_LONG_DIGITS + 1));
-			write(arr[from]);
+			ensureCapacity((to - from) * (MAX_LONG_DIGITS + 1));
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[from], p);
+			final byte d = (byte) delimiter;
 			for (int i = from + 1; i < to; i++) {
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
-				write(arr[i]);
+				buf[p] = d;
+				p = write(arr[i], p + 1);
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1373,11 +2160,10 @@ public final class C {
 		public FastPrinter print(final double[] arr, final int from, final int to, final char delimiter) {
 			if (from >= to) return this;
 			print(arr[from]);
+			final byte d = (byte) delimiter;
 			for (int i = from + 1; i < to; i++) {
-				String s = Double.toString(arr[i]);
-				ensureCapacity(s.length() + 1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
-				write(s);
+				print(d);
+				print(arr[i]);
 			}
 			if (autoFlush) flush();
 			return this;
@@ -1385,12 +2171,19 @@ public final class C {
 
 		public FastPrinter print(final String[] arr, final int from, final int to, final char delimiter) {
 			if (from >= to) return this;
-			print(arr[from]);
+			int totalLen = 0;
+			for (int i = from; i < to; i++) totalLen += arr[i].length();
+			ensureCapacity(totalLen + (to - from - 1));
+
+			final byte[] buf = buffer;
+			int p = pos;
+			p = write(arr[from], p);
+			final byte d = (byte) delimiter;
 			for (int i = from + 1; i < to; i++) {
-				ensureCapacity(arr[i].length() + 1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
-				write(arr[i]);
+				buf[p] = d;
+				p = write(arr[i], p + 1);
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1429,8 +2222,7 @@ public final class C {
 			final int len = arr.length;
 			if (len > 0) print(function.apply(arr[0]));
 			for (int i = 1; i < len; i++) {
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, SPACE);
+				print(SPACE);
 				print(function.apply(arr[i]));
 			}
 			return this;
@@ -1440,8 +2232,7 @@ public final class C {
 			final int len = arr.length;
 			if (len > 0) print(function.apply(arr[0]));
 			for (int i = 1; i < len; i++) {
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, SPACE);
+				print(SPACE);
 				print(function.apply(arr[i]));
 			}
 			return this;
@@ -1451,8 +2242,7 @@ public final class C {
 			final int len = arr.length;
 			if (len > 0) print(function.apply(arr[0]));
 			for (int i = 1; i < len; i++) {
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, SPACE);
+				print(SPACE);
 				print(function.apply(arr[i]));
 			}
 			return this;
@@ -1462,8 +2252,7 @@ public final class C {
 			final int len = arr.length;
 			if (len > 0) print(function.apply(arr[0]));
 			for (int i = 1; i < len; i++) {
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, SPACE);
+				print(SPACE);
 				print(function.apply(arr[i]));
 			}
 			return this;
@@ -1473,8 +2262,7 @@ public final class C {
 			final int len = arr.length;
 			if (len > 0) print(function.apply(arr[0]));
 			for (int i = 1; i < len; i++) {
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, SPACE);
+				print(SPACE);
 				print(function.apply(arr[i]));
 			}
 			return this;
@@ -1484,8 +2272,7 @@ public final class C {
 			final int len = arr.length;
 			if (len > 0) print(function.apply(arr[0]));
 			for (int i = 1; i < len; i++) {
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, SPACE);
+				print(SPACE);
 				print(function.apply(arr[i]));
 			}
 			return this;
@@ -1554,8 +2341,7 @@ public final class C {
 				final int len = arr.length;
 				if (len > 0) print(arr[0]);
 				for (int i = 1; i < len; i++) {
-					ensureCapacity(1);
-					BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
+					print(delimiter);
 					print(arr[i]);
 				}
 				println();
@@ -1604,18 +2390,18 @@ public final class C {
 			int p = pos, i = from;
 			final int limit8 = from + (len & ~7);
 			while (i < limit8) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) arr[i]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) arr[i + 1]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 2, (byte) arr[i + 2]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 3, (byte) arr[i + 3]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 4, (byte) arr[i + 4]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 5, (byte) arr[i + 5]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 6, (byte) arr[i + 6]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 7, (byte) arr[i + 7]);
+				buf[p] = (byte) arr[i];
+				buf[p + 1] = (byte) arr[i + 1];
+				buf[p + 2] = (byte) arr[i + 2];
+				buf[p + 3] = (byte) arr[i + 3];
+				buf[p + 4] = (byte) arr[i + 4];
+				buf[p + 5] = (byte) arr[i + 5];
+				buf[p + 6] = (byte) arr[i + 6];
+				buf[p + 7] = (byte) arr[i + 7];
 				p += 8;
 				i += 8;
 			}
-			while (i < to) BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[i++]);
+			while (i < to) buf[p++] = (byte) arr[i++];
 			pos = p;
 			if (autoFlush) flush();
 			return this;
@@ -1628,18 +2414,18 @@ public final class C {
 			int p = pos, i = 0;
 			final int limit = len & ~7;
 			while (i < limit) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) function.applyAsInt(arr[i]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) function.applyAsInt(arr[i + 1]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 2, (byte) function.applyAsInt(arr[i + 2]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 3, (byte) function.applyAsInt(arr[i + 3]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 4, (byte) function.applyAsInt(arr[i + 4]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 5, (byte) function.applyAsInt(arr[i + 5]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 6, (byte) function.applyAsInt(arr[i + 6]));
-				BYTE_ARRAY_HANDLE.set(buf, p + 7, (byte) function.applyAsInt(arr[i + 7]));
+				buf[p] = (byte) function.applyAsInt(arr[i]);
+				buf[p + 1] = (byte) function.applyAsInt(arr[i + 1]);
+				buf[p + 2] = (byte) function.applyAsInt(arr[i + 2]);
+				buf[p + 3] = (byte) function.applyAsInt(arr[i + 3]);
+				buf[p + 4] = (byte) function.applyAsInt(arr[i + 4]);
+				buf[p + 5] = (byte) function.applyAsInt(arr[i + 5]);
+				buf[p + 6] = (byte) function.applyAsInt(arr[i + 6]);
+				buf[p + 7] = (byte) function.applyAsInt(arr[i + 7]);
 				p += 8;
 				i += 8;
 			}
-			while (i < len) BYTE_ARRAY_HANDLE.set(buf, p++, (byte) function.applyAsInt(arr[i++]));
+			while (i < len) buf[p++] = (byte) function.applyAsInt(arr[i++]);
 			pos = p;
 			if (autoFlush) flush();
 			return this;
@@ -1671,8 +2457,7 @@ public final class C {
 			final Iterator<T> it = iter.iterator();
 			if (it.hasNext()) print(it.next());
 			while (it.hasNext()) {
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
+				print(delimiter);
 				print(it.next());
 			}
 			return this;
@@ -1694,8 +2479,7 @@ public final class C {
 			final Iterator<T> it = iter.iterator();
 			if (it.hasNext()) print(function.apply(it.next()));
 			while (it.hasNext()) {
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buffer, pos++, (byte) delimiter);
+				print(delimiter);
 				print(function.apply(it.next()));
 			}
 			return this;
@@ -1705,21 +2489,9 @@ public final class C {
 			if (cnt <= 0) return this;
 			ensureCapacity(cnt);
 			final byte[] buf = buffer;
-			final byte b = (byte) c;
-			int p = pos;
-			BYTE_ARRAY_HANDLE.set(buf, p++, b);
-			int copied = 1;
-			while (copied << 1 <= cnt) {
-				System.arraycopy(buf, pos, buf, p, copied);
-				p += copied;
-				copied <<= 1;
-			}
-			final int remain = cnt - copied;
-			if (remain > 0) {
-				System.arraycopy(buf, pos, buf, p, remain);
-				p += remain;
-			}
-			pos = p;
+			final int p = pos;
+			fill(buf, p, p + cnt, (byte) c);
+			pos = p + cnt;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1731,30 +2503,17 @@ public final class C {
 			final int total = len * cnt;
 			ensureCapacity(total);
 			final byte[] buf = buffer;
-			int p = pos, i = 0;
-			final int limit8 = len & ~7;
-			while (i < limit8) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) s.charAt(i));
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) s.charAt(i + 1));
-				BYTE_ARRAY_HANDLE.set(buf, p + 2, (byte) s.charAt(i + 2));
-				BYTE_ARRAY_HANDLE.set(buf, p + 3, (byte) s.charAt(i + 3));
-				BYTE_ARRAY_HANDLE.set(buf, p + 4, (byte) s.charAt(i + 4));
-				BYTE_ARRAY_HANDLE.set(buf, p + 5, (byte) s.charAt(i + 5));
-				BYTE_ARRAY_HANDLE.set(buf, p + 6, (byte) s.charAt(i + 6));
-				BYTE_ARRAY_HANDLE.set(buf, p + 7, (byte) s.charAt(i + 7));
-				p += 8;
-				i += 8;
-			}
-			while (i < len) BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
+			final int origPos = pos;
+			int p = write(s, origPos);
 			int copied = 1;
 			while (copied << 1 <= cnt) {
-				System.arraycopy(buf, pos, buf, p, copied * len);
+				System.arraycopy(buf, origPos, buf, p, copied * len);
 				p += copied * len;
 				copied <<= 1;
 			}
 			final int remain = cnt - copied;
 			if (remain > 0) {
-				System.arraycopy(buf, pos, buf, p, remain * len);
+				System.arraycopy(buf, origPos, buf, p, remain * len);
 				p += remain * len;
 			}
 			pos = p;
@@ -1768,19 +2527,19 @@ public final class C {
 			ensureCapacity(total);
 			final byte[] buf = buffer;
 			final byte b = (byte) c;
-			int p = pos;
-			BYTE_ARRAY_HANDLE.set(buf, p, b);
-			BYTE_ARRAY_HANDLE.set(buf, p + 1, LINE);
-			p += 2;
+			final int origPos = pos;
+			buf[origPos] = b;
+			buf[origPos + 1] = LINE;
+			int p = origPos + 2;
 			int copied = 2;
 			while (copied << 1 <= total) {
-				System.arraycopy(buf, pos, buf, p, copied);
+				System.arraycopy(buf, origPos, buf, p, copied);
 				p += copied;
 				copied <<= 1;
 			}
 			final int remain = total - copied;
 			if (remain > 0) {
-				System.arraycopy(buf, pos, buf, p, remain);
+				System.arraycopy(buf, origPos, buf, p, remain);
 				p += remain;
 			}
 			pos = p;
@@ -1790,39 +2549,24 @@ public final class C {
 
 		public FastPrinter printlnRepeat(final String s, final int cnt) {
 			if (cnt <= 0) return this;
-			final int sLen = s.length();
-			if (sLen == 0) return this;
-			final int unit = sLen + 1;
-			final int total = unit * cnt;
-			ensureCapacity(total);
+			final int len = s.length();
+			if (len == 0) return this;
+			final int unitLen = len + 1;
+			ensureCapacity(unitLen * cnt);
 			final byte[] buf = buffer;
-			int p = pos;
-			int i = 0;
-			final int limit8 = sLen & ~7;
-			while (i < limit8) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) s.charAt(i));
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) s.charAt(i + 1));
-				BYTE_ARRAY_HANDLE.set(buf, p + 2, (byte) s.charAt(i + 2));
-				BYTE_ARRAY_HANDLE.set(buf, p + 3, (byte) s.charAt(i + 3));
-				BYTE_ARRAY_HANDLE.set(buf, p + 4, (byte) s.charAt(i + 4));
-				BYTE_ARRAY_HANDLE.set(buf, p + 5, (byte) s.charAt(i + 5));
-				BYTE_ARRAY_HANDLE.set(buf, p + 6, (byte) s.charAt(i + 6));
-				BYTE_ARRAY_HANDLE.set(buf, p + 7, (byte) s.charAt(i + 7));
-				p += 8;
-				i += 8;
-			}
-			while (i < sLen) BYTE_ARRAY_HANDLE.set(buf, p++, (byte) s.charAt(i++));
-			BYTE_ARRAY_HANDLE.set(buf, p++, LINE);
+			final int origPos = pos;
+			int p = write(s, origPos);
+			buf[p++] = LINE;
 			int copied = 1;
 			while (copied << 1 <= cnt) {
-				System.arraycopy(buf, pos, buf, p, copied * unit);
-				p += copied * unit;
+				System.arraycopy(buf, origPos, buf, p, copied * unitLen);
+				p += copied * unitLen;
 				copied <<= 1;
 			}
 			final int remain = cnt - copied;
 			if (remain > 0) {
-				System.arraycopy(buf, pos, buf, p, remain * unit);
-				p += remain * unit;
+				System.arraycopy(buf, origPos, buf, p, remain * unitLen);
+				p += remain * unitLen;
 			}
 			pos = p;
 			if (autoFlush) flush();
@@ -1831,24 +2575,28 @@ public final class C {
 
 		public FastPrinter printlnReverse(final boolean[] arr) {
 			final int len = arr.length;
+			if (len == 0) return this;
+			ensureCapacity(len * (MAX_BOOL_DIGITS + 1));
 			final byte[] buf = buffer;
+			int p = pos;
 			for (int i = len - 1; i >= 0; i--) {
-				write(arr[i]);
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buf, pos++, LINE);
+				p = write(arr[i], p);
+				buf[p++] = LINE;
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter printlnReverse(final char[] arr) {
 			final int len = arr.length;
+			if (len == 0) return this;
 			ensureCapacity(len << 1);
 			final byte[] buf = buffer;
 			int p = pos;
 			for (int i = len - 1; i >= 0; i--) {
-				BYTE_ARRAY_HANDLE.set(buf, p, (byte) arr[i]);
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, LINE);
+				buf[p] = (byte) arr[i];
+				buf[p + 1] = LINE;
 				p += 2;
 			}
 			pos = p;
@@ -1861,10 +2609,12 @@ public final class C {
 			if (len == 0) return this;
 			ensureCapacity(len * (MAX_INT_DIGITS + 1));
 			final byte[] buf = buffer;
+			int p = pos;
 			for (int i = len - 1; i >= 0; i--) {
-				write(arr[i]);
-				BYTE_ARRAY_HANDLE.set(buf, pos++, LINE);
+				p = write(arr[i], p);
+				buf[p++] = LINE;
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1874,22 +2624,23 @@ public final class C {
 			if (len == 0) return this;
 			ensureCapacity(len * (MAX_LONG_DIGITS + 1));
 			final byte[] buf = buffer;
+			int p = pos;
 			for (int i = len - 1; i >= 0; i--) {
-				write(arr[i]);
-				BYTE_ARRAY_HANDLE.set(buf, pos++, LINE);
+				p = write(arr[i], p);
+				buf[p++] = LINE;
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
 
 		public FastPrinter printlnReverse(final double[] arr) {
 			final int len = arr.length;
-			final byte[] buf = buffer;
 			for (int i = len - 1; i >= 0; i--) {
-				String s = Double.toString(arr[i]);
+				final String s = Double.toString(arr[i]);
 				ensureCapacity(s.length() + 1);
-				write(s);
-				BYTE_ARRAY_HANDLE.set(buf, pos++, LINE);
+				pos = write(s, pos);
+				buffer[pos++] = LINE;
 			}
 			if (autoFlush) flush();
 			return this;
@@ -1897,12 +2648,11 @@ public final class C {
 
 		public FastPrinter printlnReverse(final String[] arr) {
 			final int len = arr.length;
-			final byte[] buf = buffer;
 			for (int i = len - 1; i >= 0; i--) {
-				String s = arr[i];
+				final String s = arr[i];
 				ensureCapacity(s.length() + 1);
-				write(s);
-				BYTE_ARRAY_HANDLE.set(buf, pos++, LINE);
+				pos = write(s, pos);
+				buffer[pos++] = LINE;
 			}
 			if (autoFlush) flush();
 			return this;
@@ -1918,13 +2668,15 @@ public final class C {
 		public FastPrinter printReverse(final boolean[] arr) {
 			final int len = arr.length;
 			if (len == 0) return this;
+			ensureCapacity(len * (MAX_BOOL_DIGITS + 1) - 1);
 			final byte[] buf = buffer;
-			write(arr[len - 1]);
+			int p = pos;
+			p = write(arr[len - 1], p);
 			for (int i = len - 2; i >= 0; i--) {
-				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buf, pos++, SPACE);
-				write(arr[i]);
+				buf[p] = SPACE;
+				p = write(arr[i], p + 1);
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1935,10 +2687,10 @@ public final class C {
 			ensureCapacity((len << 1) - 1);
 			final byte[] buf = buffer;
 			int p = pos;
-			BYTE_ARRAY_HANDLE.set(buf, p++, (byte) arr[len - 1]);
+			buf[p++] = (byte) arr[len - 1];
 			for (int i = len - 2; i >= 0; i--) {
-				BYTE_ARRAY_HANDLE.set(buf, p, SPACE);
-				BYTE_ARRAY_HANDLE.set(buf, p + 1, (byte) arr[i]);
+				buf[p] = SPACE;
+				buf[p + 1] = (byte) arr[i];
 				p += 2;
 			}
 			pos = p;
@@ -1951,11 +2703,13 @@ public final class C {
 			if (len == 0) return this;
 			ensureCapacity(len * (MAX_INT_DIGITS + 1) - 1);
 			final byte[] buf = buffer;
-			write(arr[len - 1]);
+			int p = pos;
+			p = write(arr[len - 1], p);
 			for (int i = len - 2; i >= 0; i--) {
-				BYTE_ARRAY_HANDLE.set(buf, pos++, SPACE);
-				write(arr[i]);
+				buf[p] = SPACE;
+				p = write(arr[i], p + 1);
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1965,11 +2719,13 @@ public final class C {
 			if (len == 0) return this;
 			ensureCapacity(len * (MAX_LONG_DIGITS + 1) - 1);
 			final byte[] buf = buffer;
-			write(arr[len - 1]);
+			int p = pos;
+			p = write(arr[len - 1], p);
 			for (int i = len - 2; i >= 0; i--) {
-				BYTE_ARRAY_HANDLE.set(buf, pos++, SPACE);
-				write(arr[i]);
+				buf[p] = SPACE;
+				p = write(arr[i], p + 1);
 			}
+			pos = p;
 			if (autoFlush) flush();
 			return this;
 		}
@@ -1977,13 +2733,14 @@ public final class C {
 		public FastPrinter printReverse(final double[] arr) {
 			final int len = arr.length;
 			if (len == 0) return this;
-			final byte[] buf = buffer;
-			print(arr[len - 1]);
+			final String s0 = Double.toString(arr[len - 1]);
+			ensureCapacity(s0.length());
+			pos = write(s0, pos);
 			for (int i = len - 2; i >= 0; i--) {
-				String s = Double.toString(arr[i]);
+				final String s = Double.toString(arr[i]);
 				ensureCapacity(s.length() + 1);
-				BYTE_ARRAY_HANDLE.set(buf, pos++, SPACE);
-				write(s);
+				buffer[pos] = SPACE;
+				pos = write(s, pos + 1);
 			}
 			if (autoFlush) flush();
 			return this;
@@ -1992,13 +2749,12 @@ public final class C {
 		public FastPrinter printReverse(final String[] arr) {
 			final int len = arr.length;
 			if (len == 0) return this;
-			final byte[] buf = buffer;
 			ensureCapacity(arr[len - 1].length());
-			write(arr[len - 1]);
+			pos = write(arr[len - 1], pos);
 			for (int i = len - 2; i >= 0; i--) {
 				ensureCapacity(arr[i].length() + 1);
-				BYTE_ARRAY_HANDLE.set(buf, pos++, SPACE);
-				write(arr[i]);
+				buffer[pos] = SPACE;
+				pos = write(arr[i], pos + 1);
 			}
 			if (autoFlush) flush();
 			return this;
@@ -2007,15 +2763,51 @@ public final class C {
 		public FastPrinter printReverse(final Object[] arr) {
 			final int len = arr.length;
 			if (len == 0) return this;
-			final byte[] buf = buffer;
 			print(arr[len - 1]);
 			for (int i = len - 2; i >= 0; i--) {
 				ensureCapacity(1);
-				BYTE_ARRAY_HANDLE.set(buf, pos++, SPACE);
+				buffer[pos++] = SPACE;
 				print(arr[i]);
 			}
 			if (autoFlush) flush();
 			return this;
+		}
+
+		private static final class Cache {
+			private static final VarHandle SHORT_HANDLE = MethodHandles.byteArrayViewVarHandle(short[].class, ByteOrder.LITTLE_ENDIAN);
+			private static final VarHandle INT_HANDLE = MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.LITTLE_ENDIAN);
+			private static final byte[] TRUE_BYTES = {'Y', 'e', 's'};
+			private static final byte[] FALSE_BYTES = {'N', 'o'};
+			private static final short[] DIGITS_2 = {
+					12336, 12592, 12848, 13104, 13360, 13616, 13872, 14128, 14384, 14640,
+					12337, 12593, 12849, 13105, 13361, 13617, 13873, 14129, 14385, 14641,
+					12338, 12594, 12850, 13106, 13362, 13618, 13874, 14130, 14386, 14642,
+					12339, 12595, 12851, 13107, 13363, 13619, 13875, 14131, 14387, 14643,
+					12340, 12596, 12852, 13108, 13364, 13620, 13876, 14132, 14388, 14644,
+					12341, 12597, 12853, 13109, 13365, 13621, 13877, 14133, 14389, 14645,
+					12342, 12598, 12854, 13110, 13366, 13622, 13878, 14134, 14390, 14646,
+					12343, 12599, 12855, 13111, 13367, 13623, 13879, 14135, 14391, 14647,
+					12344, 12600, 12856, 13112, 13368, 13624, 13880, 14136, 14392, 14648,
+					12345, 12601, 12857, 13113, 13369, 13625, 13881, 14137, 14393, 14649,
+			};
+			private static final int[] DIGITS_4 = new int[10000];
+			private static final long[] POW10 = {
+					1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000,
+					1_000_000_000, 10_000_000_000L, 100_000_000_000L, 1_000_000_000_000L,
+					10_000_000_000_000L, 100_000_000_000_000L, 1_000_000_000_000_000L,
+					10_000_000_000_000_000L, 100_000_000_000_000_000L, 1_000_000_000_000_000_000L
+			};
+
+			static {
+				int idx4 = 0;
+				for (int i = 0; i < 100; i++) {
+					final int hi = DIGITS_2[i] & 0xFFFF;
+					for (int j = 0; j < 100; j++) {
+						final int lo = DIGITS_2[j] & 0xFFFF;
+						DIGITS_4[idx4++] = (lo << 16) | hi;
+					}
+				}
+			}
 		}
 	}
 	// endregion
