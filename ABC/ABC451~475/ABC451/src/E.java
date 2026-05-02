@@ -1,3 +1,6 @@
+import static java.lang.Math.*;
+import static java.util.Arrays.*;
+
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
@@ -6,15 +9,13 @@ import java.nio.charset.*;
 import java.util.*;
 import java.util.function.*;
 
-import static java.lang.Math.*;
-import static java.util.Arrays.*;
-
-public final class B {
+public final class E {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG = true;
 	private static final int MOD = 998244353;
 	// private static final int MOD = 1_000_000_007;
+	private static final char[] op = new char[]{'L', 'U', 'R', 'D'};
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
 	private static final FastScanner sc = new FastScanner();
@@ -23,15 +24,58 @@ public final class B {
 
 	private static void solve() {
 		int n = sc.nextInt();
-		int m = sc.nextInt();
-		int[] ans = new int[m];
-		while (n-- > 0) {
-			int a = sc.nextInt0();
-			int b = sc.nextInt0();
-			ans[a]--;
-			ans[b]++;
+		int[][] a = new int[n][n];
+		for (int i = 0; i < n - 1; i++) {
+			for (int j = i + 1; j < n; j++) {
+				a[i][j] = a[j][i] = sc.nextInt();
+			}
 		}
-		out.println(ans);
+
+		IndexedPriorityQueue pq = new IndexedPriorityQueue(n);
+		pq.push(0, 0);
+		int[] parent = new int[n];
+		boolean[] visited = new boolean[n];
+		parent[0] = -1;
+		UndirectedGraph tree = new UndirectedGraph(n, n - 1);
+		while (!pq.isEmpty()) {
+			int u = pq.peekNode();
+			int c = (int) pq.poll();
+			if (parent[u] != -1) tree.add(parent[u], u, c);
+			visited[u] = true;
+			int[] cost = a[u];
+			for (int v = 0; v < n; v++) {
+				if (u == v || visited[v]) continue;
+				if (pq.relax(v, cost[v])) parent[v] = u;
+			}
+		}
+
+		int[] dist = new int[n];
+		int[] seen = new int[n];
+		int[] q = new int[n];
+		for (int i = 0; i < n - 1; i++) {
+			int head = 0, tail = 0;
+			q[tail++] = i;
+			dist[i] = 0;
+			seen[i] = ~i;
+			while (head < tail) {
+				int u = q[head++];
+				for (int e : tree.adjEdgeIds(u)) {
+					int v = tree.to(u, e);
+					if (seen[v] == ~i) continue;
+					dist[v] = dist[u] + (int) tree.cost(e);
+					seen[v] = ~i;
+					q[tail++] = v;
+				}
+			}
+			int[] cost = a[i];
+			for (int j = i + 1; j < n; j++) {
+				if (dist[j] != cost[j]) {
+					out.println(false);
+					return;
+				}
+			}
+		}
+		out.println(true);
 	}
 
 	// region < Utility Methods >
@@ -97,11 +141,27 @@ public final class B {
 		return true;
 	}
 
+	private static int min(final int a, final int b) {
+		return Math.min(a, b);
+	}
+
+	private static int min(final int a, final int b, final int c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
 	private static int min(int... a) {
 		int len = a.length;
 		int min = a[0];
 		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
 		return min;
+	}
+
+	private static int max(final int a, final int b) {
+		return Math.max(a, b);
+	}
+
+	private static int max(final int a, final int b, final int c) {
+		return Math.max(a, Math.max(b, c));
 	}
 
 	private static int max(int... a) {
@@ -111,11 +171,27 @@ public final class B {
 		return max;
 	}
 
+	private static long min(final long a, final long b) {
+		return Math.min(a, b);
+	}
+
+	private static long min(final long a, final long b, final long c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
 	private static long min(long... a) {
 		int len = a.length;
 		long min = a[0];
 		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
 		return min;
+	}
+
+	private static long max(final long a, final long b) {
+		return Math.max(a, b);
+	}
+
+	private static long max(final long a, final long b, final long c) {
+		return Math.max(a, Math.max(b, c));
 	}
 
 	private static long max(long... a) {
@@ -125,11 +201,27 @@ public final class B {
 		return max;
 	}
 
+	private static double min(final double a, final double b) {
+		return Math.min(a, b);
+	}
+
+	private static double min(final double a, final double b, final double c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
 	private static double min(double... a) {
 		int len = a.length;
 		double min = a[0];
 		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
 		return min;
+	}
+
+	private static double max(final double a, final double b) {
+		return Math.max(a, b);
+	}
+
+	private static double max(final double a, final double b, final double c) {
+		return Math.max(a, Math.max(b, c));
 	}
 
 	private static double max(double... a) {
@@ -204,6 +296,62 @@ public final class B {
 		}
 		return a << commonShift;
 	}
+
+	private static void compression(final int[] a, final int len) {
+		final int[] b = copyOf(a, len);
+		sort(b);
+		int n = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[n++] = b[i];
+		}
+		for (int i = 0; i < len; i++) {
+			a[i] = binarySearch(b, 0, n, a[i]);
+		}
+	}
+
+	private static void compression(final int[][] a, final int n, final int m) {
+		final int len = n * m;
+		final int[] b = new int[len];
+		for (int i = 0, j = 0; i < n; i++, j += m) {
+			System.arraycopy(a[i], 0, b, j, m);
+		}
+		sort(b);
+		int nm = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[nm++] = b[i];
+		}
+		for (int i = 0; i < n; i++) {
+			int[] ai = a[i];
+			for (int j = 0; j < m; j++) {
+				ai[j] = binarySearch(b, 0, nm, ai[j]);
+			}
+		}
+	}
+
+	private static void compression(final int[][] a, final int n) {
+		int len = 0;
+		for (int i = 0; i < n; i++) len += a[i].length;
+		final int[] b = new int[len];
+		for (int i = 0, j = 0; i < n; i++) {
+			int m = a[i].length;
+			System.arraycopy(a[i], 0, b, j, m);
+			j += m;
+		}
+		sort(b);
+		int nm = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[nm++] = b[i];
+		}
+		for (int i = 0; i < n; i++) {
+			int[] ai = a[i];
+			for (int j = 0, m = ai.length; j < m; j++) {
+				ai[j] = binarySearch(b, 0, nm, ai[j]);
+			}
+		}
+	}
 	// endregion
 
 	// region < I/O & Debug >
@@ -211,7 +359,6 @@ public final class B {
 		try {
 			solve();
 		} finally {
-			sc.close();
 			out.close();
 		}
 	}
@@ -223,74 +370,674 @@ public final class B {
 		}
 	}
 
+	/**
+	 * 自己ループを含まない連結無向グラフ管理用ライブラリ
+	 * <p>
+	 * 無向辺は追加順に0始まりの辺IDが割り当てられます。
+	 * 内部表現では1本の無向辺を2本の内部辺として保持しますが、
+	 * 外部には無向辺IDとして公開します。
+	 * <p>
+	 * {@link #adjEdgeIds(int)} で取得した辺IDは {@link #to(int, int)} と
+	 * {@link #cost(int)} にそのまま渡せます。
+	 * {@link #to(int, int)} は「頂点 {@code u} から見た接続先頂点」を返します。
+	 */
 	@SuppressWarnings("unused")
-	private static final class FastScanner implements AutoCloseable {
-		private static final int DEFAULT_BUFFER_SIZE = 1 << 20;
-		private final InputStream in;
+	private static final class UndirectedGraph {
+		private final int[] dest, next, first, degree;
+		private final long[] cost;
+		private final int n;
+		private int edgeCount = 0;
+
+		public UndirectedGraph(final int n, final int m) {
+			this.n = n;
+			int m2 = m * 2;
+			dest = new int[m2];
+			next = new int[m2];
+			first = new int[n];
+			fill(first, -1);
+			degree = new int[n];
+			cost = new long[m2];
+		}
+
+		public void add(final int i, final int j) {
+			add(i, j, 1);
+		}
+
+		public void add(final int i, final int j, final long c) {
+			dest[edgeCount] = j;
+			next[edgeCount] = first[i];
+			cost[edgeCount] = c;
+			first[i] = edgeCount++;
+			degree[i]++;
+
+			dest[edgeCount] = i;
+			next[edgeCount] = first[j];
+			cost[edgeCount] = c;
+			first[j] = edgeCount++;
+			degree[j]++;
+		}
+
+		public int degree(final int i) {
+			return degree[i];
+		}
+
+		public boolean isBipartite() {
+			int[] color = new int[n];
+			int[] q = new int[n];
+			int head = 0, tail = 0;
+			color[0] = 1;
+			q[tail++] = 0;
+			while (head < tail) {
+				int u = q[head++];
+				for (int e = first[u]; e != -1; e = next[e]) {
+					int v = dest[e];
+					if (color[v] == color[u]) return false;
+					if (color[v] != 0) continue;
+					color[v] = -color[u];
+					q[tail++] = v;
+				}
+			}
+			return true;
+		}
+
+		public int to(final int u, final int e) {
+			int v1 = dest[e << 1];
+			int v2 = dest[e << 1 | 1];
+			return u != v1 ? v1 : v2;
+		}
+
+		public long cost(final int e) {
+			return cost[e << 1];
+		}
+
+		public int[] adj(final int u) {
+			int[] adj = new int[degree[u]];
+			for (int e = first[u], i = 0; e != -1; e = next[e], i++) {
+				adj[i] = dest[e];
+			}
+			return adj;
+		}
+
+		public int[] adjEdgeIds(final int u) {
+			int[] ids = new int[degree[u]];
+			for (int e = first[u], i = 0; e != -1; e = next[e], i++) {
+				ids[i] = e >> 1;
+			}
+			return ids;
+		}
+
+		public Iterable<Integer> bfs(final int s) {
+			return () -> new PrimitiveIterator.OfInt() {
+				private final int[] q = new int[n];
+				private final boolean[] visited = new boolean[n];
+				private int head, tail;
+
+				{
+					q[tail++] = s;
+					visited[s] = true;
+				}
+
+				@Override
+				public boolean hasNext() {
+					return head < tail;
+				}
+
+				@Override
+				public int nextInt() {
+					int u = q[head++];
+					for (int e = first[u]; e != -1; e = next[e]) {
+						int v = dest[e];
+						if (visited[v]) continue;
+						q[tail++] = v;
+						visited[v] = true;
+					}
+					return u;
+				}
+			};
+		}
+
+		public Iterable<Integer> bfs(final int... s) {
+			return () -> new PrimitiveIterator.OfInt() {
+				private final int[] q = new int[n];
+				private final boolean[] visited = new boolean[n];
+				private int head, tail;
+
+				{
+					for (int s1 : s) {
+						q[tail++] = s1;
+						visited[s1] = true;
+					}
+				}
+
+				@Override
+				public boolean hasNext() {
+					return head < tail;
+				}
+
+				@Override
+				public int nextInt() {
+					int u = q[head++];
+					for (int e = first[u]; e != -1; e = next[e]) {
+						int v = dest[e];
+						if (visited[v]) continue;
+						q[tail++] = v;
+						visited[v] = true;
+					}
+					return u;
+				}
+			};
+		}
+
+		public int[] dist(final int s) {
+			int[] dist = new int[n];
+			fill(dist, -1);
+			dist[s] = 0;
+			int[] q = new int[n];
+			int head = 0, tail = 0;
+			q[tail++] = s;
+			while (head < tail) {
+				int u = q[head++];
+				for (int e = first[u]; e != -1; e = next[e]) {
+					int v = dest[e];
+					if (dist[v] != -1) continue;
+					dist[v] = dist[u] + 1;
+					q[tail++] = v;
+				}
+			}
+			return dist;
+		}
+
+		public int[] dist(final int... s) {
+			int[] dist = new int[n];
+			fill(dist, -1);
+			int[] q = new int[n];
+			int head = 0, tail = 0;
+			for (int s1 : s) {
+				dist[s1] = 0;
+				q[tail++] = s1;
+			}
+			while (head < tail) {
+				int u = q[head++];
+				for (int e = first[u]; e != -1; e = next[e]) {
+					int v = dest[e];
+					if (dist[v] != -1) continue;
+					dist[v] = dist[u] + 1;
+					q[tail++] = v;
+				}
+			}
+			return dist;
+		}
+
+	}
+
+	/**
+	 * グラフアルゴリズム特化高性能インデックス付き優先度キュー
+	 * <p>
+	 * 遅延ヒープ構築により、複数の要素追加後に一度だけヒープ化を行うことで高速化を実現。
+	 * インデックスベースの操作により、特定ノードへの O(1) アクセスが可能。
+	 * グラフの最短経路問題（Dijkstra法など）での使用に最適化されている。
+	 */
+	@SuppressWarnings("unused")
+	private static final class IndexedPriorityQueue implements Iterable<Long> {
+		// -------------- フィールド --------------
+		private final boolean isDescendingOrder;
+		private final long[] cost;
+		private final int[] heap, position;
+		private int size, unsortedCount;
+
+		// -------------- コンストラクタ --------------
+
+		/**
+		 * コンストラクタ（最小値優先）
+		 *
+		 * @param n 頂点数
+		 */
+		public IndexedPriorityQueue(final int n) {
+			this(n, false);
+		}
+
+		/**
+		 * コンストラクタ
+		 *
+		 * @param n                 頂点数
+		 * @param isDescendingOrder true の場合は最大値優先（降順）、false の場合は最小値優先（昇順）
+		 */
+		public IndexedPriorityQueue(final int n, final boolean isDescendingOrder) {
+			this.isDescendingOrder = isDescendingOrder;
+			cost = new long[n];
+			heap = new int[n];
+			position = new int[n];
+			fill(position, -2);
+			size = 0;
+			unsortedCount = 0;
+		}
+
+		// -------------- 公開メソッド --------------
+
+		/**
+		 * 要素を追加する
+		 *
+		 * @param node 追加するノード
+		 * @param c    追加するノードのコスト
+		 */
+		public void push(final int node, long c) {
+			if (position[node] != -2) throw new IllegalArgumentException();
+			if (isDescendingOrder) c = -c;
+			cost[node] = c;
+			heap[size] = node;
+			position[node] = size;
+			size++;
+			unsortedCount++;
+		}
+
+		/**
+		 * 全ての要素を追加する
+		 *
+		 * @param nodes 追加するノードの配列
+		 * @param costs 追加するコストの配列
+		 */
+		public void pushAll(final int[] nodes, final long[] costs) {
+			final int n = nodes.length;
+			int s = size;
+			final long[] cArr = cost;
+			final int[] hArr = heap;
+			final int[] pArr = position;
+			if (isDescendingOrder) {
+				for (int i = 0; i < n; i++) {
+					final int node = nodes[i];
+					if (pArr[node] != -2) throw new IllegalArgumentException();
+					cArr[node] = -costs[i];
+					hArr[s] = node;
+					pArr[node] = s++;
+				}
+			} else {
+				for (int i = 0; i < n; i++) {
+					final int node = nodes[i];
+					if (pArr[node] != -2) throw new IllegalArgumentException();
+					cArr[node] = costs[i];
+					hArr[s] = node;
+					pArr[node] = s++;
+				}
+			}
+			size = s;
+			unsortedCount += n;
+		}
+
+		/**
+		 * 指定したノードが存在しなければ追加し、存在すれば更新する
+		 *
+		 * @param node ノード
+		 * @param cost ノードのコスト
+		 */
+		public void pushOrUpdate(final int node, final long cost) {
+			if (position[node] < 0) {
+				push(node, cost);
+			} else {
+				updateCost(node, cost);
+			}
+		}
+
+		/**
+		 * 指定したノードのコストを更新する
+		 *
+		 * @param node    ノード
+		 * @param newCost 新しいコスト
+		 */
+		public void updateCost(final int node, long newCost) {
+			if (position[node] < 0) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			if (isDescendingOrder) newCost = -newCost;
+			long oldCost = cost[node];
+			cost[node] = newCost;
+			int pos = position[node];
+			if (newCost < oldCost) siftUp(node, pos);
+			else siftDown(node, pos);
+		}
+
+		/**
+		 * relax操作（Dijkstra法などで使用）
+		 *
+		 * @param node ノード
+		 * @param cost 新しいコスト
+		 * @return 更新が行われた場合はtrue
+		 */
+		public boolean relax(final int node, long cost) {
+			if (position[node] == -1) return false;
+			if (position[node] == -2) {
+				push(node, cost);
+				return true;
+			}
+			if (isDescendingOrder) cost = -cost;
+			if (this.cost[node] > cost) {
+				this.cost[node] = cost;
+				siftUp(node, position[node]);
+				return true;
+			}
+			return false;
+		}
+
+		/**
+		 * ヒープの先頭要素のコストを取得する
+		 *
+		 * @return ヒープの先頭要素のコスト（昇順時は最小、降順時は最大）
+		 */
+		public long peek() {
+			if (isEmpty()) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			return isDescendingOrder ? -cost[heap[0]] : cost[heap[0]];
+		}
+
+		/**
+		 * ヒープの先頭ノードを取得する
+		 *
+		 * @return ヒープの先頭ノード（昇順時は最小コスト、降順時は最大コストのノード）
+		 */
+		public int peekNode() {
+			if (isEmpty()) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			return heap[0];
+		}
+
+		/**
+		 * 2番目の要素のコストを取得する
+		 *
+		 * @return 2番目の要素のコスト（昇順時は2番目に小さい、降順時は2番目に大きい）
+		 */
+		public long peekSecond() {
+			if (size < 2) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			if (size == 2) {
+				return isDescendingOrder ? -cost[heap[1]] : cost[heap[1]];
+			}
+			long c1 = cost[heap[1]];
+			long c2 = cost[heap[2]];
+			return isDescendingOrder ? -min(c1, c2) : min(c1, c2);
+		}
+
+		/**
+		 * ヒープの先頭要素を削除し、そのコストを返す
+		 *
+		 * @return 削除された要素のコスト（昇順時は最小、降順時は最大）
+		 */
+		public long poll() {
+			if (isEmpty()) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			int node = heap[0];
+			long c = isDescendingOrder ? -cost[node] : cost[node];
+			position[node] = -1;
+			size--;
+			if (size > 0) {
+				int lastNode = heap[size];
+				siftDown(lastNode, 0);
+			}
+			return c;
+		}
+
+		/**
+		 * ヒープの先頭ノードを削除し、そのノードを返す
+		 *
+		 * @return 削除されたノード（昇順時は最小コスト、降順時は最大コストのノード）
+		 */
+		public int pollNode() {
+			if (isEmpty()) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			int node = heap[0];
+			position[node] = -1;
+			size--;
+			if (size > 0) {
+				int lastNode = heap[size];
+				siftDown(lastNode, 0);
+			}
+			return node;
+		}
+
+		/**
+		 * 指定したノードを削除する
+		 *
+		 * @param node 削除するノード
+		 */
+		public void remove(final int node) {
+			if (position[node] < 0) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			int pos = position[node];
+			position[node] = -1;
+			size--;
+			if (pos < size) {
+				int lastNode = heap[size];
+				long lastCost = cost[lastNode];
+				long removedCost = cost[node];
+				if (lastCost < removedCost) siftUp(lastNode, pos);
+				else siftDown(lastNode, pos);
+			}
+		}
+
+		/**
+		 * 指定したノードのコストを取得する（存在しない場合は例外をスロー）
+		 *
+		 * @param node 対象ノード
+		 * @return コスト
+		 */
+		public long getCost(int node) {
+			if (position[node] == -2) throw new NoSuchElementException();
+			return isDescendingOrder ? -cost[node] : cost[node];
+		}
+
+		/**
+		 * 指定したノードのコストを取得する（存在しない場合はデフォルト値を返す）
+		 *
+		 * @param node         対象ノード
+		 * @param defaultValue デフォルト値
+		 * @return コストまたはデフォルト値
+		 */
+		public long getCostOrDefault(final int node, final long defaultValue) {
+			return position[node] == -2 ? defaultValue : isDescendingOrder ? -cost[node] : cost[node];
+		}
+
+		/**
+		 * 要素数を取得する
+		 *
+		 * @return 要素数
+		 */
+		public int size() {
+			return size;
+		}
+
+		/**
+		 * ヒープをクリアする
+		 */
+		public void clear() {
+			size = 0;
+			unsortedCount = 0;
+			fill(position, -2);
+		}
+
+		/**
+		 * ヒープが空かどうかを判定する
+		 *
+		 * @return 空の場合はtrue
+		 */
+		public boolean isEmpty() {
+			return size == 0;
+		}
+
+		/**
+		 * 指定したノードが存在するかどうかを判定する
+		 *
+		 * @param node 対象ノード
+		 * @return 存在する場合はtrue
+		 */
+		public boolean contains(int node) {
+			return position[node] >= 0;
+		}
+
+		/**
+		 * 要素のイテレータを取得する（ヒープ順序）
+		 *
+		 * @return イテレータ
+		 */
+		@Override
+		public PrimitiveIterator.OfLong iterator() {
+			if (unsortedCount > 0) ensureHeapProperty();
+			return new PrimitiveIterator.OfLong() {
+				int i = 0;
+
+				@Override
+				public boolean hasNext() {
+					return i < size;
+				}
+
+				@Override
+				public long nextLong() {
+					if (!hasNext()) throw new NoSuchElementException();
+					long c = cost[heap[i++]];
+					return isDescendingOrder ? -c : c;
+				}
+			};
+		}
+
+		// -------------- ヒープ構築（遅延評価） --------------
+
+		/**
+		 * 遅延評価された未ソート要素をヒープ化し、ヒーププロパティを復元する
+		 * <p>
+		 * このメソッドは、未ソート要素が存在する場合に最適なアルゴリズムを自動選択して実行します
+		 * <p><b>分岐点の決定：</b>
+		 * 両アルゴリズムの最大比較回数を計算し、コストが小さい方を実行する
+		 * (heapifyCost < incrementalCost なら heapify を選択)
+		 */
+		private void ensureHeapProperty() {
+			final int log2N = 31 - Integer.numberOfLeadingZeros(size);
+			final int heapifyCost = size * 2 - 2 * log2N;
+			final int incrementalCost = unsortedCount <= 100 ? getIncrementalCostStrict() : getIncrementalCostApprox();
+			if (heapifyCost < incrementalCost) {
+				heapify();
+			} else {
+				for (int i = size - unsortedCount; i < size; i++) siftUp(heap[i], i);
+			}
+			unsortedCount = 0;
+		}
+
+		/**
+		 * インクリメンタル構築の最大比較回数を厳密に計算する
+		 *
+		 * @return 最大比較回数の合計
+		 */
+		private int getIncrementalCostStrict() {
+			int totalCost = 0;
+			final int sortedSize = size - unsortedCount;
+			for (int i = 1; i <= unsortedCount; i++) {
+				final int currentHeapSize = sortedSize + i;
+				final int depth = 31 - Integer.numberOfLeadingZeros(currentHeapSize);
+				totalCost += depth;
+			}
+			return totalCost;
+		}
+
+		/**
+		 * インクリメンタル構築の最大比較回数を高速に近似計算する
+		 * <p>コスト ≈ k * floor(log₂(平均ヒープサイズ))
+		 *
+		 * @return 最大比較回数の近似値
+		 */
+		private int getIncrementalCostApprox() {
+			final int sortedSize = size - unsortedCount;
+			final int avgHeapSize = sortedSize + (unsortedCount >> 1);
+			if (avgHeapSize == 0) return 0;
+			final int depthOfAvgSize = 31 - Integer.numberOfLeadingZeros(avgHeapSize);
+			return unsortedCount * depthOfAvgSize;
+		}
+
+		/**
+		 * Bottom-up heapify (Floyd's algorithm)
+		 */
+		private void heapify() {
+			for (int i = (size >> 1) - 1; i >= 0; i--) siftDown(heap[i], i);
+		}
+
+		// -------------- ヒープ操作（基本） --------------
+
+		/**
+		 * siftUp操作
+		 *
+		 * @param node 移動させるノード
+		 * @param i    ノードの現在位置
+		 */
+		private void siftUp(final int node, int i) {
+			final long[] cArr = cost;
+			final int[] hArr = heap;
+			final int[] pArr = position;
+			final long c = cArr[node];
+			while (i > 0) {
+				final int j = (i - 1) >> 1;
+				final int parent = hArr[j];
+				if (c >= cArr[parent]) break;
+				hArr[i] = parent;
+				pArr[parent] = i;
+				i = j;
+			}
+			hArr[i] = node;
+			pArr[node] = i;
+		}
+
+		/**
+		 * siftDown操作
+		 *
+		 * @param node 移動させるノード
+		 * @param i    ノードの現在位置
+		 */
+		private void siftDown(final int node, int i) {
+			final long[] cArr = cost;
+			final int[] hArr = heap;
+			final int[] pArr = position;
+			final int n = size;
+			final long c = cArr[node];
+			final int half = n >> 1;
+			while (i < half) {
+				int child = (i << 1) + 1;
+				if (child + 1 < n && cArr[hArr[child]] > cArr[hArr[child + 1]]) child++;
+				final int childNode = hArr[child];
+				if (c <= cArr[childNode]) break;
+				hArr[i] = childNode;
+				pArr[childNode] = i;
+				i = child;
+			}
+			hArr[i] = node;
+			pArr[node] = i;
+		}
+	}
+
+	@SuppressWarnings("unused")
+	private static final class FastScanner {
+		private static final VarHandle LONG_HANDLE = MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
 		private final byte[] buffer;
-		private int pos = 0, bufferLength = 0;
+		private final int bufferLength;
+		private int pos = 0;
 
 		public FastScanner() {
-			this(System.in, DEFAULT_BUFFER_SIZE);
+			this(System.in);
 		}
 
 		public FastScanner(final InputStream in) {
-			this(in, DEFAULT_BUFFER_SIZE);
-		}
-
-		public FastScanner(final int bufferSize) {
-			this(System.in, bufferSize);
-		}
-
-		public FastScanner(final InputStream in, final int bufferSize) {
-			this.in = in;
-			this.buffer = new byte[bufferSize];
+			try {
+				int capacity = in.available() + 64;
+				buffer = new byte[capacity];
+				bufferLength = in.read(buffer, 0, capacity);
+			} catch (final IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
 
 		private int skipSpaces() {
-			final byte[] buf = buffer;
-			int p = pos, len = bufferLength, b;
+			int p = pos, b;
 			do {
-				if (p >= len) {
-					try {
-						len = in.read(buf);
-						p = 0;
-					} catch (final IOException e) {
-						throw new RuntimeException(e);
-					}
-					if (len <= 0) throw new NoSuchElementException();
-					if (len < buf.length) buf[len] = 32;
-				}
-				b = buf[p++];
+				b = buffer[p++];
 			} while (b <= 32);
 			pos = p;
-			bufferLength = len;
 			return b;
 		}
 
-		@Override
-		public void close() {
-			try {
-				in.close();
-			} catch (final IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
-
-		private boolean hasNextByte() {
-			if (pos < bufferLength) return true;
-			pos = 0;
-			try {
-				bufferLength = in.read(buffer);
-				if (bufferLength > 0 && bufferLength < buffer.length) buffer[bufferLength] = 32;
-			} catch (final IOException e) {
-				throw new RuntimeException(e);
-			}
-			return bufferLength > 0;
-		}
-
 		public boolean hasNext() {
-			while (hasNextByte()) {
+			while (pos < bufferLength) {
 				if (buffer[pos] > 32) return true;
 				pos++;
 			}
@@ -304,20 +1051,12 @@ public final class B {
 
 		public int nextInt() {
 			int b = skipSpaces();
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
-				b = buffer[pos++];
-			}
-			return pos + 10 <= bufferLength ? nextIntFast(b, negative) : nextIntSlow(b, negative);
-		}
-
-		private int nextIntFast(int b, final boolean negative) {
+			boolean negative = b == '-';
 			final byte[] buf = buffer;
 			int p = pos, n = 0;
-			long a = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
-			long check = a & 0xF0F0F0F0F0F0F0F0L;
+			if (negative) b = buf[p++];
+			long a = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			final long check = a & 0xF0F0F0F0F0F0F0F0L;
 			if (check == 0) {
 				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
 				a = (a * 100 + (a >>> 16)) & 0x0000FFFF0000FFFFL;
@@ -334,43 +1073,15 @@ public final class B {
 			return negative ? -n : n;
 		}
 
-		private int nextIntSlow(int b, final boolean negative) {
-			int p = pos, len = bufferLength;
-			int n = 0;
-			do {
-				n = (n << 3) + (n << 1) + (b & 15);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buffer[p++];
-			} while (b > 32);
-			pos = p;
-			return negative ? -n : n;
-		}
-
 		public long nextLong() {
 			int b = skipSpaces();
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
-				b = buffer[pos++];
-			}
-			return pos + 20 <= bufferLength ? nextLongFast(b, negative) : nextLongSlow(b, negative);
-		}
-
-		private long nextLongFast(int b, final boolean negative) {
+			boolean negative = b == '-';
 			final byte[] buf = buffer;
 			int p = pos;
+			if (negative) b = buf[p++];
 			long n = 0;
-			long a = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
-			long check = a & 0xF0F0F0F0F0F0F0F0L;
+			long a = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			final long check = a & 0xF0F0F0F0F0F0F0F0L;
 			if (check == 0) {
 				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
 				a = (a * 100 + (a >>> 16)) & 0x0000FFFF0000FFFFL;
@@ -378,8 +1089,8 @@ public final class B {
 				n = a;
 				p += 7;
 				b = buf[p++];
-				long a2 = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
-				long check2 = a2 & 0xF0F0F0F0F0F0F0F0L;
+				long a2 = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+				final long check2 = a2 & 0xF0F0F0F0F0F0F0F0L;
 				if (check2 == 0) {
 					a2 = (a2 * 10 + (a2 >>> 8)) & 0x00FF00FF00FF00FFL;
 					a2 = (a2 * 100 + (a2 >>> 16)) & 0x0000FFFF0000FFFFL;
@@ -397,107 +1108,31 @@ public final class B {
 			return negative ? -n : n;
 		}
 
-		private long nextLongSlow(int b, final boolean negative) {
-			int p = pos, len = bufferLength;
-			long n = 0;
-			do {
-				n = (n << 3) + (n << 1) + (b & 15);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buffer[p++];
-			} while (b > 32);
-			pos = p;
-			return negative ? -n : n;
-		}
-
 		public double nextDouble() {
 			int b = skipSpaces();
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
-				b = buffer[pos++];
-			}
-			return pos + 20 <= bufferLength ? nextDoubleFast(b, negative) : nextDoubleSlow(b, negative);
-		}
-
-		private double nextDoubleFast(int b, final boolean negative) {
+			final boolean negative = b == '-';
 			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
+			int p = pos;
+			if (negative) b = buf[p++];
 			long intPart = 0;
 			do {
 				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
 				b = buf[p++];
 			} while ('0' <= b && b <= '9');
 			double result = intPart;
-			if (b == '.') result += parseFracPart(p, len, buf);
+			if (b == '.') result += parseFracPart(p, buf);
 			else pos = p;
 			return negative ? -result : result;
 		}
 
-		private double nextDoubleSlow(int b, final boolean negative) {
-			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
-			long intPart = 0;
-			do {
-				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						b = -1;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buf[p++];
-			} while ('0' <= b && b <= '9');
-
-			double result = intPart;
-			if (b == '.') result += parseFracPart(p, len, buf);
-			else pos = p;
-			return negative ? -result : result;
-		}
-
-		private double parseFracPart(int p, int len, final byte[] buf) {
-			if (p == len) {
-				pos = p;
-				hasNextByte();
-				p = pos;
-				len = bufferLength;
-			}
+		private double parseFracPart(int p, final byte[] buf) {
 			int b = buf[p++];
 			long fracPart = 0, divisor = 1;
-			if (p + 20 <= len) {
-				do {
-					fracPart = fracPart * 10 + (b & 15);
-					divisor *= 10;
-					b = buf[p++];
-				} while ('0' <= b && b <= '9');
-			} else {
-				do {
-					fracPart = fracPart * 10 + (b & 15);
-					divisor *= 10;
-					if (p == len) {
-						pos = p;
-						if (!hasNextByte()) {
-							p = pos;
-							break;
-						}
-						p = pos;
-						len = bufferLength;
-					}
-					b = buf[p++];
-				} while ('0' <= b && b <= '9');
-			}
+			do {
+				fracPart = fracPart * 10 + (b & 15);
+				divisor *= 10;
+				b = buf[p++];
+			} while ('0' <= b && b <= '9');
 			pos = p;
 			return (double) fracPart / divisor;
 		}
@@ -505,109 +1140,29 @@ public final class B {
 		public String next() {
 			skipSpaces();
 			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
+			int p = pos;
 			final int start = p - 1;
-			while (p < len && buf[p] > 32) p++;
-			if (p < len) {
-				final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
-				pos = p + 1;
-				return s;
-			}
-			final StringBuilder sb = new StringBuilder(len - start + 16);
-			for (int i = start; i < len; i++) sb.append((char) buf[i]);
-			while (true) {
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				final int b = buf[p++];
-				if (b <= 32) break;
-				sb.append((char) b);
-			}
-			pos = p;
-			return sb.toString();
+			while (buf[p] > 32) p++;
+			final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
+			pos = p + 1;
+			return s;
 		}
 
 		public StringBuilder nextStringBuilder() {
-			final StringBuilder sb = new StringBuilder();
-			int b = skipSpaces(), p = pos, len = bufferLength;
-			do {
-				sb.append((char) b);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buffer[p++];
-			} while (b > 32);
-			pos = p;
-			return sb;
+			return new StringBuilder(next());
 		}
 
 		public String nextLine() {
-			if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
 			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
+			int p = pos;
 			final int start = p;
-			while (p < len) {
+			while (p < bufferLength) {
 				final int b = buf[p];
-				if (b == '\n' || b == '\r') {
-					final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
-					p++;
-					if (b == '\r') {
-						if (p == len) {
-							pos = p;
-							hasNextByte();
-							p = pos;
-							len = bufferLength;
-						}
-						if (p < len && buf[p] == '\n') p++;
-					}
-					pos = p;
-					return s;
-				}
+				if (b == '\n' || b == '\r') break;
 				p++;
 			}
-
-			final StringBuilder sb = new StringBuilder();
-			for (int i = start; i < len; i++) sb.append((char) buf[i]);
-			while (true) {
-				pos = len;
-				if (!hasNextByte()) {
-					pos = len;
-					return sb.toString();
-				}
-				p = pos;
-				len = bufferLength;
-				while (p < len) {
-					final int b = buf[p];
-					if (b == '\n' || b == '\r') {
-						p++;
-						if (b == '\r') {
-							if (p == len) {
-								pos = p;
-								hasNextByte();
-								p = pos;
-								len = bufferLength;
-							}
-							if (p < len && buf[p] == '\n') p++;
-						}
-						pos = p;
-						return sb.toString();
-					}
-					sb.append((char) b);
-					p++;
-				}
-			}
+			pos = p + (buf[p] == '\r' && buf[p + 1] == '\n' ? 2 : 1);
+			return new String(buf, start, p - start, StandardCharsets.US_ASCII);
 		}
 
 		public BigInteger nextBigInteger() {
@@ -657,7 +1212,17 @@ public final class B {
 		}
 
 		public char[] nextChars() {
-			return next().toCharArray();
+			skipSpaces();
+			int p = pos;
+			final int start = p - 1;
+			while (buffer[p] > 32) p++;
+			final int len = p - start;
+			final char[] c = new char[len];
+			for (int i = 0; i < len; i++) {
+				c[i] = (char) buffer[start + i];
+			}
+			pos = p + 1;
+			return c;
 		}
 
 		public char[] nextChars(final int n) {
@@ -946,9 +1511,6 @@ public final class B {
 			return multiset;
 		}
 
-		private static final class Handles {
-			private static final VarHandle LONG_HANDLE = MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
-		}
 	}
 
 	@SuppressWarnings("unused")

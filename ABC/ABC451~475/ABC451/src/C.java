@@ -1,3 +1,6 @@
+import static java.lang.Math.*;
+import static java.util.Arrays.*;
+
 import java.io.*;
 import java.lang.invoke.*;
 import java.math.*;
@@ -6,23 +9,34 @@ import java.nio.charset.*;
 import java.util.*;
 import java.util.function.*;
 
-import static java.lang.Math.*;
-import static java.util.Arrays.*;
-
-public final class A {
+public final class C {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG = true;
 	private static final int MOD = 998244353;
 	// private static final int MOD = 1_000_000_007;
+	private static final char[] op = new char[]{'L', 'U', 'R', 'D'};
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
-	private static final FastScanner sc = new FastScanner(64);
-	private static final FastPrinter out = new FastPrinter(64);
+	private static final FastScanner sc = new FastScanner();
+	private static final FastPrinter out = new FastPrinter();
 	// endregion
 
 	private static void solve() {
-		out.println(sc.nextChars().length % 5 == 0);
+		int q = sc.nextInt();
+		IntPriorityQueue tree = new IntPriorityQueue();
+		while (q-- > 0) {
+			int t = sc.nextInt();
+			int h = sc.nextInt();
+			if (t == 1) {
+				tree.push(h);
+			} else {
+				while (!tree.isEmpty() && tree.peek() <= h) {
+					tree.poll();
+				}
+			}
+			out.println(tree.size());
+		}
 	}
 
 	// region < Utility Methods >
@@ -88,11 +102,27 @@ public final class A {
 		return true;
 	}
 
+	private static int min(final int a, final int b) {
+		return Math.min(a, b);
+	}
+
+	private static int min(final int a, final int b, final int c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
 	private static int min(int... a) {
 		int len = a.length;
 		int min = a[0];
 		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
 		return min;
+	}
+
+	private static int max(final int a, final int b) {
+		return Math.max(a, b);
+	}
+
+	private static int max(final int a, final int b, final int c) {
+		return Math.max(a, Math.max(b, c));
 	}
 
 	private static int max(int... a) {
@@ -102,11 +132,27 @@ public final class A {
 		return max;
 	}
 
+	private static long min(final long a, final long b) {
+		return Math.min(a, b);
+	}
+
+	private static long min(final long a, final long b, final long c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
 	private static long min(long... a) {
 		int len = a.length;
 		long min = a[0];
 		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
 		return min;
+	}
+
+	private static long max(final long a, final long b) {
+		return Math.max(a, b);
+	}
+
+	private static long max(final long a, final long b, final long c) {
+		return Math.max(a, Math.max(b, c));
 	}
 
 	private static long max(long... a) {
@@ -116,11 +162,27 @@ public final class A {
 		return max;
 	}
 
+	private static double min(final double a, final double b) {
+		return Math.min(a, b);
+	}
+
+	private static double min(final double a, final double b, final double c) {
+		return Math.min(a, Math.min(b, c));
+	}
+
 	private static double min(double... a) {
 		int len = a.length;
 		double min = a[0];
 		for (int i = 1; i < len; i++) if (min > a[i]) min = a[i];
 		return min;
+	}
+
+	private static double max(final double a, final double b) {
+		return Math.max(a, b);
+	}
+
+	private static double max(final double a, final double b, final double c) {
+		return Math.max(a, Math.max(b, c));
 	}
 
 	private static double max(double... a) {
@@ -195,6 +257,62 @@ public final class A {
 		}
 		return a << commonShift;
 	}
+
+	private static void compression(final int[] a, final int len) {
+		final int[] b = copyOf(a, len);
+		sort(b);
+		int n = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[n++] = b[i];
+		}
+		for (int i = 0; i < len; i++) {
+			a[i] = binarySearch(b, 0, n, a[i]);
+		}
+	}
+
+	private static void compression(final int[][] a, final int n, final int m) {
+		final int len = n * m;
+		final int[] b = new int[len];
+		for (int i = 0, j = 0; i < n; i++, j += m) {
+			System.arraycopy(a[i], 0, b, j, m);
+		}
+		sort(b);
+		int nm = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[nm++] = b[i];
+		}
+		for (int i = 0; i < n; i++) {
+			int[] ai = a[i];
+			for (int j = 0; j < m; j++) {
+				ai[j] = binarySearch(b, 0, nm, ai[j]);
+			}
+		}
+	}
+
+	private static void compression(final int[][] a, final int n) {
+		int len = 0;
+		for (int i = 0; i < n; i++) len += a[i].length;
+		final int[] b = new int[len];
+		for (int i = 0, j = 0; i < n; i++) {
+			int m = a[i].length;
+			System.arraycopy(a[i], 0, b, j, m);
+			j += m;
+		}
+		sort(b);
+		int nm = 1;
+		for (int i = 1; i < len; i++) {
+			if (b[i] == b[i - 1]) continue;
+			b[nm++] = b[i];
+		}
+		for (int i = 0; i < n; i++) {
+			int[] ai = a[i];
+			for (int j = 0, m = ai.length; j < m; j++) {
+				ai[j] = binarySearch(b, 0, nm, ai[j]);
+			}
+		}
+	}
 	// endregion
 
 	// region < I/O & Debug >
@@ -202,7 +320,6 @@ public final class A {
 		try {
 			solve();
 		} finally {
-			sc.close();
 			out.close();
 		}
 	}
@@ -214,74 +331,344 @@ public final class A {
 		}
 	}
 
+	/**
+	 * 競技プログラミング向け優先度キュー（int型特化版）
+	 */
 	@SuppressWarnings("unused")
-	private static final class FastScanner implements AutoCloseable {
-		private static final int DEFAULT_BUFFER_SIZE = 1 << 20;
-		private final InputStream in;
+	private static final class IntPriorityQueue implements Iterable<Integer> {
+		// -------------- フィールド --------------
+		private static final int DEFAULT_INITIAL_CAPACITY = 1024;
+		private final boolean isDescendingOrder;
+		private int[] buf;
+		private int size, capacity, unsortedCount;
+
+		// -------------- コンストラクタ --------------
+
+		/**
+		 * コンストラクタ（デフォルト容量1024、最小値優先）
+		 */
+		public IntPriorityQueue() {
+			this(DEFAULT_INITIAL_CAPACITY, false);
+		}
+
+		/**
+		 * コンストラクタ（最小値優先）
+		 *
+		 * @param capacity 初期容量
+		 */
+		public IntPriorityQueue(int capacity) {
+			this(capacity, false);
+		}
+
+		/**
+		 * コンストラクタ（デフォルト容量1024）
+		 *
+		 * @param isDescendingOrder true の場合は最大値優先（降順）、false の場合は最小値優先（昇順）
+		 */
+		public IntPriorityQueue(boolean isDescendingOrder) {
+			this(DEFAULT_INITIAL_CAPACITY, isDescendingOrder);
+		}
+
+		/**
+		 * コンストラクタ
+		 *
+		 * @param capacity          初期容量
+		 * @param isDescendingOrder true の場合は最大値優先（降順）、false の場合は最小値優先（昇順）
+		 */
+		public IntPriorityQueue(int capacity, boolean isDescendingOrder) {
+			this.capacity = max(capacity, DEFAULT_INITIAL_CAPACITY);
+			this.isDescendingOrder = isDescendingOrder;
+			buf = new int[this.capacity];
+			size = 0;
+			unsortedCount = 0;
+		}
+
+		// -------------- 公開メソッド --------------
+
+		/**
+		 * 要素を追加する
+		 *
+		 * @param v 追加する要素
+		 */
+		public void push(int v) {
+			if (size == capacity) buf = copyOf(buf, capacity <<= 1);
+			if (isDescendingOrder) v = -v;
+			buf[size++] = v;
+			unsortedCount++;
+		}
+
+		/**
+		 * 全ての要素を追加する
+		 *
+		 * @param elements 追加する要素の配列
+		 */
+		public void addAll(final int[] elements) {
+			final int n = elements.length;
+			int s = size;
+			if (s + n > capacity) {
+				int newCap = capacity;
+				while (s + n > newCap) newCap <<= 1;
+				buf = copyOf(buf, newCap);
+				capacity = newCap;
+			}
+			final int[] b = buf;
+			if (isDescendingOrder) for (int i = 0; i < n; i++) b[s + i] = -elements[i];
+			else System.arraycopy(elements, 0, b, s, n);
+			size = s + n;
+			unsortedCount += n;
+		}
+
+		/**
+		 * 全ての要素を追加する
+		 *
+		 * @param elements 追加する要素のイテラブル
+		 */
+		public void addAll(final Iterable<Integer> elements) {
+			if (elements instanceof final Collection<Integer> c) {
+				final int n = c.size();
+				int s = size;
+				if (s + n > capacity) {
+					int newCap = capacity;
+					while (s + n > newCap) newCap <<= 1;
+					buf = copyOf(buf, newCap);
+					capacity = newCap;
+				}
+				final int[] b = buf;
+				if (isDescendingOrder) for (final int e : c) b[s++] = -e;
+				else for (final int e : c) b[s++] = e;
+				size = s;
+				unsortedCount += n;
+			} else {
+				for (final int e : elements) push(e);
+			}
+		}
+
+		/**
+		 * ヒープの先頭要素を取得
+		 *
+		 * @return ヒープの先頭要素（昇順時は最小、降順時は最大）
+		 * @throws NoSuchElementException ヒープが空の場合
+		 */
+		public int peek() {
+			if (isEmpty()) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			return isDescendingOrder ? -buf[0] : buf[0];
+		}
+
+		/**
+		 * ヒープの先頭要素を削除して返す
+		 *
+		 * @return 削除された要素（昇順時は最小、降順時は最大）
+		 */
+		public int poll() {
+			if (isEmpty()) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			int res = isDescendingOrder ? -buf[0] : buf[0];
+			if (--size > 0) siftDown(buf[size], 0);
+			return res;
+		}
+
+		/**
+		 * ヒープの先頭要素を置き換える
+		 *
+		 * @param v 置き換える要素
+		 * @return 置き換えられた要素（昇順時は最小、降順時は最大）
+		 */
+		public int replaceTop(final int v) {
+			if (isEmpty()) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			int res = isDescendingOrder ? -buf[0] : buf[0];
+			buf[0] = isDescendingOrder ? -v : v;
+			siftDown(buf[0], 0);
+			return res;
+		}
+
+		/**
+		 * 要素数を取得する
+		 *
+		 * @return 要素数
+		 */
+		public int size() {
+			return size;
+		}
+
+		/**
+		 * ヒープをクリアする
+		 */
+		public void clear() {
+			size = 0;
+			unsortedCount = 0;
+		}
+
+		/**
+		 * ヒープが空かどうかを判定
+		 *
+		 * @return 空の場合はtrue
+		 */
+		public boolean isEmpty() {
+			return size == 0;
+		}
+
+		/**
+		 * 要素を順序付けていないイテレータを取得する
+		 *
+		 * @return 順序付けていないイテレータ
+		 */
+		@Override
+		public PrimitiveIterator.OfInt iterator() {
+			return new PrimitiveIterator.OfInt() {
+				int i = 0;
+
+				@Override
+				public boolean hasNext() {
+					return i < size;
+				}
+
+				@Override
+				public int nextInt() {
+					if (!hasNext()) throw new NoSuchElementException();
+					int v = buf[i++];
+					return isDescendingOrder ? -v : v;
+				}
+			};
+		}
+
+		// -------------- ヒープ構築（遅延評価） --------------
+
+		/**
+		 * 遅延評価された未ソート要素をヒープ化し、ヒーププロパティを復元する
+		 * <p>
+		 * このメソッドは、未ソート要素が存在する場合に最適なアルゴリズムを自動選択して実行します
+		 * <p><b>分岐点の決定：</b>
+		 * 両アルゴリズムの最大比較回数を計算し、コストが小さい方を実行する
+		 * (heapifyCost < incrementalCost なら heapify を選択)
+		 */
+		private void ensureHeapProperty() {
+			final int log2N = 31 - Integer.numberOfLeadingZeros(size);
+			final int heapifyCost = size * 2 - 2 * log2N;
+			final int incrementalCost = unsortedCount <= 100 ? getIncrementalCostStrict() : getIncrementalCostApprox();
+			if (heapifyCost < incrementalCost) {
+				heapify();
+			} else {
+				for (int i = size - unsortedCount; i < size; i++) siftUp(buf[i], i);
+			}
+			unsortedCount = 0;
+		}
+
+		/**
+		 * インクリメンタル構築の最大比較回数を厳密に計算する
+		 *
+		 * @return 最大比較回数の合計
+		 */
+		private int getIncrementalCostStrict() {
+			int totalCost = 0;
+			final int sortedSize = size - unsortedCount;
+			for (int i = 1; i <= unsortedCount; i++) {
+				final int currentHeapSize = sortedSize + i;
+				final int depth = 31 - Integer.numberOfLeadingZeros(currentHeapSize);
+				totalCost += depth;
+			}
+			return totalCost;
+		}
+
+		/**
+		 * インクリメンタル構築の最大比較回数を高速に近似計算する
+		 * <p>コスト ≈ k * floor(log₂(平均ヒープサイズ))
+		 *
+		 * @return 最大比較回数の近似値
+		 */
+		private int getIncrementalCostApprox() {
+			final int sortedSize = size - unsortedCount;
+			final int avgHeapSize = sortedSize + (unsortedCount >> 1);
+			if (avgHeapSize == 0) return 0;
+			final int depthOfAvgSize = 31 - Integer.numberOfLeadingZeros(avgHeapSize);
+			return unsortedCount * depthOfAvgSize;
+		}
+
+		/**
+		 * Bottom-up heapify (Floyd's algorithm)
+		 */
+		private void heapify() {
+			for (int i = (size >> 1) - 1; i >= 0; i--) siftDown(buf[i], i);
+		}
+
+		// -------------- ヒープ操作（基本） --------------
+
+		/**
+		 * siftUp操作 - O(log N)
+		 * <p>
+		 * 新要素を親と比較しながら上方向に移動（親 ≤ 子）
+		 *
+		 * @param v 移動させる要素
+		 * @param i 要素の現在位置
+		 */
+		private void siftUp(final int v, int i) {
+			final int[] b = buf;
+			while (i > 0) {
+				final int j = (i - 1) >> 1;
+				if (v >= b[j]) break;
+				b[i] = b[j];
+				i = j;
+			}
+			b[i] = v;
+		}
+
+		/**
+		 * siftDown操作 - O(log N)
+		 * <p>
+		 * 末尾要素を子と比較しながら下方向に移動（親 ≤ 子）
+		 * 2つの子のうち小さい方と比較
+		 *
+		 * @param v 移動させる要素
+		 * @param i 要素の現在位置
+		 */
+		private void siftDown(final int v, int i) {
+			final int[] b = buf;
+			final int n = size;
+			final int half = n >> 1;
+			while (i < half) {
+				int child = (i << 1) + 1;
+				if (child + 1 < n && b[child] > b[child + 1]) child++;
+				if (v <= b[child]) break;
+				b[i] = b[child];
+				i = child;
+			}
+			b[i] = v;
+		}
+	}
+
+	@SuppressWarnings("unused")
+	private static final class FastScanner {
+		private static final VarHandle LONG_HANDLE = MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
 		private final byte[] buffer;
-		private int pos = 0, bufferLength = 0;
+		private final int bufferLength;
+		private int pos = 0;
 
 		public FastScanner() {
-			this(System.in, DEFAULT_BUFFER_SIZE);
+			this(System.in);
 		}
 
 		public FastScanner(final InputStream in) {
-			this(in, DEFAULT_BUFFER_SIZE);
-		}
-
-		public FastScanner(final int bufferSize) {
-			this(System.in, bufferSize);
-		}
-
-		public FastScanner(final InputStream in, final int bufferSize) {
-			this.in = in;
-			this.buffer = new byte[bufferSize];
+			try {
+				int capacity = in.available() + 64;
+				buffer = new byte[capacity];
+				bufferLength = in.read(buffer, 0, capacity);
+			} catch (final IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
 
 		private int skipSpaces() {
-			final byte[] buf = buffer;
-			int p = pos, len = bufferLength, b;
+			int p = pos, b;
 			do {
-				if (p >= len) {
-					try {
-						len = in.read(buf);
-						p = 0;
-					} catch (final IOException e) {
-						throw new RuntimeException(e);
-					}
-					if (len <= 0) throw new NoSuchElementException();
-					if (len < buf.length) buf[len] = 32;
-				}
-				b = buf[p++];
+				b = buffer[p++];
 			} while (b <= 32);
 			pos = p;
-			bufferLength = len;
 			return b;
 		}
 
-		@Override
-		public void close() {
-			try {
-				in.close();
-			} catch (final IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
-
-		private boolean hasNextByte() {
-			if (pos < bufferLength) return true;
-			pos = 0;
-			try {
-				bufferLength = in.read(buffer);
-				if (bufferLength > 0 && bufferLength < buffer.length) buffer[bufferLength] = 32;
-			} catch (final IOException e) {
-				throw new RuntimeException(e);
-			}
-			return bufferLength > 0;
-		}
-
 		public boolean hasNext() {
-			while (hasNextByte()) {
+			while (pos < bufferLength) {
 				if (buffer[pos] > 32) return true;
 				pos++;
 			}
@@ -295,20 +682,12 @@ public final class A {
 
 		public int nextInt() {
 			int b = skipSpaces();
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
-				b = buffer[pos++];
-			}
-			return pos + 10 <= bufferLength ? nextIntFast(b, negative) : nextIntSlow(b, negative);
-		}
-
-		private int nextIntFast(int b, final boolean negative) {
+			boolean negative = b == '-';
 			final byte[] buf = buffer;
 			int p = pos, n = 0;
-			long a = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
-			long check = a & 0xF0F0F0F0F0F0F0F0L;
+			if (negative) b = buf[p++];
+			long a = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			final long check = a & 0xF0F0F0F0F0F0F0F0L;
 			if (check == 0) {
 				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
 				a = (a * 100 + (a >>> 16)) & 0x0000FFFF0000FFFFL;
@@ -325,43 +704,15 @@ public final class A {
 			return negative ? -n : n;
 		}
 
-		private int nextIntSlow(int b, final boolean negative) {
-			int p = pos, len = bufferLength;
-			int n = 0;
-			do {
-				n = (n << 3) + (n << 1) + (b & 15);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buffer[p++];
-			} while (b > 32);
-			pos = p;
-			return negative ? -n : n;
-		}
-
 		public long nextLong() {
 			int b = skipSpaces();
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
-				b = buffer[pos++];
-			}
-			return pos + 20 <= bufferLength ? nextLongFast(b, negative) : nextLongSlow(b, negative);
-		}
-
-		private long nextLongFast(int b, final boolean negative) {
+			boolean negative = b == '-';
 			final byte[] buf = buffer;
 			int p = pos;
+			if (negative) b = buf[p++];
 			long n = 0;
-			long a = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
-			long check = a & 0xF0F0F0F0F0F0F0F0L;
+			long a = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+			final long check = a & 0xF0F0F0F0F0F0F0F0L;
 			if (check == 0) {
 				a = (a * 10 + (a >>> 8)) & 0x00FF00FF00FF00FFL;
 				a = (a * 100 + (a >>> 16)) & 0x0000FFFF0000FFFFL;
@@ -369,8 +720,8 @@ public final class A {
 				n = a;
 				p += 7;
 				b = buf[p++];
-				long a2 = (long) Handles.LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
-				long check2 = a2 & 0xF0F0F0F0F0F0F0F0L;
+				long a2 = (long) LONG_HANDLE.get(buf, p - 1) ^ 0x3030303030303030L;
+				final long check2 = a2 & 0xF0F0F0F0F0F0F0F0L;
 				if (check2 == 0) {
 					a2 = (a2 * 10 + (a2 >>> 8)) & 0x00FF00FF00FF00FFL;
 					a2 = (a2 * 100 + (a2 >>> 16)) & 0x0000FFFF0000FFFFL;
@@ -388,107 +739,31 @@ public final class A {
 			return negative ? -n : n;
 		}
 
-		private long nextLongSlow(int b, final boolean negative) {
-			int p = pos, len = bufferLength;
-			long n = 0;
-			do {
-				n = (n << 3) + (n << 1) + (b & 15);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buffer[p++];
-			} while (b > 32);
-			pos = p;
-			return negative ? -n : n;
-		}
-
 		public double nextDouble() {
 			int b = skipSpaces();
-			boolean negative = false;
-			if (b == '-') {
-				negative = true;
-				if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
-				b = buffer[pos++];
-			}
-			return pos + 20 <= bufferLength ? nextDoubleFast(b, negative) : nextDoubleSlow(b, negative);
-		}
-
-		private double nextDoubleFast(int b, final boolean negative) {
+			final boolean negative = b == '-';
 			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
+			int p = pos;
+			if (negative) b = buf[p++];
 			long intPart = 0;
 			do {
 				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
 				b = buf[p++];
 			} while ('0' <= b && b <= '9');
 			double result = intPart;
-			if (b == '.') result += parseFracPart(p, len, buf);
+			if (b == '.') result += parseFracPart(p, buf);
 			else pos = p;
 			return negative ? -result : result;
 		}
 
-		private double nextDoubleSlow(int b, final boolean negative) {
-			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
-			long intPart = 0;
-			do {
-				intPart = (intPart << 3) + (intPart << 1) + (b & 15);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						b = -1;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buf[p++];
-			} while ('0' <= b && b <= '9');
-
-			double result = intPart;
-			if (b == '.') result += parseFracPart(p, len, buf);
-			else pos = p;
-			return negative ? -result : result;
-		}
-
-		private double parseFracPart(int p, int len, final byte[] buf) {
-			if (p == len) {
-				pos = p;
-				hasNextByte();
-				p = pos;
-				len = bufferLength;
-			}
+		private double parseFracPart(int p, final byte[] buf) {
 			int b = buf[p++];
 			long fracPart = 0, divisor = 1;
-			if (p + 20 <= len) {
-				do {
-					fracPart = fracPart * 10 + (b & 15);
-					divisor *= 10;
-					b = buf[p++];
-				} while ('0' <= b && b <= '9');
-			} else {
-				do {
-					fracPart = fracPart * 10 + (b & 15);
-					divisor *= 10;
-					if (p == len) {
-						pos = p;
-						if (!hasNextByte()) {
-							p = pos;
-							break;
-						}
-						p = pos;
-						len = bufferLength;
-					}
-					b = buf[p++];
-				} while ('0' <= b && b <= '9');
-			}
+			do {
+				fracPart = fracPart * 10 + (b & 15);
+				divisor *= 10;
+				b = buf[p++];
+			} while ('0' <= b && b <= '9');
 			pos = p;
 			return (double) fracPart / divisor;
 		}
@@ -496,109 +771,29 @@ public final class A {
 		public String next() {
 			skipSpaces();
 			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
+			int p = pos;
 			final int start = p - 1;
-			while (p < len && buf[p] > 32) p++;
-			if (p < len) {
-				final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
-				pos = p + 1;
-				return s;
-			}
-			final StringBuilder sb = new StringBuilder(len - start + 16);
-			for (int i = start; i < len; i++) sb.append((char) buf[i]);
-			while (true) {
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				final int b = buf[p++];
-				if (b <= 32) break;
-				sb.append((char) b);
-			}
-			pos = p;
-			return sb.toString();
+			while (buf[p] > 32) p++;
+			final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
+			pos = p + 1;
+			return s;
 		}
 
 		public StringBuilder nextStringBuilder() {
-			final StringBuilder sb = new StringBuilder();
-			int b = skipSpaces(), p = pos, len = bufferLength;
-			do {
-				sb.append((char) b);
-				if (p == len) {
-					pos = p;
-					if (!hasNextByte()) {
-						p = pos;
-						break;
-					}
-					p = pos;
-					len = bufferLength;
-				}
-				b = buffer[p++];
-			} while (b > 32);
-			pos = p;
-			return sb;
+			return new StringBuilder(next());
 		}
 
 		public String nextLine() {
-			if (pos == bufferLength && !hasNextByte()) throw new NoSuchElementException();
 			final byte[] buf = buffer;
-			int p = pos, len = bufferLength;
+			int p = pos;
 			final int start = p;
-			while (p < len) {
+			while (p < bufferLength) {
 				final int b = buf[p];
-				if (b == '\n' || b == '\r') {
-					final String s = new String(buf, start, p - start, StandardCharsets.US_ASCII);
-					p++;
-					if (b == '\r') {
-						if (p == len) {
-							pos = p;
-							hasNextByte();
-							p = pos;
-							len = bufferLength;
-						}
-						if (p < len && buf[p] == '\n') p++;
-					}
-					pos = p;
-					return s;
-				}
+				if (b == '\n' || b == '\r') break;
 				p++;
 			}
-
-			final StringBuilder sb = new StringBuilder();
-			for (int i = start; i < len; i++) sb.append((char) buf[i]);
-			while (true) {
-				pos = len;
-				if (!hasNextByte()) {
-					pos = len;
-					return sb.toString();
-				}
-				p = pos;
-				len = bufferLength;
-				while (p < len) {
-					final int b = buf[p];
-					if (b == '\n' || b == '\r') {
-						p++;
-						if (b == '\r') {
-							if (p == len) {
-								pos = p;
-								hasNextByte();
-								p = pos;
-								len = bufferLength;
-							}
-							if (p < len && buf[p] == '\n') p++;
-						}
-						pos = p;
-						return sb.toString();
-					}
-					sb.append((char) b);
-					p++;
-				}
-			}
+			pos = p + (buf[p] == '\r' && buf[p + 1] == '\n' ? 2 : 1);
+			return new String(buf, start, p - start, StandardCharsets.US_ASCII);
 		}
 
 		public BigInteger nextBigInteger() {
@@ -648,7 +843,17 @@ public final class A {
 		}
 
 		public char[] nextChars() {
-			return next().toCharArray();
+			skipSpaces();
+			int p = pos;
+			final int start = p - 1;
+			while (buffer[p] > 32) p++;
+			final int len = p - start;
+			final char[] c = new char[len];
+			for (int i = 0; i < len; i++) {
+				c[i] = (char) buffer[start + i];
+			}
+			pos = p + 1;
+			return c;
 		}
 
 		public char[] nextChars(final int n) {
@@ -937,9 +1142,6 @@ public final class A {
 			return multiset;
 		}
 
-		private static final class Handles {
-			private static final VarHandle LONG_HANDLE = MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
-		}
 	}
 
 	@SuppressWarnings("unused")
