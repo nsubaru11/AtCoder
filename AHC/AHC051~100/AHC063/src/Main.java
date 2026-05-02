@@ -4,47 +4,92 @@ import java.math.*;
 import java.nio.*;
 import java.nio.charset.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.function.*;
-import java.util.stream.*;
 
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
 
-public final class E {
+public final class Main {
 
 	// region < Constants & Globals >
+	private static final long startTime = System.currentTimeMillis();
 	private static final boolean DEBUG = true;
 	private static final int MOD = 998244353;
 	// private static final int MOD = 1_000_000_007;
-	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
-	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
+	private static final byte[] di = new byte[]{0, -1, 0, 1, -1, -1, 1, 1};
+	private static final byte[] dj = new byte[]{-1, 0, 1, 0, -1, 1, 1, -1};
 	private static final FastScanner sc = new FastScanner();
 	private static final FastPrinter out = new FastPrinter();
+	private static long[][] ZOBRIST_GRID;
+	private static long[] ZOBRIST_SNAKE, ZOBRIST_HEAD;
+	private static byte[] init, target;
+	private static int n, nn, m;
 	// endregion
 
 	private static void solve() {
-		int n = sc.nextInt();
-		int k = sc.nextInt();
-		int q = sc.nextInt();
-		IntAVLMultiset avl = new IntAVLMultiset();
-		int[] a = new int[n];
-		avl.add(0, n);
-		long ans = 0;
-		while (q-- > 0) {
-			int x = sc.nextInt0();
-			int y = -sc.nextInt();
-			int ak = k < n ? avl.getByIndex(k) : Integer.MAX_VALUE;
-			if (avl.indexOf(a[x]) < k) {
-				ans += min(ak, y) - a[x];
-			} else {
-				int ak1 = avl.getByIndex(k - 1);
-				ans += min(y, ak1) - ak1;
+		init();
+		beamSearch();
+	}
+
+	private static int beamSearch() {
+		int w = 10000;
+		PriorityQueue<Ouroboros> cur = new PriorityQueue<>(w * 4, true);
+		PriorityQueue<Ouroboros> next = new PriorityQueue<>(w * 4, true);
+		Ouroboros best = new Ouroboros(init);
+		cur.push(best);
+		LongHashSet visited = new LongHashSet();
+		for (int turn = 0; turn < 100000; turn++) {
+			long elapsed = System.currentTimeMillis() - startTime;
+			if (elapsed > 1900) break;
+			int curW = max(1500, (int) (w * (2000 - elapsed) / 2000));
+			for (Ouroboros state : cur) {
+				for (byte d = 0; d < 4; d++) {
+					Ouroboros nextState = state.clone();
+					long res = nextState.move(d);
+					if (res == -1) continue;
+					if (best.score > nextState.score) best = nextState;
+					if (nextState.len == m && nextState.e == 0) continue;
+					long hash = nextState.hash
+							^ ((long) nextState.len << 32)
+							^ (nextState.e * 0x9E3779B97F4A7C15L)
+							^ nextState.index[nextState.head];
+					if (visited.add(hash)) next.push(nextState);
+				}
 			}
-			avl.remove(a[x]);
-			avl.add(y);
-			a[x] = y;
-			out.println(-ans);
+			int size = next.size();
+			while (size-- > curW) next.poll();
+			if (next.isEmpty()) break;
+			PriorityQueue<Ouroboros> temp = cur;
+			cur = next;
+			next = temp;
+			next.clear();
+			visited.clear();
 		}
+		best.print();
+		return best.score;
+	}
+
+	private static void init() {
+		n = sc.nextInt(); // 8 <= n <= 16
+		nn = n * n;
+		m = sc.nextInt(); // 3 * 256 / 4 = 192 (n^2 / 4 <= m <= 3 * n^2 / 4)
+		int c = sc.nextInt(); // 3 <= c <= 7
+		target = new byte[m];
+		for (int i = 0; i < m; i++) target[i] = (byte) (sc.nextChar() - '0');
+		init = new byte[nn];
+		for (int i = 0; i < nn; i++) init[i] = (byte) (sc.nextChar() - '0');
+
+		ThreadLocalRandom rnd = ThreadLocalRandom.current();
+		ZOBRIST_GRID = new long[c + 1][nn];
+		ZOBRIST_SNAKE = new long[nn];
+		ZOBRIST_HEAD = new long[nn];
+
+		for (int i = 0; i < nn; i++) {
+			ZOBRIST_SNAKE[i] = rnd.nextLong();
+			ZOBRIST_HEAD[i] = rnd.nextLong();
+		}
+		for (int i = 0; i <= c; i++) setAll(ZOBRIST_GRID[i], _ -> rnd.nextLong());
 	}
 
 	// region < Utility Methods >
@@ -236,668 +281,506 @@ public final class E {
 		}
 	}
 
-	@SuppressWarnings("unused")
-	private static final class IntAVLMultiset implements Iterable<Integer> {
-		// -------------- Fields --------------
-		private Node root;
-		private int first, last;
-		private long size;
-		private int uniqueSize;
+	private static final class Ouroboros implements Comparable<Ouroboros>, Cloneable {
+		private static final char[] opc = {'L', 'U', 'R', 'D'};
+		private final int[] index;
+		private final byte[] color, grid;
+		private final boolean[] isSnake;
+		private final Ouroboros prev;
+		private int head, len, e, t, score;
+		private char op;
+		private long hash;
 
-		// -------------- Constructors --------------
-		public IntAVLMultiset() {
-			clear();
+		public Ouroboros(final byte[] init) {
+			index = new int[m];
+			color = new byte[m];
+			grid = new byte[nn];
+			isSnake = new boolean[nn];
+			System.arraycopy(init, 0, grid, 0, nn);
+			head = 4;
+			len = 5;
+			for (int i = 0; i < 5; i++) {
+				color[i] = 1;
+				isSnake[index[i] = i * n] = true;
+			}
+			score = 10000 * (2 * (m - len));
+			prev = null;
+			long h = 0;
+			h ^= ZOBRIST_HEAD[index[head]];
+			for (int i = 0; i < nn; i++) {
+				h ^= ZOBRIST_GRID[grid[i]][i];
+				if (isSnake[i]) h ^= ZOBRIST_SNAKE[i];
+			}
+			this.hash = h;
 		}
 
-		// -------------- Size & State --------------
-		public long size() {
+		private Ouroboros(Ouroboros prev) {
+			index = new int[m];
+			color = new byte[m];
+			grid = new byte[nn];
+			isSnake = new boolean[nn];
+			this.prev = prev;
+		}
+
+		public Ouroboros clone() {
+			Ouroboros o = new Ouroboros(this);
+			System.arraycopy(index, 0, o.index, 0, m);
+			System.arraycopy(color, 0, o.color, 0, len);
+			System.arraycopy(grid, 0, o.grid, 0, nn);
+			System.arraycopy(isSnake, 0, o.isSnake, 0, nn);
+			o.e = e;
+			o.t = t;
+			o.head = head;
+			o.len = len;
+			o.score = score;
+			o.hash = hash;
+			return o;
+		}
+
+		public int move(final byte d) {
+			int old = index[head];
+			int ni = old / n + di[d], nj = old % n + dj[d];
+			int idx = ni * n + nj;
+			if (!isValidRange(ni, nj, n, n) || index[(head - 1 + m) % m] == idx) return -1;
+			hash ^= ZOBRIST_HEAD[old];
+			hash ^= ZOBRIST_HEAD[idx];
+			op = opc[d];
+			t++;
+			head = (head + 1) % m;
+			if (grid[idx] != 0) {
+				byte eat = grid[idx];
+				hash ^= ZOBRIST_GRID[eat][idx];
+				hash ^= ZOBRIST_GRID[0][idx];
+				if (target[len] != (color[len++] = eat)) e++;
+				grid[idx] = 0;
+			} else {
+				int oldTail = index[(head - len + m) % m];
+				isSnake[oldTail] = false;
+				hash ^= ZOBRIST_SNAKE[oldTail];
+				if (isSnake[idx]) {
+					int tail = (head - len + 1 + m) % m;
+					while (index[tail] != idx) {
+						int i = index[tail];
+						byte ci = color[--len];
+						if (target[len] != (grid[i] = ci)) e--;
+						isSnake[i] = false;
+						hash ^= ZOBRIST_SNAKE[i];
+						hash ^= ZOBRIST_GRID[0][i];
+						hash ^= ZOBRIST_GRID[ci][i];
+						tail = (tail + 1) % m;
+					}
+				}
+			}
+			if (!isSnake[idx]) hash ^= ZOBRIST_SNAKE[idx];
+			isSnake[index[head] = idx] = true;
+
+			score = t + 10000 * (e + 2 * (m - len));
+			// evalScore = evaluate(idx);
+			return score;
+		}
+
+		// private int evaluate(int idx) {
+		// 	return score;
+		// 	// if (len == m) return score;
+		// 	// byte nextColor = target[len];
+		// 	// int minDist = 100;
+		// 	// int i = idx / n, j = idx % n;
+		// 	// for (int ni = 0, ij = 0; ni < n; ni++) {
+		// 	// 	for (int nj = 0; nj < n; nj++, ij++) {
+		// 	// 		if (grid[ij] != nextColor) continue;
+		// 	// 		int di = abs(i - ni) + abs(j - nj);
+		// 	// 		if (di < minDist) {
+		// 	// 			minDist = di;
+		// 	// 			if (minDist == 1) break;
+		// 	// 		}
+		// 	// 	}
+		// 	// }
+		// 	// return minDist == 100 ? score : score + minDist * 8;
+		// }
+
+		public void print() {
+			Ouroboros p = this;
+			char[] ans = new char[t];
+			int loop = t;
+			while (p.op != 0) {
+				ans[--loop] = p.op;
+				p = p.prev;
+			}
+			out.println(ans);
+		}
+
+		public int compareTo(final Ouroboros o) {
+			return Integer.compare(score, o.score);
+		}
+	}
+
+	/**
+	 * 競技プログラミング向け優先度キュー（ジェネリック版）
+	 */
+	@SuppressWarnings("unused")
+	private static final class PriorityQueue<T extends Comparable<T>> implements Iterable<T> {
+		// -------------- フィールド --------------
+		private static final int DEFAULT_INITIAL_CAPACITY = 1024;
+		private final Comparator<? super T> comparator;
+		private T[] buf;
+		private int size, capacity, unsortedCount;
+
+		// -------------- コンストラクタ --------------
+
+		/**
+		 * コンストラクタ（デフォルト容量1024、最小値優先）
+		 */
+		public PriorityQueue() {
+			this(DEFAULT_INITIAL_CAPACITY, Comparator.naturalOrder(), false);
+		}
+
+		/**
+		 * コンストラクタ（最小値優先）
+		 *
+		 * @param capacity 初期容量
+		 */
+		public PriorityQueue(int capacity) {
+			this(capacity, Comparator.naturalOrder(), false);
+		}
+
+		/**
+		 * コンストラクタ（デフォルト容量1024）
+		 *
+		 * @param comparator 比較関数
+		 */
+		public PriorityQueue(Comparator<T> comparator) {
+			this(DEFAULT_INITIAL_CAPACITY, comparator, false);
+		}
+
+		/**
+		 * コンストラクタ（デフォルト容量1024）
+		 *
+		 * @param isDescendingOrder true の場合は最大値優先（降順）、false の場合は最小値優先（昇順）
+		 */
+		public PriorityQueue(boolean isDescendingOrder) {
+			this(DEFAULT_INITIAL_CAPACITY, Comparator.naturalOrder(), isDescendingOrder);
+		}
+
+		/**
+		 * コンストラクタ
+		 *
+		 * @param capacity   初期容量
+		 * @param comparator 比較関数
+		 */
+		public PriorityQueue(int capacity, Comparator<T> comparator) {
+			this(capacity, comparator, false);
+		}
+
+		/**
+		 * コンストラクタ（デフォルト容量1024）
+		 *
+		 * @param comparator        比較関数
+		 * @param isDescendingOrder true の場合は最大値優先（降順）、false の場合は最小値優先（昇順）
+		 */
+		public PriorityQueue(Comparator<T> comparator, boolean isDescendingOrder) {
+			this(DEFAULT_INITIAL_CAPACITY, comparator, isDescendingOrder);
+		}
+
+		/**
+		 * コンストラクタ
+		 *
+		 * @param capacity          初期容量
+		 * @param isDescendingOrder true の場合は最大値優先（降順）、false の場合は最小値優先（昇順）
+		 */
+		public PriorityQueue(int capacity, boolean isDescendingOrder) {
+			this(capacity, Comparator.naturalOrder(), isDescendingOrder);
+		}
+
+		/**
+		 * コンストラクタ
+		 *
+		 * @param capacity          初期容量
+		 * @param comparator        比較関数
+		 * @param isDescendingOrder true の場合は最大値優先（降順）、false の場合は最小値優先（昇順）
+		 */
+		public PriorityQueue(int capacity, Comparator<T> comparator, boolean isDescendingOrder) {
+			this.capacity = max(capacity, DEFAULT_INITIAL_CAPACITY);
+			this.comparator = isDescendingOrder ? comparator.reversed() : comparator;
+			buf = (T[]) new Comparable<?>[this.capacity];
+			size = 0;
+			unsortedCount = 0;
+		}
+
+		// -------------- 公開メソッド --------------
+
+		/**
+		 * 要素を追加する
+		 *
+		 * @param v 追加する要素
+		 */
+		public void push(T v) {
+			if (size == capacity) buf = copyOf(buf, capacity <<= 1);
+			buf[size++] = v;
+			unsortedCount++;
+		}
+
+		/**
+		 * 全ての要素を追加する
+		 *
+		 * @param elements 追加する要素の配列
+		 */
+		public void addAll(final T[] elements) {
+			final int n = elements.length;
+			if (size + n > capacity) {
+				while (size + n > capacity) capacity <<= 1;
+				buf = copyOf(buf, capacity);
+			}
+			System.arraycopy(elements, 0, buf, size, n);
+			size += n;
+			unsortedCount += n;
+		}
+
+		/**
+		 * 全ての要素を追加する
+		 *
+		 * @param elements 追加する要素のイテラブル
+		 */
+		public void addAll(final Iterable<T> elements) {
+			if (elements instanceof final Collection<T> c) {
+				final int n = c.size();
+				int s = size;
+				if (s + n > capacity) {
+					int newCap = capacity;
+					while (s + n > newCap) newCap <<= 1;
+					buf = copyOf(buf, newCap);
+					capacity = newCap;
+				}
+				final T[] b = buf;
+				for (final T e : c) b[s++] = e;
+				size = s;
+				unsortedCount += n;
+			} else {
+				for (final T e : elements) push(e);
+			}
+		}
+
+		/**
+		 * ヒープの先頭要素を取得
+		 *
+		 * @return ヒープの先頭要素（昇順時は最小、降順時は最大）
+		 * @throws NoSuchElementException ヒープが空の場合
+		 */
+		public T peek() {
+			if (isEmpty()) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			return buf[0];
+		}
+
+		/**
+		 * ヒープの先頭要素を削除して返す
+		 *
+		 * @return 削除された要素（昇順時は最小、降順時は最大）
+		 */
+		public T poll() {
+			if (isEmpty()) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			T res = buf[0];
+			if (--size > 0) siftDown(buf[size], 0);
+			return res;
+		}
+
+		/**
+		 * ヒープの先頭要素を置き換える
+		 *
+		 * @param v 置き換える要素
+		 * @return 置き換えられた要素（昇順時は最小、降順時は最大）
+		 */
+		public T replaceTop(final T v) {
+			if (isEmpty()) throw new NoSuchElementException();
+			if (unsortedCount > 0) ensureHeapProperty();
+			T res = buf[0];
+			buf[0] = v;
+			siftDown(buf[0], 0);
+			return res;
+		}
+
+		/**
+		 * 要素数を取得する
+		 *
+		 * @return 要素数
+		 */
+		public int size() {
 			return size;
 		}
 
-		public int uniqueSize() {
-			return uniqueSize;
+		/**
+		 * ヒープをクリアする
+		 */
+		public void clear() {
+			size = 0;
+			unsortedCount = 0;
 		}
 
+		/**
+		 * ヒープが空かどうかを判定
+		 *
+		 * @return 空の場合はtrue
+		 */
 		public boolean isEmpty() {
 			return size == 0;
 		}
 
+		/**
+		 * 要素を順序付けていないイテレータを取得する
+		 *
+		 * @return 順序付けていないイテレータ
+		 */
+		@Override
+		public Iterator<T> iterator() {
+			return new Iterator<>() {
+				int i = 0;
+
+				@Override
+				public boolean hasNext() {
+					return i < size;
+				}
+
+				@Override
+				public T next() {
+					if (!hasNext()) throw new NoSuchElementException();
+					return buf[i++];
+				}
+			};
+		}
+
+		// -------------- ヒープ構築（遅延評価） --------------
+
+		/**
+		 * 遅延評価された未ソート要素をヒープ化し、ヒーププロパティを復元する
+		 * <p>
+		 * このメソッドは、未ソート要素が存在する場合に最適なアルゴリズムを自動選択して実行します
+		 * <p><b>分岐点の決定：</b>
+		 * 両アルゴリズムの最大比較回数を計算し、コストが小さい方を実行する
+		 * (heapifyCost < incrementalCost なら heapify を選択)
+		 */
+		private void ensureHeapProperty() {
+			final int log2N = 31 - Integer.numberOfLeadingZeros(size);
+			final int heapifyCost = size * 2 - 2 * log2N;
+			final int incrementalCost = unsortedCount <= 100 ? getIncrementalCostStrict() : getIncrementalCostApprox();
+			if (heapifyCost < incrementalCost) {
+				heapify();
+			} else {
+				for (int i = size - unsortedCount; i < size; i++) siftUp(buf[i], i);
+			}
+			unsortedCount = 0;
+		}
+
+		/**
+		 * インクリメンタル構築の最大比較回数を厳密に計算する
+		 *
+		 * @return 最大比較回数の合計
+		 */
+		private int getIncrementalCostStrict() {
+			int totalCost = 0;
+			final int sortedSize = size - unsortedCount;
+			for (int i = 1; i <= unsortedCount; i++) {
+				final int currentHeapSize = sortedSize + i;
+				final int depth = 31 - Integer.numberOfLeadingZeros(currentHeapSize);
+				totalCost += depth;
+			}
+			return totalCost;
+		}
+
+		/**
+		 * インクリメンタル構築の最大比較回数を高速に近似計算する
+		 * <p>コスト ≈ k * floor(log₂(平均ヒープサイズ))
+		 *
+		 * @return 最大比較回数の近似値
+		 */
+		private int getIncrementalCostApprox() {
+			final int sortedSize = size - unsortedCount;
+			final int avgHeapSize = sortedSize + (unsortedCount >> 1);
+			if (avgHeapSize == 0) return 0;
+			final int depthOfAvgSize = 31 - Integer.numberOfLeadingZeros(avgHeapSize);
+			return unsortedCount * depthOfAvgSize;
+		}
+
+		/**
+		 * Bottom-up heapify (Floyd's algorithm)
+		 */
+		private void heapify() {
+			for (int i = (size >> 1) - 1; i >= 0; i--) siftDown(buf[i], i);
+		}
+
+		// -------------- ヒープ操作（基本） --------------
+
+		/**
+		 * siftUp操作 - O(log N)
+		 * <p>
+		 * 新要素を親と比較しながら上方向に移動（親 ≤ 子）
+		 *
+		 * @param v 移動させる要素
+		 * @param i 要素の現在位置
+		 */
+		private void siftUp(final T v, int i) {
+			final T[] b = buf;
+			while (i > 0) {
+				final int j = (i - 1) >> 1;
+				if (comparator.compare(v, b[j]) >= 0) break;
+				b[i] = b[j];
+				i = j;
+			}
+			b[i] = v;
+		}
+
+		/**
+		 * siftDown操作 - O(log N)
+		 * <p>
+		 * 末尾要素を子と比較しながら下方向に移動（親 ≤ 子）
+		 * 2つの子のうち小さい方と比較
+		 *
+		 * @param v 移動させる要素
+		 * @param i 要素の現在位置
+		 */
+		private void siftDown(final T v, int i) {
+			final T[] b = buf;
+			final int n = size;
+			final int half = n >> 1;
+			while (i < half) {
+				int child = (i << 1) + 1;
+				if (child + 1 < n && comparator.compare(b[child], b[child + 1]) > 0) child++;
+				if (comparator.compare(v, b[child]) <= 0) break;
+				b[i] = b[child];
+				i = child;
+			}
+			b[i] = v;
+		}
+	}
+
+	private static final class LongHashSet {
+		private final int[] stamp;
+		private final long[] keys;
+		private final int mask;
+		private int size, curStamp;
+
+		public LongHashSet() {
+			int capacity = 1 << 20;
+			stamp = new int[capacity];
+			keys = new long[capacity];
+			mask = capacity - 1;
+			curStamp = 1;
+		}
+
+		public boolean add(long key) {
+			int idx = Long.hashCode(key) & mask;
+			while (stamp[idx] == curStamp) {
+				if (keys[idx] == key) return false;
+				idx = (idx + 1) & mask;
+			}
+			stamp[idx] = curStamp;
+			keys[idx] = key;
+			size++;
+			return true;
+		}
+
 		public void clear() {
-			root = null;
-			first = last = 0;
-			size = uniqueSize = 0;
-		}
-
-		// -------------- String --------------
-		public String toString() {
-			StringJoiner sj = new StringJoiner(", ", "[", "]");
-			PrimitiveIterator.OfInt it = iterator();
-			while (it.hasNext()) sj.add(Integer.toString(it.nextInt()));
-			return sj.toString();
-		}
-
-		// -------------- Contains --------------
-		public boolean contains(final int t) {
-			if (size == 0) return false;
-			return count(t) > 0;
-		}
-
-		public boolean containsAll(final Collection<Integer> c) {
-			if (size == 0) return c.isEmpty();
-			boolean contains = true;
-			for (int t : c) {
-				if (!contains(t)) {
-					contains = false;
-					break;
-				}
-			}
-			return contains;
-		}
-
-		// -------------- Add --------------
-		public boolean add(final int t) {
-			return applyDeltaAndUpdate(t, 1, false);
-		}
-
-		public boolean add(final int t, final long cnt) {
-			if (cnt <= 0) throw new IllegalArgumentException("cnt must be > 0");
-			return applyDeltaAndUpdate(t, cnt, false);
-		}
-
-		public boolean addAll(final Collection<Integer> c) {
-			long oldSize = size;
-			for (int a : c) add(a);
-			return size != oldSize;
-		}
-
-		// -------------- Remove --------------
-		public boolean remove(final int t) {
-			return applyDeltaAndUpdate(t, -1, false);
-		}
-
-		public boolean remove(final int t, final long cnt) {
-			if (cnt <= 0) throw new IllegalArgumentException("cnt must be > 0");
-			return applyDeltaAndUpdate(t, -cnt, false);
-		}
-
-		public boolean removeAll(final int t) {
-			return applyDeltaAndUpdate(t, 0, true);
-		}
-
-		public boolean removeAll(final Collection<Integer> c) {
-			if (isEmpty()) return false;
-			long oldSize = size;
-			Collection<Integer> hs = c instanceof Set ? c : new HashSet<>(c);
-			for (int v : hs) removeAll(v);
-			return size != oldSize;
-		}
-
-		public boolean removeAt(final long index) {
-			if (index < 0 || size <= index) throw new IndexOutOfBoundsException();
-			return removeByIndex(index, false);
-		}
-
-		public boolean removeUniqueAt(final int index) {
-			if (index < 0 || uniqueSize <= index) throw new IndexOutOfBoundsException();
-			return removeByIndex(index, true);
-		}
-
-		private boolean removeByIndex(final long index, final boolean unique) {
-			long oldSize = size;
-			int oldUniqueSize = uniqueSize;
-			root = root.removeAt(index, unique);
-			update();
-			boolean updated = size != oldSize;
-			if (size > 0 && uniqueSize != oldUniqueSize) {
-				if (!unique) {
-					if (index == 0) first = leftmost(root).label;
-					if (index == oldSize - 1) last = rightmost(root).label;
-				} else {
-					if (index == 0) first = leftmost(root).label;
-					if (index == oldUniqueSize - 1) last = rightmost(root).label;
-				}
-			}
-			return updated;
-		}
-
-		// -------------- Arrays --------------
-		public int[] toArray() {
-			if (size == 0) return new int[0];
-			if (size > Integer.MAX_VALUE)
-				throw new IllegalStateException("Array too large: " + size + " elements (exceeds single-array limit)");
-			int[] arr = new int[(int) size];
-			PrimitiveIterator.OfInt it = iterator();
-			for (int i = 0; it.hasNext(); i++) arr[i] = it.nextInt();
-			return arr;
-		}
-
-		public int[] toUniqueArray() {
-			if (uniqueSize == 0) return new int[0];
-			int[] arr = new int[uniqueSize];
-			PrimitiveIterator.OfInt it = uniqueIterator();
-			for (int i = 0; it.hasNext(); i++) arr[i] = it.nextInt();
-			return arr;
-		}
-
-		// -------------- Streams --------------
-		public IntStream stream() {
-			return toStream(false);
-		}
-
-		public IntStream uniqueStream() {
-			return toStream(true);
-		}
-
-		private IntStream toStream(final boolean unique) {
-			long size = unique ? uniqueSize : this.size;
-			int characteristics = Spliterator.ORDERED | Spliterator.NONNULL | Spliterator.SIZED | Spliterator.SUBSIZED;
-			if (unique) characteristics |= Spliterator.DISTINCT;
-			PrimitiveIterator.OfInt it = unique ? uniqueIterator() : iterator();
-			return StreamSupport.intStream(Spliterators.spliterator(it, size, characteristics), false);
-		}
-
-		// -------------- Iteration --------------
-		public PrimitiveIterator.OfInt iterator() {
-			return new AvlIterator(root, false);
-		}
-
-		public PrimitiveIterator.OfInt uniqueIterator() {
-			return new AvlIterator(root, true);
-		}
-
-		// -------------- Access by Index --------------
-		public int getByIndex(long index) {
-			if (index < 0 || size <= index) throw new IndexOutOfBoundsException();
-			Node cur = root;
-			while (cur != null) {
-				long leftSize = cur.left == null ? 0 : cur.left.size;
-				if (index < leftSize) {
-					cur = cur.left;
-				} else if (index >= leftSize + cur.cnt) {
-					index -= leftSize + cur.cnt;
-					cur = cur.right;
-				} else {
-					break;
-				}
-			}
-			return cur.label;
-		}
-
-		public int getByUniqueIndex(int index) {
-			if (index < 0 || uniqueSize <= index) throw new IndexOutOfBoundsException();
-			Node cur = root;
-			while (cur != null) {
-				int leftSize = cur.left == null ? 0 : cur.left.uniqueSize;
-				if (index < leftSize) {
-					cur = cur.left;
-				} else if (index >= leftSize + 1) {
-					index -= leftSize + 1;
-					cur = cur.right;
-				} else {
-					break;
-				}
-			}
-			return cur.label;
-		}
-
-		// -------------- Search & Rank --------------
-		public long indexOf(final int t) {
-			if (size == 0) return -1;
-			long index = index(t, false);
-			return index >= 0 ? index : -1;
-		}
-
-		public int uniqueIndexOf(final int t) {
-			if (size == 0) return -1;
-			int index = (int) index(t, true);
-			return index >= 0 ? index : -1;
-		}
-
-		public long rank(final int t) {
-			long index = index(t, false);
-			return index < 0 ? ~index : index;
-		}
-
-		public long uniqueRank(final int t) {
-			long index = index(t, true);
-			return index < 0 ? ~index : index;
-		}
-
-		private long index(final int t, final boolean unique) {
-			Node cur = root;
-			long index = 0;
-			while (cur != null) {
-				if (cur.label < t) {
-					index += unique ? cur.leftUniqueSize() + 1 : cur.leftSize() + cur.cnt;
-					cur = cur.right;
-				} else if (cur.label > t) {
-					cur = cur.left;
-				} else {
-					index += unique ? cur.leftUniqueSize() : cur.leftSize();
-					break;
-				}
-			}
-			return cur == null ? ~index : index;
-		}
-
-		// -------------- Bounds --------------
-		public long upperBound(final int t) {
-			Node cur = root;
-			long index = 0;
-			while (cur != null) {
-				if (cur.label < t) {
-					index += cur.leftSize() + cur.cnt;
-					cur = cur.right;
-				} else if (cur.label > t) {
-					cur = cur.left;
-				} else {
-					index += cur.leftSize() + cur.cnt - 1;
-					break;
-				}
-			}
-			return cur == null ? ~index : index;
-		}
-
-		public long lowerBound(final int t) {
-			Node cur = root;
-			long index = 0;
-			while (cur != null) {
-				if (cur.label < t) {
-					index += cur.leftSize() + cur.cnt;
-					cur = cur.right;
-				} else if (cur.label > t) {
-					cur = cur.left;
-				} else {
-					index += cur.leftSize();
-					break;
-				}
-			}
-			return cur == null ? ~index : index;
-		}
-
-		// -------------- Counts --------------
-		public long count(final int t) {
-			if (size == 0) return 0;
-			Node cur = root;
-			while (cur != null) {
-				if (cur.label < t) {
-					cur = cur.right;
-				} else if (cur.label > t) {
-					cur = cur.left;
-				} else {
-					break;
-				}
-			}
-			return cur == null ? 0 : cur.cnt;
-		}
-
-		// -------------- Navigation --------------
-		public Integer higher(final int key) {
-			return boundary(key, false, true);
-		}
-
-		public Integer ceiling(final int key) {
-			return boundary(key, true, true);
-		}
-
-		public Integer lower(final int key) {
-			return boundary(key, false, false);
-		}
-
-		public Integer floor(final int key) {
-			return boundary(key, true, false);
-		}
-
-		private Integer boundary(final int key, final boolean inclusive, final boolean higher) {
-			if (size == 0) return null;
-			if (first == key && inclusive) return first;
-			if (first > key) return higher ? first : null;
-			if (last == key && inclusive) return last;
-			if (last < key) return higher ? null : last;
-			Integer t = null;
-			Node cur = root;
-			while (cur != null) {
-				if (higher) {
-					if (cur.label > key || (inclusive && cur.label == key)) {
-						t = cur.label;
-						cur = cur.left;
-					} else {
-						cur = cur.right;
-					}
-				} else {
-					if (cur.label < key || (inclusive && cur.label == key)) {
-						t = cur.label;
-						cur = cur.right;
-					} else {
-						cur = cur.left;
-					}
-				}
-			}
-			return t;
-		}
-
-		// -------------- Endpoints --------------
-		public int first() {
-			return first;
-		}
-
-		public int last() {
-			return last;
-		}
-
-		public int pollFirst() {
-			if (size == 0) throw new NoSuchElementException();
-			int temp = first;
-			removeByIndex(0, false);
-			return temp;
-		}
-
-		public int pollLast() {
-			if (size == 0) throw new NoSuchElementException();
-			int temp = last;
-			removeByIndex(size - 1, false);
-			return temp;
-		}
-
-		public int pollFirstAll() {
-			if (size == 0) throw new NoSuchElementException();
-			int temp = first;
-			removeByIndex(0, true);
-			return temp;
-		}
-
-		public int pollLastAll() {
-			if (size == 0) throw new NoSuchElementException();
-			int temp = last;
-			removeByIndex(uniqueSize - 1, true);
-			return temp;
-		}
-
-		// -------------- Internal Helpers --------------
-		private boolean applyDeltaAndUpdate(final int t, final long delta, final boolean removeAll) {
-			if (size == 0) {
-				if (delta <= 0 || removeAll) return false;
-				first = last = t;
-				root = new Node(t, null, delta);
-				uniqueSize = 1;
-				size = delta;
-				return true;
-			}
-			if (!removeAll && delta > 0) {
-				if (t < first) first = t;
-				if (t > last) last = t;
-			}
-			long oldSize = size;
-			int oldUniqueSize = uniqueSize;
-			root = root.applyDelta(t, delta, removeAll);
-			update();
-			boolean updated = size != oldSize;
-			if (updated && size > 0 && uniqueSize != oldUniqueSize && (removeAll || delta <= 0)) {
-				if (t == first) first = leftmost(root).label;
-				if (t == last) last = rightmost(root).label;
-			}
-			return updated;
-		}
-
-		private void update() {
-			if (root == null) {
-				clear();
-				return;
-			}
-			root.parent = null;
-			uniqueSize = root.uniqueSize;
-			size = root.size;
-		}
-
-		private Node leftmost(Node cur) {
-			if (cur == null) return null;
-			while (cur.left != null) cur = cur.left;
-			return cur;
-		}
-
-		private Node rightmost(Node cur) {
-			if (cur == null) return null;
-			while (cur.right != null) cur = cur.right;
-			return cur;
-		}
-
-		private Node successor(Node cur) {
-			if (cur == null) return null;
-			if (cur.right != null) return leftmost(cur.right);
-			while (cur.parent != null && cur.parent.right == cur) cur = cur.parent;
-			return cur.parent;
-		}
-
-		// -------------- Nested classes --------------
-		private static final class Node {
-			private final int label;
-			private long cnt, size;
-			private int height, uniqueSize;
-			private Node left, right, parent;
-
-			private Node(final int label, final Node parent, final long cnt) {
-				this.label = label;
-				this.cnt = this.size = cnt;
-				this.height = this.uniqueSize = 1;
-				this.parent = parent;
-			}
-
-			private Node removeAt(long index, final boolean unique) {
-				long lIdx = unique ? leftUniqueSize() : leftSize();
-				long rIdx = lIdx + (unique ? 1 : cnt);
-				if (rIdx <= index) {
-					index -= rIdx;
-					setRight(right.removeAt(index, unique));
-				} else if (index < lIdx) {
-					setLeft(left.removeAt(index, unique));
-				} else {
-					cnt--;
-					if (unique || cnt <= 0) return removeInternal();
-				}
-				updateNode();
-				int bf = leftHeight() - rightHeight();
-				return abs(bf) <= 1 ? this : rotate(bf);
-			}
-
-			private Node applyDelta(final int t, final long delta, final boolean all) {
-				if (label < t) {
-					if (right == null) {
-						if (delta <= 0) return this;
-						setRight(new Node(t, this, delta));
-					} else {
-						setRight(right.applyDelta(t, delta, all));
-					}
-				} else if (label > t) {
-					if (left == null) {
-						if (delta <= 0) return this;
-						setLeft(new Node(t, this, delta));
-					} else {
-						setLeft(left.applyDelta(t, delta, all));
-					}
-				} else {
-					cnt += delta;
-					if (all || cnt <= 0) return removeInternal();
-				}
-				updateNode();
-				int bf = leftHeight() - rightHeight();
-				return abs(bf) <= 1 ? this : rotate(bf);
-			}
-
-			private Node removeInternal() {
-				if (left == null) return right;
-				if (right == null) return left;
-				Node temp;
-				if (leftHeight() >= rightHeight()) {
-					temp = left.extractMax();
-					if (temp == left) {
-						setLeft(temp.left);
-					} else {
-						int bf = left.leftHeight() - left.rightHeight();
-						setLeft(abs(bf) <= 1 ? left : left.rotate(bf));
-					}
-				} else {
-					temp = right.extractMin();
-					if (temp == right) {
-						setRight(temp.right);
-					} else {
-						int bf = right.leftHeight() - right.rightHeight();
-						setRight(abs(bf) <= 1 ? right : right.rotate(bf));
-					}
-				}
-				temp.parent = parent;
-				temp.setLeft(left);
-				temp.setRight(right);
-				temp.updateNode();
-				int bf = temp.leftHeight() - temp.rightHeight();
-				return abs(bf) <= 1 ? temp : temp.rotate(bf);
-			}
-
-			private Node extractMin() {
-				if (left == null) return this;
-				Node min = left.extractMin();
-				if (left == min) setLeft(left.right);
-				if (left != null) {
-					int bf = left.leftHeight() - left.rightHeight();
-					if (abs(bf) > 1) setLeft(left.rotate(bf));
-				}
-				updateNode();
-				return min;
-			}
-
-			private Node extractMax() {
-				if (right == null) return this;
-				Node max = right.extractMax();
-				if (right == max) setRight(right.left);
-				if (right != null) {
-					int bf = right.leftHeight() - right.rightHeight();
-					if (abs(bf) > 1) setRight(right.rotate(bf));
-				}
-				updateNode();
-				return max;
-			}
-
-			private Node rotate(final int bf) {
-				Node prevParent = parent;
-				Node newRoot;
-				if (bf > 0) {
-					int bfl = left.leftHeight() - left.rightHeight();
-					newRoot = bfl >= 0 ? rotateLL() : rotateLR();
-					newRoot.right.updateNode();
-				} else {
-					int bfr = right.leftHeight() - right.rightHeight();
-					newRoot = bfr > 0 ? rotateRL() : rotateRR();
-					newRoot.left.updateNode();
-				}
-				newRoot.updateNode();
-				newRoot.parent = prevParent;
-				return newRoot;
-			}
-
-			private Node rotateLR() {
-				Node newRoot = this.left.right;
-				Node tempLeft = newRoot.left;
-				Node tempRight = newRoot.right;
-				newRoot.setRight(this);
-				newRoot.setLeft(this.left);
-				newRoot.right.setLeft(tempRight);
-				newRoot.left.setRight(tempLeft);
-				newRoot.left.updateNode();
-				return newRoot;
-			}
-
-			private Node rotateLL() {
-				Node newRoot = this.left;
-				setLeft(newRoot.right);
-				newRoot.setRight(this);
-				return newRoot;
-			}
-
-			private Node rotateRR() {
-				Node newRoot = this.right;
-				setRight(newRoot.left);
-				newRoot.setLeft(this);
-				return newRoot;
-			}
-
-			private Node rotateRL() {
-				Node newRoot = this.right.left;
-				Node tempLeft = newRoot.left;
-				Node tempRight = newRoot.right;
-				newRoot.setLeft(this);
-				newRoot.setRight(this.right);
-				newRoot.left.setRight(tempLeft);
-				newRoot.right.setLeft(tempRight);
-				newRoot.right.updateNode();
-				return newRoot;
-			}
-
-			private void setLeft(final Node child) {
-				left = child;
-				if (child != null) child.parent = this;
-			}
-
-			private void setRight(final Node child) {
-				right = child;
-				if (child != null) child.parent = this;
-			}
-
-			private void updateNode() {
-				size = leftSize() + rightSize() + cnt;
-				height = 1 + max(leftHeight(), rightHeight());
-				uniqueSize = leftUniqueSize() + rightUniqueSize() + 1;
-			}
-
-			private int leftHeight() {
-				return left == null ? 0 : left.height;
-			}
-
-			private int rightHeight() {
-				return right == null ? 0 : right.height;
-			}
-
-			private long leftSize() {
-				return left == null ? 0 : left.size;
-			}
-
-			private long rightSize() {
-				return right == null ? 0 : right.size;
-			}
-
-			private int leftUniqueSize() {
-				return left == null ? 0 : left.uniqueSize;
-			}
-
-			private int rightUniqueSize() {
-				return right == null ? 0 : right.uniqueSize;
-			}
-		}
-
-		private final class AvlIterator implements PrimitiveIterator.OfInt {
-			private final boolean unique;
-			private Node cur;
-			private long remainingCnt;
-
-			AvlIterator(final Node root, final boolean unique) {
-				this.unique = unique;
-				cur = leftmost(root);
-				remainingCnt = cur == null ? 0 : cur.cnt;
-			}
-
-			public boolean hasNext() {
-				return cur != null;
-			}
-
-			public int nextInt() {
-				if (cur == null) throw new NoSuchElementException();
-				int val = cur.label;
-				if (!unique && remainingCnt > 1) {
-					remainingCnt--;
-					return val;
-				}
-				cur = successor(cur);
-				remainingCnt = cur == null ? 0 : cur.cnt;
-				return val;
-			}
+			curStamp++;
+			size = 0;
 		}
 	}
 
