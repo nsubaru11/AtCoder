@@ -25,7 +25,7 @@ public final class D {
 	private static void solve() {
 		int n = sc.nextInt();
 		int m = sc.nextInt();
-		// MEMO: 現在有効なアルバイトのうち、最も報酬が大きいものを選択していく。
+		// MEMO: 現在有効なアルバイトのうち、最も報酬が大きいものを選択していく。（スコア最大化）
 		ArrayList<Integer>[] list = new ArrayList[m];
 		for (int i = 0; i < n; i++) {
 			int a = sc.nextInt0();
