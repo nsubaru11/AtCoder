@@ -9,7 +9,7 @@ import java.nio.charset.*;
 import java.util.*;
 import java.util.function.*;
 
-public final class C2 {
+public final class D {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG = true;
@@ -19,36 +19,51 @@ public final class C2 {
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
 	private static final FastScanner sc = new FastScanner();
-	private static final FastPrinter out = new FastPrinter(64);
+	private static final FastPrinter out = new FastPrinter();
 	// endregion
 
+	// MEMO: ゲームDP
 	private static void solve() {
-		int n = sc.nextInt();
-		int m = sc.nextInt();
-		UndirectedGraph graph = new UndirectedGraph(n, m);
-		for (int i = 0; i < m; i++) {
-			int u = sc.nextInt0();
-			int v = sc.nextInt0();
-			graph.add(u, v);
-		}
-		out.println(dfs(n - 1, graph, new boolean[n]));
-	}
-
-	private static int dfs(int i, UndirectedGraph graph, boolean[] isBlack) {
-		if (i == -1) {
-			int cnt = 0;
-			for (int u = 0; u < graph.n; u++) {
-				for (int v : graph.adj(u)) {
-					if (u < v && isBlack[u] == isBlack[v]) cnt++;
+		int t = sc.nextInt();
+		while (t-- > 0) {
+			int n = sc.nextInt();
+			int m = sc.nextInt();
+			int k = sc.nextInt();
+			char[] s = sc.nextChars(n);
+			DirectedGraph graph = new DirectedGraph(n, m);
+			while (m-- > 0) {
+				int u = sc.nextInt0();
+				int v = sc.nextInt0();
+				graph.add(v, u);
+			}
+			int k2 = k << 1 | 1;
+			int[][] dp = new int[k2][n];
+			ArrayDeque<Integer> dq = new ArrayDeque<>();
+			for (int i = 0; i < n; i++) {
+				if (s[i] == 'A') {
+					dq.add(i * k2);
+					dp[0][i] = 'A';
+				} else if (s[i] == 'B') {
+					dq.add(i * k2);
+					dp[0][i] = 'B';
 				}
 			}
-			return cnt;
+			boolean[][] added = new boolean[k2][n];
+			while (!dq.isEmpty()) {
+				int u = dq.poll();
+				int i = u / k2, c = u % k2;
+				int dpi = dp[c][i];
+				if (c + 1 >= k2) continue;
+				for (int v : graph.adj(i)) {
+					if (dp[c + 1][v] == 0 || ((c + 1) & 1) + 'A' == dpi) {
+						dp[c + 1][v] = dpi;
+						if (!added[c + 1][v]) dq.add(v * k2 + c + 1);
+						added[c + 1][v] = true;
+					}
+				}
+			}
+			out.println(dp[k2 - 1][0] == 'A' ? "Alice" : "Bob");
 		}
-		int ans = dfs(i - 1, graph, isBlack);
-		isBlack[i] = true;
-		ans = min(ans, dfs(i - 1, graph, isBlack));
-		isBlack[i] = false;
-		return ans;
 	}
 
 	// region < Utility Methods >
@@ -344,87 +359,188 @@ public final class C2 {
 	}
 
 	/**
-	 * 自己ループを含まない連結無向グラフ管理用ライブラリ
+	 * 無向辺・自己ループを含まない有向連結グラフ管理用ライブラリ
 	 * <p>
-	 * 無向辺は追加順に0始まりの辺IDが割り当てられます。
-	 * 内部表現では1本の無向辺を2本の内部辺として保持しますが、
-	 * 外部には無向辺IDとして公開します。
-	 * <p>
-	 * {@link #adjEdgeIds(int)} で取得した辺IDは {@link #to(int, int)} と
-	 * {@link #cost(int)} にそのまま渡せます。
-	 * {@link #to(int, int)} は「頂点 {@code u} から見た接続先頂点」を返します。
+	 * 辺は追加順に0始まりの辺IDが割り当てられます。
+	 * {@link #adjEdgeIds(int)} で取得した辺IDは {@link #to(int)} と {@link #cost(int)} にそのまま渡せます。
 	 */
 	@SuppressWarnings("unused")
-	private static final class UndirectedGraph {
-		private final int[] dest, next, first, degree;
+	private static final class DirectedGraph {
+		private final int[] dest, next, first, inDegree, outDegree;
 		private final long[] cost;
 		private final int n;
 		private int edgeCount = 0;
 
-		public UndirectedGraph(final int n, final int m) {
+		public DirectedGraph(final int n, final int m) {
 			this.n = n;
-			int m2 = m * 2;
-			dest = new int[m2];
-			next = new int[m2];
+			dest = new int[m];
+			next = new int[m];
 			first = new int[n];
 			fill(first, -1);
-			degree = new int[n];
-			cost = new long[m2];
+			inDegree = new int[n];
+			outDegree = new int[n];
+			cost = new long[m];
 		}
 
 		public void add(final int i, final int j) {
 			add(i, j, 1);
 		}
 
-		public void add(final int i, final int j, final long c) {
+		public void add(final int i, final int j, long c) {
 			dest[edgeCount] = j;
 			next[edgeCount] = first[i];
 			cost[edgeCount] = c;
 			first[i] = edgeCount++;
-			degree[i]++;
-
-			dest[edgeCount] = i;
-			next[edgeCount] = first[j];
-			cost[edgeCount] = c;
-			first[j] = edgeCount++;
-			degree[j]++;
+			outDegree[i]++;
+			inDegree[j]++;
 		}
 
 		public int degree(final int i) {
-			return degree[i];
+			return inDegree[i] + outDegree[i];
 		}
 
-		public boolean isBipartite() {
-			int[] color = new int[n];
-			int[] q = new int[n];
-			int head = 0, tail = 0;
-			color[0] = 1;
-			q[tail++] = 0;
-			while (head < tail) {
-				int u = q[head++];
-				for (int e = first[u]; e != -1; e = next[e]) {
-					int v = dest[e];
-					if (color[v] == color[u]) return false;
-					if (color[v] != 0) continue;
-					color[v] = -color[u];
-					q[tail++] = v;
-				}
-			}
-			return true;
+		public int inDegree(final int i) {
+			return inDegree[i];
 		}
 
-		public int to(final int u, final int e) {
-			int v1 = dest[e << 1];
-			int v2 = dest[e << 1 | 1];
-			return u != v1 ? v1 : v2;
+		public int outDegree(final int i) {
+			return outDegree[i];
 		}
 
 		public long cost(final int e) {
-			return cost[e << 1];
+			return cost[e];
+		}
+
+		public int to(final int e) {
+			return dest[e];
+		}
+
+		public int[] topologicalSort() {
+			int[] degree = new int[n];
+			System.arraycopy(inDegree, 0, degree, 0, n);
+			int[] q = new int[n];
+			int head = 0, tail = 0;
+			for (int i = 0; i < n; i++) {
+				if (degree[i] == 0) q[tail++] = i;
+			}
+			int[] res = new int[n];
+			int idx = 0;
+			while (head < tail) {
+				int u = q[head++];
+				res[idx++] = u;
+				for (int e = first[u]; e != -1; e = next[e]) {
+					int v = dest[e];
+					degree[v]--;
+					if (degree[v] == 0) q[tail++] = v;
+				}
+			}
+			return idx == n ? res : null;
+		}
+
+		public boolean hasCycle() {
+			int count = 0;
+			int[] degree = new int[n];
+			System.arraycopy(inDegree, 0, degree, 0, n);
+			int[] q = new int[n];
+			int head = 0, tail = 0;
+			for (int i = 0; i < n; i++) {
+				if (degree[i] == 0) q[tail++] = i;
+			}
+			while (head < tail) {
+				int u = q[head++];
+				count++;
+				for (int e = first[u]; e != -1; e = next[e]) {
+					int v = dest[e];
+					if (--degree[v] == 0) q[tail++] = v;
+				}
+			}
+			return count < n;
+		}
+
+		/**
+		 * 強連結成分分解（SCC）を行います。
+		 *
+		 * @return 2次元配列 {@code sccs}。
+		 * {@code sccs[i]} が i 番目の強連結成分に属する頂点配列を表します。
+		 * 各頂点はちょうど1回だけいずれかの {@code sccs[i]} に現れます。
+		 * 成分同士の並びは縮約グラフのトポロジカル順です。
+		 * すなわち、異なる成分 {@code a -> b} への辺が存在するなら、返却配列では {@code a} の方が前に現れます。
+		 * 各成分内の頂点順はDFSの探索順（辺の追加順と頂点番号順）に依存します。
+		 */
+		public int[][] scc() {
+			int[] ord = new int[n];
+			int[] low = new int[n];
+
+			int[] edgeIter = new int[n];
+			System.arraycopy(first, 0, edgeIter, 0, n);
+
+			int[] stack = new int[n];
+			int stackPtr = 0;
+
+			int[] sccStack = new int[n];
+			int sccPtr = 0;
+			boolean[] onSccStack = new boolean[n];
+
+			int timer = 1;
+
+			int[] sccList = new int[n];
+			int listPtr = 0;
+			int[] sep = new int[n + 1];
+			int sepPtr = 0;
+			sep[sepPtr++] = 0;
+			for (int i = 0; i < n; i++)
+				if (ord[i] == 0) {
+					stack[stackPtr++] = i;
+					outer:
+					while (stackPtr > 0) {
+						int u = stack[stackPtr - 1];
+						if (ord[u] == 0) {
+							ord[u] = low[u] = timer++;
+							sccStack[sccPtr++] = u;
+							onSccStack[u] = true;
+						}
+						while (edgeIter[u] != -1) {
+							int e = edgeIter[u];
+							int v = dest[e];
+							edgeIter[u] = next[e];
+							if (ord[v] == 0) {
+								stack[stackPtr++] = v;
+								continue outer;
+							} else if (onSccStack[v]) {
+								low[u] = min(low[u], ord[v]);
+							}
+						}
+						if (stackPtr > 1) {
+							int p = stack[stackPtr - 2];
+							low[p] = min(low[p], low[u]);
+						}
+						if (low[u] == ord[u]) {
+							while (true) {
+								int v = sccStack[--sccPtr];
+								onSccStack[v] = false;
+								sccList[listPtr++] = v;
+								if (u == v) break;
+							}
+							sep[sepPtr++] = listPtr;
+						}
+						stackPtr--;
+					}
+				}
+			int groupCount = sepPtr - 1;
+			int[][] result = new int[groupCount][];
+			for (int i = 0, end = sep[groupCount]; i < groupCount; i++) {
+				int start = sep[groupCount - i - 1];
+				int len = end - start;
+				int[] grp = new int[len];
+				System.arraycopy(sccList, start, grp, 0, len);
+				result[i] = grp;
+				end = start;
+			}
+			return result;
 		}
 
 		public int[] adj(final int u) {
-			int[] adj = new int[degree[u]];
+			int[] adj = new int[outDegree[u]];
 			for (int e = first[u], i = 0; e != -1; e = next[e], i++) {
 				adj[i] = dest[e];
 			}
@@ -432,9 +548,9 @@ public final class C2 {
 		}
 
 		public int[] adjEdgeIds(final int u) {
-			int[] ids = new int[degree[u]];
+			int[] ids = new int[outDegree[u]];
 			for (int e = first[u], i = 0; e != -1; e = next[e], i++) {
-				ids[i] = e >> 1;
+				ids[i] = e;
 			}
 			return ids;
 		}
