@@ -9,7 +9,7 @@ import java.nio.charset.*;
 import java.util.*;
 import java.util.function.*;
 
-public final class B {
+public final class C {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG = true;
@@ -23,19 +23,15 @@ public final class B {
 	// endregion
 
 	private static void solve() {
-		int a = sc.nextInt();
-		int b = sc.nextInt();
-		int c = sc.nextInt();
-		int x = sc.nextInt();
-		int cnt = 0;
-		for (int i = 0; i <= a; i++) {
-			for (int j = 0; j <= b; j++) {
-				for (int k = 0; k <= c; k++) {
-					if (i * 500 + j * 100 + k * 50 == x) cnt++;
-				}
-			}
+		int n = sc.nextInt();
+		int[] a1 = sc.nextIntPrefixSum(n);
+		int[] a2 = sc.nextInt(n);
+		for (int i = n - 2; i >= 0; i--) a2[i] += a2[i + 1];
+		int ans = 0;
+		for (int i = 0; i < n; i++) {
+			ans = max(ans, a1[i] + a2[i]);
 		}
-		out.println(cnt);
+		out.println(ans);
 	}
 
 	// region < Utility Methods >
