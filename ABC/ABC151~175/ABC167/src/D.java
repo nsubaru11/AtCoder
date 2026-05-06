@@ -22,6 +22,7 @@ public final class D {
 	private static final FastPrinter out = new FastPrinter(64);
 	// endregion
 
+	// MEMO: ダブリング
 	private static void solve() {
 		int n = sc.nextInt();
 		long k = sc.nextLong();
