@@ -38,7 +38,7 @@ logs/
 **/history.txt
 
 # 仮想環境や依存関係管理ファイル
-**/node_modules/       # Node.js の依存関係
+/*//*/node_modules/       # Node.js の依存関係
 **/venv/               # Python の仮想環境
 **/*.jar               # ローカルで生成したJARファイル
 **/*.war               # Webアーカイブファイル
