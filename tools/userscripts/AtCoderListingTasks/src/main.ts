@@ -1,23 +1,3 @@
-﻿// ==UserScript==
-// @name           AtCoder Listing Tasks
-// @name:en        AtCoder Listing Tasks
-// @namespace      https://github.com/nsubaru11/AtCoder/tools/userscripts
-// @version        1.5.5
-// @description    「問題」タブにマウスカーソルを置くと、コンテスト内の各問題のページに移動できるドロップダウンリストを表示します。
-// @description:en Hover on the "Tasks" tab to open a drop-down list that takes you to the page for each problem in the contest.
-// @author         luuguas (original), nsubaru11 (modified)
-// @license        Apache-2.0
-// @homepageURL    https://github.com/nsubaru11/AtCoder/tree/main/tools/userscripts/AtCoderListingTasks
-// @supportURL     https://github.com/nsubaru11/AtCoder/issues
-// @match          https://atcoder.jp/contests/*
-// @exclude        https://atcoder.jp/contests/
-// @exclude        https://atcoder.jp/contests/?*
-// @exclude        https://atcoder.jp/contests/archive*
-// @grant          none
-// @updateURL      https://raw.githubusercontent.com/nsubaru11/AtCoder/main/tools/userscripts/AtCoderListingTasks/dist/AtCoderListingTasks.user.js
-// @downloadURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/tools/userscripts/AtCoderListingTasks/dist/AtCoderListingTasks.user.js
-// ==/UserScript==
-
 (function () {
 	'use strict';
 
@@ -31,85 +11,112 @@
 	const CONTEST_PERMANENT = ['practice', 'APG4b', 'abs', 'practice2', 'typical90', 'math-and-algorithm', 'tessoku-book'];
 	const ATONCE_TAB_MAX = 20;
 
-	const CSS = `
-.${PRE}-dropdown {
-    max-height: 890%;
-    overflow: visible auto;
-}
-.${PRE}-label {
-    width: 100%;
-    margin: 0px;
-    padding: 3px 10px;
-    clear: both;
-    font-weight: normal;
-    white-space: nowrap;
-}
-.${PRE}-label:hover {
-    background-color: #f5f5f5;
-}
-.${PRE}-checkbox {
-    margin: 0px !important;
-    vertical-align: middle;
-}
+	const CSS = /* language=css */ `
+		.${PRE}-dropdown {
+			max-height: 890%;
+			overflow: visible auto;
+		}
 
-.${PRE}-option {
-    margin: 5px 0px 15px 10px;
-}
-.${PRE}-flex {
-    display: flex;
-    align-items: center;
-}
-.${PRE}-select-all {
-    height: 30px;
-}
-.${PRE}-select-specify {
-    height: 35px;
-}
-.${PRE}-radio {
-    padding-right: 15px;
-}
-.${PRE}-disabled {
-    opacity: 0.65;
-}
-.${PRE}-caution {
-    color: red;
-}
-.${PRE}-toggle {
-    min-width: 55px;
-}
-.${PRE}-caret {
-    margin-left: 5px !important;
-}
-span.${PRE}-caret {
-    color: #333 !important;
-}
-.${PRE}-list {
-    max-height: 800%;
-    overflow: visible auto;
-}
-.${PRE}-target {
-    background-color: #e0e0e0;
-}
-.${PRE}-target:hover {
-    background-color: #e0e0e0 !important;
-}
-.${PRE}-between {
-    padding: 0px 5px;
-}
-    
-    /* ドロップダウンメニューのホバー効果 */
-    .dropdown:hover .dropdown-menu {
-    display: block;
-    margin-top: 0;
-    transition: all 0.3s ease;
-    }
-`;
-	const TEXT = {
+		.${PRE}-label {
+			width: 100%;
+			margin: 0;
+			padding: 3px 10px;
+			clear: both;
+			font-weight: normal;
+			white-space: nowrap;
+		}
+
+		.${PRE}-label:hover {
+			background-color: #f5f5f5;
+		}
+
+		.${PRE}-checkbox {
+			margin: 0 !important;
+			vertical-align: middle;
+		}
+
+		.${PRE}-option {
+			margin: 5px 0 15px 10px;
+		}
+
+		.${PRE}-flex {
+			display: flex;
+			align-items: center;
+		}
+
+		.${PRE}-select-all {
+			height: 30px;
+		}
+
+		.${PRE}-select-specify {
+			height: 35px;
+		}
+
+		.${PRE}-radio {
+			padding-right: 15px;
+		}
+
+		.${PRE}-disabled {
+			opacity: 0.65;
+		}
+
+		.${PRE}-caution {
+			color: red;
+		}
+
+		.${PRE}-toggle {
+			min-width: 55px;
+		}
+
+		.${PRE}-caret {
+			margin-left: 5px !important;
+		}
+
+		span.${PRE}-caret {
+			color: #333 !important;
+		}
+
+		.${PRE}-list {
+			max-height: 800%;
+			overflow: visible auto;
+		}
+
+		.${PRE}-target {
+			background-color: #e0e0e0;
+		}
+
+		.${PRE}-target:hover {
+			background-color: #e0e0e0 !important;
+		}
+
+		.${PRE}-between {
+			padding: 0 5px;
+		}
+
+		/* ドロップダウンメニューのホバー効果 */
+		.dropdown:hover .dropdown-menu {
+			display: block;
+			margin-top: 0;
+			transition: all 0.3s ease;
+		}
+	`;
+	type LocalizedText = Record<string, string>;
+	type ProblemInfo = {
+		url: string;
+		diff: string;
+		name: string;
+	};
+	type StoreInfo = {
+		storeName: string;
+		keyPath: string;
+	};
+
+	const TEXT: Record<string, LocalizedText> = {
 		newTab: {'ja': '新しいタブで開く', 'en': 'Open in a new tab'},
 		taskTable: {'ja': '問題一覧', 'en': 'Task Table'},
 		loadingFailed: {'ja': '(読み込み失敗)', 'en': '(Loading Failed)'},
 		atOnce: {'ja': 'まとめて開く', 'en': 'Open at once'},
-		modalDiscription: {'ja': '複数の問題をまとめて開きます。', 'en': 'Open several problems at once.'},
+		modalDescription: {'ja': '複数の問題をまとめて開きます。', 'en': 'Open several problems at once.'},
 		cancel: {'ja': 'キャンセル', 'en': 'Cancel'},
 		all: {'ja': 'すべて', 'en': 'All'},
 		specify: {'ja': '範囲を指定', 'en': 'Specify the range'},
@@ -129,7 +136,7 @@ span.${PRE}-caret {
 	const DB_NAME = 'UserScript_ACLT_Database';
 	const DB_VERSION = 1;
 	const STORE_NAME = {option: 'option', problemList: 'problemList'};
-	const STORE_INFO = [{storeName: STORE_NAME.option, keyPath: 'name'}, {
+	const STORE_INFO: StoreInfo[] = [{storeName: STORE_NAME.option, keyPath: 'name'}, {
 		storeName: STORE_NAME.problemList,
 		keyPath: 'contestName'
 	}];
@@ -140,12 +147,12 @@ span.${PRE}-caret {
 
 	/*IndexedDBを扱うクラス
 	  https://github.com/luuguas/IndexedDBManager */
-	let IDBManager = function (databaseName) {
+	let IDBManager: any = function (databaseName: string) {
 		this.database = null;
 		this.databaseName = databaseName;
 	};
 	IDBManager.prototype = {
-		openDatabase(storeInfos, version) {
+		openDatabase(storeInfos: any, version: number) {
 			return new Promise((resolve, reject) => {
 				if (this.database !== null) {
 					resolve(null);
@@ -156,8 +163,8 @@ span.${PRE}-caret {
 					return;
 				}
 				let openRequest = window.indexedDB.open(this.databaseName, version);
-				openRequest.onupgradeneeded = (event) => {
-					let database = event.target.result;
+				openRequest.onupgradeneeded = () => {
+					let database = openRequest.result;
 					let m = new Map();
 					for (let name of database.objectStoreNames) m.set(name, {status: 1, keyPath: null});
 					for (let info of storeInfos) {
@@ -170,12 +177,12 @@ span.${PRE}-caret {
 					}
 					console.info('Database was created or upgraded.');
 				};
-				openRequest.onerror = (event) => {
+				openRequest.onerror = () => {
 					this.database = null;
-					reject(`Failed to get database. (${event.target.error})`);
+					reject(`Failed to get database. (${openRequest.error})`);
 				};
-				openRequest.onsuccess = (event) => {
-					this.database = event.target.result;
+				openRequest.onsuccess = () => {
+					this.database = openRequest.result;
 					resolve(null);
 				};
 			});
@@ -183,7 +190,7 @@ span.${PRE}-caret {
 		isOpened() {
 			return this.database !== null;
 		},
-		getData(storeName, key) {
+		getData(storeName: any, key: any) {
 			return new Promise((resolve, reject) => {
 				if (!this.isOpened()) {
 					reject('Database is not loaded.');
@@ -191,16 +198,16 @@ span.${PRE}-caret {
 				}
 				let trans = this.database.transaction(storeName, 'readonly');
 				let getRequest = trans.objectStore(storeName).get(key);
-				getRequest.onerror = (event) => {
+				getRequest.onerror = (event: { target: { error: any; }; }) => {
 					reject(`Failed to get data. (${event.target.error})`);
 				};
-				getRequest.onsuccess = (event) => {
+				getRequest.onsuccess = (event: { target: { result: unknown; }; }) => {
 					if (event.target.result) resolve(event.target.result);
 					else resolve(null);
 				};
 			});
 		},
-		getAllMatchedData(storeName, filter) {
+		getAllMatchedData(storeName: any, filter: (arg0: any) => any) {
 			return new Promise((resolve, reject) => {
 				if (!this.isOpened()) {
 					reject('Database is not loaded.');
@@ -208,11 +215,11 @@ span.${PRE}-caret {
 				}
 				let trans = this.database.transaction(storeName, 'readonly');
 				let cursorRequest = trans.objectStore(storeName).openCursor();
-				let res = [];
-				cursorRequest.onerror = (event) => {
+				let res: any[] = [];
+				cursorRequest.onerror = (event: { target: { error: any; }; }) => {
 					reject(`Failed to get cursor. (${event.target.error})`);
 				};
-				cursorRequest.onsuccess = (event) => {
+				cursorRequest.onsuccess = (event: { target: { result: any; }; }) => {
 					let cursor = event.target.result;
 					if (cursor) {
 						if (filter(cursor.value)) res.push(cursor.value);
@@ -221,7 +228,7 @@ span.${PRE}-caret {
 				};
 			});
 		},
-		setData(storeName, data) {
+		setData(storeName: any, data: any) {
 			return new Promise((resolve, reject) => {
 				if (!this.isOpened()) {
 					reject('Database is not loaded.');
@@ -229,7 +236,7 @@ span.${PRE}-caret {
 				}
 				let trans = this.database.transaction(storeName, 'readwrite');
 				let setRequest = trans.objectStore(storeName).put(data);
-				setRequest.onerror = (event) => {
+				setRequest.onerror = (event: { target: { error: any; }; }) => {
 					reject(`Failed to set data. (${event.target.error})`);
 				};
 				setRequest.onsuccess = () => {
@@ -237,7 +244,7 @@ span.${PRE}-caret {
 				};
 			});
 		},
-		deleteData(storeName, key) {
+		deleteData(storeName: any, key: any) {
 			return new Promise((resolve, reject) => {
 				if (!this.isOpened()) {
 					reject('Database is not loaded.');
@@ -245,7 +252,7 @@ span.${PRE}-caret {
 				}
 				let trans = this.database.transaction(storeName, 'readwrite');
 				let deleteRequest = trans.objectStore(storeName).delete(key);
-				deleteRequest.onerror = (event) => {
+				deleteRequest.onerror = (event: { target: { error: any; }; }) => {
 					reject(`Failed to delete data. (${event.target.error})`);
 				};
 				deleteRequest.onsuccess = () => {
@@ -256,7 +263,7 @@ span.${PRE}-caret {
 	};
 
 	/* 設定や問題リストの読み込み・保存をするクラス */
-	let Setting = function () {
+	let Setting: any = function () {
 		this.problemList = null;
 		this.newTab = null;
 		this.lastRemove = null;
@@ -282,7 +289,7 @@ span.${PRE}-caret {
 			}
 			this.dbExists = this.db.isOpened();
 		},
-		requestList: function (contestName) {
+		requestList: function (contestName: any) {
 			return new Promise((resolve) => {
 				let xhr = new XMLHttpRequest();
 				xhr.responseType = 'document';
@@ -293,8 +300,8 @@ span.${PRE}-caret {
 							let problem_node = result.find('#contest-nav-tabs + .col-sm-12');
 							let problem_list = problem_node.find('tbody tr');
 							//問題リストを抽出して配列に格納
-							let list = [];
-							problem_list.each((idx, val) => {
+							let list: ProblemInfo[] = [];
+							problem_list.each((_idx: number, val: HTMLElement) => {
 								let td = $(val).children('td');
 								list.push({
 									url: td[0].firstChild.getAttribute('href'),
@@ -402,7 +409,7 @@ span.${PRE}-caret {
 				this.lastRemove = null;
 			}
 		},
-		saveData: async function (name, value) {
+		saveData: async function (name: any, value: any) {
 			if (!this.dbExists) {
 				return;
 			}
@@ -417,7 +424,7 @@ span.${PRE}-caret {
 				return;
 			}
 			//最終アクセスが現在時刻より一定以上前の問題リストを削除する
-			let oldData = await this.db.getAllMatchedData(STORE_NAME.problemList, (data) => {
+			let oldData = await this.db.getAllMatchedData(STORE_NAME.problemList, (data: { lastAccess: number; }) => {
 				return now - data.lastAccess >= REMOVE_BASE;
 			});
 			if (oldData.length !== 0) {
@@ -486,7 +493,7 @@ span.${PRE}-caret {
 	};
 
 	/* DOM操作およびスクリプト全体の動作を管理するクラス */
-	let Launcher = function () {
+	let Launcher: any = function () {
 		this.setting = new Setting();
 		this.dropdownList = {
 			begin: null,
@@ -575,7 +582,7 @@ span.${PRE}-caret {
 			let checkbox = $('<input>', {type: 'checkbox', class: `${PRE}-checkbox`});
 			//チェックボックスはチェック状態をストレージと同期
 			checkbox.prop('checked', this.setting.newTab);
-			checkbox.on('click', (e) => {
+			checkbox.on('click', (e: { currentTarget: { checked: any; }; }) => {
 				this.setting.newTab = e.currentTarget.checked;
 				if (this.setting.dbExists) {
 					this.setting.saveData('newTab', this.setting.newTab);
@@ -585,7 +592,7 @@ span.${PRE}-caret {
 			label.append(document.createTextNode(' ' + TEXT.newTab[this.setting.lang]));
 			dropdown_menu.prepend($('<li>').append(label));
 			//チェックボックスが押された場合はドロップダウンリストを非表示にしない
-			dropdown_menu.on('click', (e) => {
+			dropdown_menu.on('click', (e: { target: any; stopPropagation: () => void; }) => {
 				if (e.target === label[0]) {
 					e.stopPropagation();
 				}
@@ -609,7 +616,7 @@ span.${PRE}-caret {
 				dropdown_menu.append($('<li>').append(a));
 			}
 		},
-		changeNewTabAttr: function (e) {
+		changeNewTabAttr: function (e: { currentTarget: any; }) {
 			let a = e.currentTarget;
 			if (this.setting.newTab) {
 				a.target = '_blank';
@@ -635,7 +642,7 @@ span.${PRE}-caret {
 
 			/* body */
 			let body = $('<div>', {class: 'modal-body'});
-			body.append($('<p>', {text: TEXT.modalDiscription[this.setting.lang]}));
+			body.append($('<p>', {text: TEXT.modalDescription[this.setting.lang]}));
 			let modalInfo = $('<p>');
 
 			let option = $('<div>', {class: `${PRE}-option`});
@@ -673,7 +680,7 @@ span.${PRE}-caret {
 			});
 			begin_button.append($('<span>', {class: `caret ${PRE}-caret`}));
 			let begin_list = $('<ul>', {class: `dropdown-menu ${PRE}-list`});
-			$.each(this.setting.problemList, (idx, data) => {
+			$.each(this.setting.problemList, (idx: any, data: { diff: any; name: any; }) => {
 				begin_list.append($('<li>').append($('<a>', {
 					text: `${data.diff} - ${data.name}`,
 					'data-index': (idx).toString()
@@ -750,7 +757,7 @@ span.${PRE}-caret {
 			let label_reverse = $('<label>');
 			let check_reverse = $('<input>', {type: 'checkbox', name: 'reverse'});
 			check_reverse.prop('checked', this.setting.reverse);
-			check_reverse.on('click', (e) => {
+			check_reverse.on('click', (e: { currentTarget: { checked: any; }; }) => {
 				this.setting.reverse = e.currentTarget.checked;
 			});
 			label_reverse.append(check_reverse, document.createTextNode(TEXT.reverse[this.setting.lang]));
@@ -786,7 +793,7 @@ span.${PRE}-caret {
 
 				//タブを開く
 				let blank = window.open('about:blank'); //ポップアップブロック用
-				let idx;
+				let idx: number;
 				if (this.isAll) {
 					if (!this.setting.reverse) {
 						idx = 0;
@@ -828,7 +835,7 @@ span.${PRE}-caret {
 			modal.append(dialog.append(content));
 			$('#main-div').before(modal);
 		},
-		changeRange: function (e) {
+		changeRange: function (e: { target: { tagName: string; }; }) {
 			if (e.target.tagName !== 'A') {
 				return;
 			}
@@ -852,7 +859,13 @@ span.${PRE}-caret {
 			}
 			this.that.setModalInfo(this.modalInfo, this.that.setting, this.that.isAll);
 		},
-		changeSelect: function (that, button, idx, isBegin) {
+		changeSelect: function (that: {
+			setting: { problemList: any; atOnce: any; };
+			dropdownList: any;
+			listChanged: { begin: boolean; end: boolean; };
+		}, button: {
+			html: (arg0: string) => void;
+		}, idx: string | number, isBegin: any) {
 			let problemList = that.setting.problemList;
 			let atOnce = that.setting.atOnce;
 			let dropdownList = that.dropdownList;
@@ -869,7 +882,11 @@ span.${PRE}-caret {
 			}
 			button.html(`${problemList[idx].diff}<span class="caret ${PRE}-caret"></span>`);
 		},
-		setModalInfo: function (modalInfo, setting, isAll) {
+		setModalInfo: function (modalInfo: { text: (arg0: string) => void; }, setting: {
+			problemList: string | any[];
+			lang: string | number;
+			atOnce: { end: number; begin: number; };
+		}, isAll: any) {
 			let text = '';
 			if (isAll) {
 				text += (setting.problemList.length).toString();
@@ -930,4 +947,3 @@ span.${PRE}-caret {
 	launcher.launch();
 
 })();
-

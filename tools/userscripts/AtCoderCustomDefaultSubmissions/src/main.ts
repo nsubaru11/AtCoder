@@ -1,43 +1,35 @@
-﻿// ==UserScript==
-// @name         AtCoder Custom Default Submissions
-// @namespace    https://github.com/nsubaru11/AtCoder/tools/userscripts
-// @version      1.6.1
-// @description  AtCoderのすべての提出・自分の提出の絞り込み、並び替え設定のデフォルトを設定します。メニューから設定を変更できます。
-// @author       ktnyori (original), nsubaru11 (modified)
-// @license      MIT
-// @include      https://atcoder.jp/contests/*
-// @grant        GM_getValue
-// @grant        GM_setValue
-// @grant        GM_registerMenuCommand
-// @homepageURL  https://github.com/nsubaru11/AtCoder/tree/main/tools/userscripts/AtCoderCustomDefaultSubmissions
-// @supportURL   https://github.com/nsubaru11/AtCoder/issues
-// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/tools/userscripts/AtCoderCustomDefaultSubmissions/dist/AtCoderCustomDefaultSubmissions.user.js
-// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/tools/userscripts/AtCoderCustomDefaultSubmissions/dist/AtCoderCustomDefaultSubmissions.user.js
-// ==/UserScript==
+import {parseAtCoderTaskUrl} from '@shared/atcoder-url';
 
 (function () {
 	'use strict';
 
-	const DEFAULTS = {
+	type SubmissionConfig = {
+		language: string;
+		status: string;
+		orderBy: string;
+		includeTaskFilter: boolean;
+	};
+
+	const DEFAULTS: SubmissionConfig = {
 		language: 'Java',
 		status: 'AC',
 		orderBy: 'time_consumption',
 		includeTaskFilter: true,
 	};
 
-	function readConfig() {
+	function readConfig(): SubmissionConfig {
 		const raw = typeof GM_getValue === 'function' ? GM_getValue('config', {}) : {};
 		if (raw && typeof raw === 'object') return Object.assign({}, DEFAULTS, raw);
 		return Object.assign({}, DEFAULTS);
 	}
 
-	function writeConfig(config) {
+	function writeConfig(config: SubmissionConfig): void {
 		if (typeof GM_setValue === 'function') {
 			GM_setValue('config', config);
 		}
 	}
 
-	function configureLanguage() {
+	function configureLanguage(): void {
 		const current = readConfig();
 		const language = window.prompt('Language name (e.g. Java, C#, Python3, Rust):', current.language);
 		if (language === null) return;
@@ -48,7 +40,7 @@
 		window.alert('設定を保存しました。ページを再読み込みしてください。');
 	}
 
-	function configureStatus() {
+	function configureStatus(): void {
 		const current = readConfig();
 		const status = window.prompt('Status filter (AC/WA/TLE/... or empty for all):', current.status);
 		if (status === null) return;
@@ -59,7 +51,7 @@
 		window.alert('設定を保存しました。ページを再読み込みしてください。');
 	}
 
-	function configureOrderBy() {
+	function configureOrderBy(): void {
 		const current = readConfig();
 		const orderBy = window.prompt('Sort key (source_length/time_consumption/memory_consumption/score):', current.orderBy);
 		if (orderBy === null) return;
@@ -70,7 +62,7 @@
 		window.alert('設定を保存しました。ページを再読み込みしてください。');
 	}
 
-	function toggleTaskFilter() {
+	function toggleTaskFilter(): void {
 		const current = readConfig();
 		const next = Object.assign({}, current, {
 			includeTaskFilter: !current.includeTaskFilter,
@@ -79,7 +71,7 @@
 		window.alert(`問題番号の絞り込み: ${next.includeTaskFilter ? 'ON' : 'OFF'}`);
 	}
 
-	function resetConfig() {
+	function resetConfig(): void {
 		writeConfig(Object.assign({}, DEFAULTS));
 		window.alert('設定をリセットしました。ページを再読み込みしてください。');
 	}
@@ -92,12 +84,11 @@
 		GM_registerMenuCommand('AtCoder Custom Default Submissions: 設定リセット', resetConfig);
 	}
 
-	function getTaskId() {
-		const match = location.pathname.match(/^\/contests\/[^/]+\/tasks\/([^/?#]+)\/?$/);
-		return match && match[1] ? match[1] : '';
+	function getTaskId(): string {
+		return parseAtCoderTaskUrl(location.href)?.taskId ?? '';
 	}
 
-	function buildSubmissionQuery(config, task) {
+	function buildSubmissionQuery(config: SubmissionConfig, task: string): string {
 		const params = new URLSearchParams({
 			'f.LanguageName': config.language,
 			// AC, WA, TLE, MLE, RE, CE, QLE, OLE, IE, WJ, WR, Judging
@@ -109,7 +100,7 @@
 		return params.toString();
 	}
 
-	function isSubmissionLink(url) {
+	function isSubmissionLink(url: URL): boolean {
 		return /\/submissions(?:\/me)?\/?$/.test(url.pathname);
 	}
 

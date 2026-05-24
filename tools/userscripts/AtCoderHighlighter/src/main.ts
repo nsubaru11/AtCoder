@@ -1,35 +1,24 @@
-﻿// ==UserScript==
-// @name            AtCoder Highlighter
-// @name:en         AtCoder Highlighter
-// @namespace       https://github.com/nsubaru11/AtCoder/tools/userscripts
-// @version         1.3.3
-// @description     AtCoder の問題文中の数字と変数、実行時間/メモリ制限を自動で強調表示させます
-// @description:en  Automatically highlights numbers, variables, and time/memory limits in AtCoder task statements
-// @author          nsubaru11
-// @license         MIT
-// @match           https://atcoder.jp/contests/*/tasks/*
-// @grant           GM_getValue
-// @grant           GM_setValue
-// @grant           GM_registerMenuCommand
-// @run-at          document-idle
-// @homepageURL     https://github.com/nsubaru11/AtCoder/tree/main/tools/userscripts/AtCoderHighlighter
-// @supportURL      https://github.com/nsubaru11/AtCoder/issues
-// @downloadURL https://update.greasyfork.org/scripts/566471/AtCoder%20Highlighter.user.js
-// @updateURL https://update.greasyfork.org/scripts/566471/AtCoder%20Highlighter.meta.js
-// ==/UserScript==
-
 (function () {
 	'use strict';
 
-	const TARGET_KEYWORDS = ['問題文', 'Problem Statement', '制約', 'Constraints'];
-	const TIME_LIMIT_KEYWORDS = ['Time Limit', '実行時間制限'];
-	const MEMORY_LIMIT_KEYWORDS = ['Memory Limit', 'メモリ制限'];
-	const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'CODE', 'PRE', 'VAR', 'KBD', 'SAMP']);
+	type ColorProp = 'num' | 'var' | 'time' | 'memory';
+	type ColorStorageKey = 'numColor' | 'varColor' | 'timeLimitColor' | 'memoryLimitColor';
+	type ColorMap = Record<ColorProp, string>;
+	type MenuItem = {
+		label: string;
+		key: ColorStorageKey;
+		prop: ColorProp;
+	};
+
+	const TARGET_KEYWORDS: string[] = ['問題文', 'Problem Statement', '制約', 'Constraints'];
+	const TIME_LIMIT_KEYWORDS: string[] = ['Time Limit', '実行時間制限'];
+	const MEMORY_LIMIT_KEYWORDS: string[] = ['Memory Limit', 'メモリ制限'];
+	const SKIP_TAGS = new Set<string>(['SCRIPT', 'STYLE', 'CODE', 'PRE', 'VAR', 'KBD', 'SAMP']);
 
 	const NUM_PATTERN = /(^|\W)([+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:e[+-]?\d+)?)/gi;
 	const NUM_PURE = /^[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:e[+-]?\d+)?$/i;
 
-	const DEFAULT_COLORS = {
+	const DEFAULT_COLORS: ColorMap = {
 		num: '#0033B3',
 		var: '#9E2927',
 		time: '#b3542a',
@@ -37,7 +26,11 @@
 	};
 
 	const IS_JP = navigator.language.startsWith('ja');
-	const MSG = {
+	const MSG: {
+		prompt: string;
+		error: string;
+		labels: ColorMap;
+	} = {
 		prompt: IS_JP ? 'の色 (例: #0033B3 / #03b / rgb(0,51,179))' : ' Color (e.g. #0033B3 / #03b / rgb(0,51,179))',
 		error: IS_JP ? '色の形式が正しくありません。' : 'Invalid color format.',
 		labels: {
@@ -48,7 +41,7 @@
 		}
 	};
 
-	function normalizeHexColor(input) {
+	function normalizeHexColor(input: unknown): string | null {
 		if (typeof input !== 'string') return null;
 		const value = input.trim();
 		if (/^#[0-9a-fA-F]{3}$/.test(value)) return `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`;
@@ -57,7 +50,7 @@
 		return null;
 	}
 
-	function normalizeColor(input) {
+	function normalizeColor(input: unknown): string | null {
 		if (typeof input !== 'string') return null;
 		const trimmed = input.trim();
 		const normalizedHex = normalizeHexColor(trimmed);
@@ -66,7 +59,7 @@
 		return null;
 	}
 
-	function readColors() {
+	function readColors(): ColorMap {
 		if (typeof GM_getValue !== 'function') return Object.assign({}, DEFAULT_COLORS);
 		return {
 			num: GM_getValue('numColor', DEFAULT_COLORS.num),
@@ -76,12 +69,12 @@
 		};
 	}
 
-	function writeColor(key, value) {
+	function writeColor(key: ColorStorageKey, value: string): void {
 		if (typeof GM_setValue !== 'function') return;
 		GM_setValue(key, value);
 	}
 
-	function injectStyles() {
+	function injectStyles(): void {
 		const existingStyle = document.getElementById('atcoder-highlighter-style');
 		if (existingStyle) existingStyle.remove();
 
@@ -120,27 +113,28 @@
 		(document.head || document.documentElement).appendChild(style);
 	}
 
-	function markTargetSections(root) {
+	function markTargetSections(root: ParentNode = document): void {
 		const sections = (root || document).querySelectorAll('#task-statement section');
 
-		sections.forEach(sec => {
+		sections.forEach((sec: Element) => {
 			const h3 = sec.querySelector('h3');
 			if (!h3) return;
 
 			const title = h3.textContent.trim();
-			if (TARGET_KEYWORDS.some(kw => title.includes(kw))) {
+			if (TARGET_KEYWORDS.some((kw: string) => title.includes(kw))) {
 				sec.classList.add('target-scope');
 			}
 		});
 	}
 
-	function isPureNumber(text) {
+	function isPureNumber(text: string | null): boolean {
+		if (text === null) return false;
 		return NUM_PURE.test(text.trim());
 	}
 
-	function highlightKaTeXNumbers(scope) {
+	function highlightKaTeXNumbers(scope: ParentNode): void {
 		const elements = scope.querySelectorAll('.katex .mord, .katex .text, .katex .mord.text');
-		elements.forEach(el => {
+		elements.forEach((el: Element) => {
 			if (el.classList.contains('number')) return;
 			if (el.classList.contains('mathnormal')) return;
 			if (isPureNumber(el.textContent)) {
@@ -149,14 +143,14 @@
 		});
 	}
 
-	function highlightTextNumbers(scope) {
+	function highlightTextNumbers(scope: Node): void {
 		const walker = document.createTreeWalker(
 			scope,
 			NodeFilter.SHOW_TEXT,
 			{
-				acceptNode: function (node) {
-					const parent = node.parentNode;
-					if (!parent || !parent.tagName) return NodeFilter.FILTER_REJECT;
+				acceptNode: function (node: Node): number {
+					const parent = node.parentElement;
+					if (!parent) return NodeFilter.FILTER_REJECT;
 
 					const tagName = parent.tagName.toUpperCase();
 					if (SKIP_TAGS.has(tagName)) return NodeFilter.FILTER_REJECT;
@@ -172,21 +166,21 @@
 			}
 		);
 
-		const nodesToProcess = [];
-		let currentNode;
+		const nodesToProcess: Text[] = [];
+		let currentNode: Node | null;
 		while ((currentNode = walker.nextNode())) {
 			if (/\d/.test(currentNode.nodeValue)) {
-				nodesToProcess.push(currentNode);
+				nodesToProcess.push(currentNode as Text);
 			}
 		}
 
-		nodesToProcess.forEach(node => {
+		nodesToProcess.forEach((node: Text) => {
 			const text = node.nodeValue;
 			if (!NUM_PATTERN.test(text)) return;
 
 			const fragment = document.createDocumentFragment();
 			let lastIndex = 0;
-			let match;
+			let match: RegExpExecArray | null;
 
 			NUM_PATTERN.lastIndex = 0;
 			while ((match = NUM_PATTERN.exec(text)) !== null) {
@@ -212,26 +206,31 @@
 			if (lastIndex < text.length) {
 				fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
 			}
-			node.parentNode.replaceChild(fragment, node);
+			node.parentNode?.replaceChild(fragment, node);
 		});
 	}
 
-	function highlightNumbers() {
+	function highlightNumbers(): void {
 		const scopes = document.querySelectorAll('.target-scope');
-		scopes.forEach(scope => {
+		scopes.forEach((scope: Element) => {
 			highlightKaTeXNumbers(scope);
 			highlightTextNumbers(scope);
 		});
 	}
 
-	function wrapLimitValue(element, keyword, className, options = {}) {
+	function wrapLimitValue(
+		element: Node,
+		keyword: string,
+		className: string,
+		options: { numberOnly?: boolean; numberClass?: string } = {}
+	): void {
 		const walker = document.createTreeWalker(
 			element,
 			NodeFilter.SHOW_TEXT,
 			{
-				acceptNode: function (node) {
-					const parent = node.parentNode;
-					if (!parent || !parent.tagName) return NodeFilter.FILTER_REJECT;
+				acceptNode: function (node: Node): number {
+					const parent = node.parentElement;
+					if (!parent) return NodeFilter.FILTER_REJECT;
 
 					const tagName = parent.tagName.toUpperCase();
 					if (SKIP_TAGS.has(tagName)) return NodeFilter.FILTER_REJECT;
@@ -245,22 +244,22 @@
 			}
 		);
 
-		const nodes = [];
-		let currentNode;
+		const nodes: Text[] = [];
+		let currentNode: Node | null;
 		while ((currentNode = walker.nextNode())) {
 			if (currentNode.nodeValue && currentNode.nodeValue.includes(keyword)) {
-				nodes.push(currentNode);
+				nodes.push(currentNode as Text);
 			}
 		}
 
 		const valuePattern = new RegExp(`${keyword}\\s*[:：]\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)(\\s*[a-zA-Z]+)?`, 'g');
 
-		nodes.forEach(node => {
+		nodes.forEach((node: Text) => {
 			const text = node.nodeValue;
 			if (!text || !text.includes(keyword)) return;
 			const fragment = document.createDocumentFragment();
 			let lastIndex = 0;
-			let match;
+			let match: RegExpExecArray | null;
 			while ((match = valuePattern.exec(text)) !== null) {
 				const fullStart = match.index;
 				const valueNumber = match[1] || '';
@@ -292,21 +291,21 @@
 		});
 	}
 
-	function emphasizeLimits() {
+	function emphasizeLimits(): void {
 		const root = document.getElementById('main-container') || document.body;
 		if (!root) return;
 
-		const configs = [
+		const configs: Array<{ keywords: string[]; cls: string; numCls: string }> = [
 			{keywords: TIME_LIMIT_KEYWORDS, cls: 'time-limit-value', numCls: 'time-limit-value-number'},
 			{keywords: MEMORY_LIMIT_KEYWORDS, cls: 'memory-limit-value', numCls: 'memory-limit-value-number'}
 		];
 
 		const candidates = root.querySelectorAll('p, dt, dd, th, td, div, li');
-		candidates.forEach(el => {
+		candidates.forEach((el: Element) => {
 			const text = el.textContent || '';
-			configs.forEach(({keywords, cls, numCls}) => {
-				if (keywords.some(kw => text.includes(kw)) && !el.querySelector(`.${numCls}`)) {
-					keywords.forEach(kw => wrapLimitValue(el, kw, cls, {
+			configs.forEach(({keywords, cls, numCls}: { keywords: string[]; cls: string; numCls: string }) => {
+				if (keywords.some((kw: string) => text.includes(kw)) && !el.querySelector(`.${numCls}`)) {
+					keywords.forEach((kw: string) => wrapLimitValue(el, kw, cls, {
 						numberOnly: true,
 						numberClass: numCls,
 					}));
@@ -317,7 +316,7 @@
 
 	let scheduled = false;
 
-	function scheduleHighlight() {
+	function scheduleHighlight(): void {
 		if (scheduled) return;
 		scheduled = true;
 		setTimeout(() => {
@@ -329,17 +328,17 @@
 		}, 100);
 	}
 
-	function resetStyles() {
+	function resetStyles(): void {
 		const style = document.getElementById('atcoder-highlighter-style');
 		if (style) style.remove();
 		injectStyles();
 		scheduleHighlight();
 	}
 
-	function registerMenu() {
+	function registerMenu(): void {
 		if (typeof GM_registerMenuCommand !== 'function') return;
 
-		const menuItems = [
+		const menuItems: MenuItem[] = [
 			{label: MSG.labels.num, key: 'numColor', prop: 'num'},
 			{label: MSG.labels.var, key: 'varColor', prop: 'var'},
 			{label: MSG.labels.time, key: 'timeLimitColor', prop: 'time'},
@@ -359,7 +358,7 @@
 		});
 	}
 
-	function observeTaskStatement() {
+	function observeTaskStatement(): void {
 		const target = document.getElementById('task-statement') || document.body;
 		if (!target) return;
 

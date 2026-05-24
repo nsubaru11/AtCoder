@@ -1,43 +1,89 @@
-﻿// ==UserScript==
-// @name        AtCoder Easy Test for Java
-// @namespace    https://github.com/nsubaru11/AtCoder/tools/userscripts
-// @version     1.5.2
-// @description Make testing sample cases easy (Modified by nsubaru11)
-// @author      magurofly (original), nsubaru11 (modified)
-// @license     MIT
-// @homepageURL  https://github.com/nsubaru11/AtCoder/tree/main/tools/userscripts/AtCoderEasyTestForJava
-// @supportURL   https://github.com/nsubaru11/AtCoder/issues
-// @match       https://atcoder.jp/contests/*/tasks/*
-// @match       https://atcoder.jp/contests/*/submit*
-// @match       https://yukicoder.me/problems/no/*
-// @match       https://yukicoder.me/problems/*
-// @match       http://codeforces.com/contest/*/problem/*
-// @match       http://codeforces.com/gym/*/problem/*
-// @match       http://codeforces.com/problemset/problem/*
-// @match       http://codeforces.com/group/*/contest/*/problem/*
-// @match       http://*.contest.codeforces.com/group/*/contest/*/problem/*
-// @match       https://codeforces.com/contest/*/problem/*
-// @match       https://codeforces.com/gym/*/problem/*
-// @match       https://codeforces.com/problemset/problem/*
-// @match       https://codeforces.com/group/*/contest/*/problem/*
-// @match       https://*.contest.codeforces.com/group/*/contest/*/problem/*
-// @match       https://m1.codeforces.com/contest/*/problem/*
-// @match       https://m2.codeforces.com/contest/*/problem/*
-// @match       https://m3.codeforces.com/contest/*/problem/*
-// @match       https://greasyfork.org/*/scripts/433152-atcoder-easy-test-v2
-// @grant       unsafeWindow
-// @grant       GM_getValue
-// @grant       GM_setValue
-// @run-at       document-end
-// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/tools/userscripts/AtCoderEasyTestForJava/dist/AtCoderEasyTestForJava.user.js
-// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/tools/userscripts/AtCoderEasyTestForJava/dist/AtCoderEasyTestForJava.user.js
-// ==/UserScript==
+import {sleep} from "@shared/async";
+import {
+	buildLocalRunnerKey,
+	buildLocalRunnerListRequest,
+	buildLocalRunnerPrecompileRequest,
+	buildLocalRunnerRunRequest,
+	isHttpUrl,
+	type LocalRunnerCompilerInfo,
+	type LocalRunnerRunResponse,
+	toEasyTestStatus,
+} from "@shared/local-runner";
+import {buildQueryString as buildParams} from "@shared/query";
 
+type RunnerOptions = {
+	trim?: boolean;
+	split?: boolean;
+	allowableError?: number;
+	runGroupId?: string;
+	refreshLocalRunner?: boolean;
+	[key: string]: unknown;
+};
+
+type RunnerResult = {
+	status: string;
+	input: string;
+	exitCode?: string | number;
+	execTime?: number;
+	memory?: number;
+	output?: string;
+	error?: string;
+	expectedOutput?: string;
+};
+
+type RunnerLike = {
+	readonly label?: string;
+	test(sourceCode: string, input: string, expectedOutput: string | null, options: RunnerOptions): Promise<RunnerResult>;
+};
+
+type RunnerMap = Record<string, RunnerLike>;
+
+type ElementAttrs<K extends keyof HTMLElementTagNameMap> = Omit<Partial<HTMLElementTagNameMap[K]>, "style"> & {
+	style?: Partial<CSSStyleDeclaration>;
+};
+
+type EventListenerFn = () => void;
+type SettingOption = {
+	type: "flag" | "count" | "text";
+	key: string;
+	defaultValue: boolean | number | string;
+	description: string;
+};
+type SettingComponent = {
+	title: string;
+	generator: (win: Window) => Node;
+};
+type ConfigData = Record<string, string>;
+type SavedCode = {
+	path: string;
+	code: string;
+};
+type TestCase = {
+	title: string;
+	input: string;
+	output: string | null;
+	anchor: Element;
+	selector?: string;
+};
+type LanguageMap = Record<string, string>;
+type Pair<T> = [T, T];
+type ResultPair = [Promise<RunnerResult>, Promise<{ show(): void; close(): void; color: string }>];
+type WandboxCompiler = {
+	name: string;
+	language: string;
+	version: string;
+	switches: Array<Record<string, string>>;
+};
+type WandboxRequest = Record<string, unknown> & {
+	compiler?: string;
+	code?: string;
+	stdin: string;
+};
 
 (function () {
 	const STORAGE_KEY = "AtCoderEasyTest";
 
-	function safeJsonParse(text, fallback) {
+	function safeJsonParse<T>(text: unknown, fallback: T): T {
 		if (typeof text !== "string") return fallback;
 		try {
 			return JSON.parse(text);
@@ -51,7 +97,7 @@
 	// ページ(localStorage)に安全フォールバックし、必要ならバックグラウンドで GM ストレージも更新する。
 	if (typeof GM_getValue !== "function" || typeof GM_setValue !== "function") {
 		const hasAsyncGM = typeof GM === "object" && typeof GM.getValue === "function" && typeof GM.setValue === "function";
-		let storage = safeJsonParse(localStorage[STORAGE_KEY] || "{}", {});
+		let storage = safeJsonParse<Record<string, unknown>>(localStorage[STORAGE_KEY] || "{}", {});
 		if (!storage || typeof storage !== "object") storage = {};
 		const persist = () => {
 			try {
@@ -60,11 +106,12 @@
 				// ignore
 			}
 		};
-		GM_getValue = (key, defaultValue = null) => ((key in storage) ? storage[key] : defaultValue);
+		GM_getValue = <T, >(key: string, defaultValue: T = null as T): T => ((key in storage) ? storage[key] as T : defaultValue);
 		GM_setValue = (key, value) => {
 			storage[key] = value;
 			persist();
-			if (hasAsyncGM) Promise.resolve(GM.setValue(key, value)).catch(() => {});
+			if (hasAsyncGM) Promise.resolve(GM.setValue(key, value)).catch(() => {
+			});
 		};
 		// 初回のみ、GMストレージに既存設定があれば取り込む（同期初期化を壊さないため遅延ロード）
 		if (hasAsyncGM && !("config" in storage)) {
@@ -81,25 +128,23 @@
 
 	if (typeof unsafeWindow !== "object") unsafeWindow = window;
 
-	function buildParams(data) {
-		return new URLSearchParams(data).toString();
-	}
-
-	function sleep(ms) {
-		return new Promise(done => setTimeout(done, ms));
-	}
-
-	function doneOrFail(p) {
+	function doneOrFail<T>(p: Promise<T>): Promise<void> {
 		return p.then(() => Promise.resolve(), () => Promise.resolve());
 	}
 
-	function html2element(html) {
+	function html2element<T extends Element = HTMLElement>(html: string): T {
 		const template = document.createElement("template");
 		template.innerHTML = html;
-		return template.content.firstChild;
+		const element = template.content.firstElementChild;
+		if (!element) throw new Error("html2element: empty HTML");
+		return element as T;
 	}
 
-	function newElement(tagName, attrs = {}, children = []) {
+	function newElement<K extends keyof HTMLElementTagNameMap>(
+		tagName: K,
+		attrs: ElementAttrs<K> = {} as ElementAttrs<K>,
+		children: Node[] = []
+	): HTMLElementTagNameMap[K] {
 		const e = document.createElement(tagName);
 		const {style, ...rest} = attrs;
 		// その他の属性はそのままプロパティとしてまとめて代入
@@ -112,7 +157,7 @@
 		return e;
 	}
 
-	function uuid() {
+	function uuid(): string {
 		const hex = "0123456789abcdef";
 		const yChars = "89ab";
 		return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c =>
@@ -120,10 +165,10 @@
 		);
 	}
 
-	async function loadScript(src, ctx = null, env = {}) {
+	async function loadScript(src: string, ctx: unknown = null, env: Record<string, unknown> = {}): Promise<void> {
 		const js = await fetch(src).then(res => res.text());
-		const keys = [];
-		const values = [];
+		const keys: string[] = [];
+		const values: unknown[] = [];
 		for (const [key, value] of Object.entries(env)) {
 			keys.push(key);
 			values.push(value);
@@ -131,20 +176,20 @@
 		unsafeWindow["Function"](keys.join(), js).apply(ctx, values);
 	}
 
-	const eventListeners = new Map();
+	const eventListeners = new Map<string, EventListenerFn[]>();
 	const events = {
-		on(name, listener) {
+		on(name: string, listener: EventListenerFn): void {
 			if (!eventListeners.has(name)) eventListeners.set(name, []);
-			eventListeners.get(name).push(listener);
+			eventListeners.get(name)?.push(listener);
 		},
-		off(name, listener) {
+		off(name: string, listener: EventListenerFn): void {
 			const listeners = eventListeners.get(name);
 			if (listeners) {
 				const idx = listeners.indexOf(listener);
 				if (idx !== -1) listeners.splice(idx, 1);
 			}
 		},
-		trig(name) {
+		trig(name: string): void {
 			const listeners = eventListeners.get(name);
 			if (listeners) {
 				for (const listener of listeners) listener();
@@ -152,35 +197,35 @@
 		},
 	};
 
-	class ObservableValue {
-		_value;
-		_listeners;
+	class ObservableValue<T> {
+		_value: T;
+		_listeners: Set<(value: T) => void>;
 
-		constructor(value) {
+		constructor(value: T) {
 			this._value = value;
 			this._listeners = new Set();
 		}
 
-		get value() {
+		get value(): T {
 			return this._value;
 		}
 
-		set value(value) {
+		set value(value: T) {
 			this._value = value;
 			for (const listener of this._listeners)
 				listener(value);
 		}
 
-		addListener(listener) {
+		addListener(listener: (value: T) => void): void {
 			this._listeners.add(listener);
 			listener(this._value);
 		}
 
-		removeListener(listener) {
+		removeListener(listener: (value: T) => void): void {
 			this._listeners.delete(listener);
 		}
 
-		map(f) {
+		map<U>(f: (value: T) => U): ObservableValue<U> {
 			const y = new ObservableValue(f(this.value));
 			this.addListener(x => {
 				y.value = f(x);
@@ -191,18 +236,20 @@
 
 	const hPage = "<!DOCTYPE html>\n<html>\n  <head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n    <title>AtCoder Easy Test</title>\n    <link href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css\" rel=\"stylesheet\">\n  </head>\n  <body>\n    <div class=\"container\" id=\"root\">\n    </div>\n    <script src=\"https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js\"></script>\n    <script src=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js\"></script>\n  </body>\n</html>";
 
-	const components = [];
+	const components: SettingComponent[] = [];
 	const settings = {
-		add(title, generator) {
+		add(title: string, generator: (win: Window) => Node): void {
 			components.push({title, generator});
 		},
-		open() {
+		open(): void {
 			const win = window.open("about:blank");
+			if (!win) throw new Error("Failed to open settings window.");
 			const doc = win.document;
 			doc.open();
 			doc.write(hPage);
 			doc.close();
 			const root = doc.getElementById("root");
+			if (!root) throw new Error("Settings root element was not found.");
 			for (const {title, generator} of components) {
 				const panel = newElement("div", {className: "panel panel-default"}, [
 					newElement("div", {className: "panel-heading", textContent: title}),
@@ -213,14 +260,14 @@
 		},
 	};
 
-	const options = [];
-	let data = {};
+	const options: SettingOption[] = [];
+	let data: ConfigData = {};
 
-	function toString() {
+	function toString(): string {
 		return JSON.stringify(data);
 	}
 
-	function save() {
+	function save(): void {
 		try {
 			GM_setValue("config", toString());
 		} catch (_e) {
@@ -228,24 +275,24 @@
 		}
 	}
 
-	function load() {
+	function load(): void {
 		const raw = GM_getValue("config");
 		if (raw && typeof raw === "object") {
-			data = raw;
+			data = raw as ConfigData;
 			return;
 		}
 		const parsed = safeJsonParse(typeof raw === "string" ? raw : null, {});
-		data = (parsed && typeof parsed === "object") ? parsed : {};
+		data = (parsed && typeof parsed === "object") ? parsed as ConfigData : {};
 	}
 
-	function reset() {
+	function reset(): void {
 		data = {};
 		save();
 	}
 
 	load();
 	// 設定ページ
-	settings.add("config", (win) => {
+	settings.add("config", (win: Window): HTMLElement => {
 		const root = newElement("form", {className: "form-horizontal"});
 		options.sort((a, b) => {
 			const x = a.key.split(".");
@@ -277,9 +324,9 @@
 					control.appendChild(newElement("input", {
 						id,
 						type: "checkbox",
-						checked: config.get(key, defaultValue),
-						onchange() {
-							config.set(key, this.checked);
+						checked: config.get<boolean>(key, Boolean(defaultValue)),
+						onchange(event) {
+							config.set(key, (event.currentTarget as HTMLInputElement).checked);
 						},
 					}));
 					break;
@@ -289,9 +336,9 @@
 						id,
 						type: "number",
 						min: "0",
-						value: config.get(key, defaultValue),
-						onchange() {
-							config.set(key, +this.value);
+						value: String(config.get<number>(key, Number(defaultValue))),
+						onchange(event) {
+							config.set(key, +(event.currentTarget as HTMLInputElement).value);
 						},
 					}));
 					break;
@@ -300,9 +347,9 @@
 					control.appendChild(newElement("input", {
 						id,
 						type: "text",
-						value: config.getString(key, defaultValue),
-						onchange() {
-							config.setString(key, this.value);
+						value: config.getString(key, String(defaultValue)),
+						onchange(event) {
+							config.setString(key, (event.currentTarget as HTMLInputElement).value);
 						},
 					}));
 					break;
@@ -324,46 +371,46 @@
 		return root;
 	});
 	const config = {
-		peekString(key, defaultValue = "") {
+		peekString(key: string, defaultValue = ""): string {
 			if (!(key in data)) return defaultValue;
 			const v = data[key];
 			return (typeof v === "string") ? v : String(v ?? "");
 		},
-		peek(key, defaultValue = null) {
+		peek<T>(key: string, defaultValue: T): T {
 			if (!(key in data)) return defaultValue;
 			try {
-				return JSON.parse(data[key]);
+				return JSON.parse(data[key]) as T;
 			} catch (_e) {
 				return defaultValue;
 			}
 		},
-		getString(key, defaultValue = "") {
+		getString(key: string, defaultValue = ""): string {
 			if (!(key in data)) {
 				config.setString(key, defaultValue);
 				return defaultValue;
 			}
 			return (typeof data[key] === "string") ? data[key] : String(data[key] ?? "");
 		},
-		setString(key, value) {
+		setString(key: string, value: string): void {
 			data[key] = value;
 			save();
 		},
-		has(key) {
+		has(key: string): boolean {
 			return key in data;
 		},
-		get(key, defaultValue = null) {
+		get<T>(key: string, defaultValue: T): T {
 			if (!(key in data)) {
 				config.set(key, defaultValue);
 				return defaultValue;
 			}
 			try {
-				return JSON.parse(data[key]);
+				return JSON.parse(data[key]) as T;
 			} catch (_e) {
 				config.set(key, defaultValue);
 				return defaultValue;
 			}
 		},
-		set(key, value) {
+		set(key: string, value: unknown): void {
 			const json = JSON.stringify(value);
 			config.setString(key, json === undefined ? "null" : json);
 		},
@@ -372,7 +419,7 @@
 		toString,
 		reset,
 		/** 設定項目を登録 */
-		registerFlag(key, defaultValue, description) {
+		registerFlag(key: string, defaultValue: boolean, description: string): void {
 			options.push({
 				type: "flag",
 				key,
@@ -380,7 +427,7 @@
 				description,
 			});
 		},
-		registerCount(key, defaultValue, description) {
+		registerCount(key: string, defaultValue: number, description: string): void {
 			options.push({
 				type: "count",
 				key,
@@ -388,7 +435,7 @@
 				description,
 			});
 		},
-		registerText(key, defaultValue, description) {
+		registerText(key: string, defaultValue: string, description: string): void {
 			options.push({
 				type: "text",
 				key,
@@ -401,18 +448,18 @@
 	config.registerFlag("log.debug", false, "Enable debug logs in console");
 	const log = (() => {
 		const prefix = "[AtCoder Easy Test]";
-		const isDebug = () => config.peek("log.debug", false) === true;
+		const isDebug = (): boolean => config.peek<boolean>("log.debug", false) === true;
 		return {
-			debug(...args) {
+			debug(...args: unknown[]): void {
 				if (isDebug()) console.debug(prefix, ...args);
 			},
-			info(...args) {
+			info(...args: unknown[]): void {
 				if (isDebug()) console.info(prefix, ...args);
 			},
-			warn(...args) {
+			warn(...args: unknown[]): void {
 				console.warn(prefix, ...args);
 			},
-			error(...args) {
+			error(...args: unknown[]): void {
 				console.error(prefix, ...args);
 			},
 		};
@@ -420,13 +467,13 @@
 
 	config.registerCount("codeSaver.limit", 10, "Max number to save codes");
 	const codeSaver = {
-		get() {
+		get(): SavedCode[] {
 			// `json` は、ソースコード文字列またはJSON文字列
 			let json = unsafeWindow.localStorage.AtCoderEasyTest$lastCode;
-			let data = [];
+			let data: SavedCode[] = [];
 			try {
 				if (typeof json === "string") {
-					data.push(...JSON.parse(json));
+					data.push(...JSON.parse(json) as SavedCode[]);
 				} else {
 					data = [];
 				}
@@ -438,20 +485,19 @@
 			}
 			return data;
 		},
-		set(data) {
+		set(data: SavedCode[]): void {
 			unsafeWindow.localStorage.AtCoderEasyTest$lastCode = JSON.stringify(data);
 		},
-		save(savePath, code) {
+		save(savePath: string, code: string): void {
 			const data = codeSaver.get();
 			const idx = data.findIndex(({path}) => path === savePath);
 			// 既存エントリがあれば 1 件だけ削除（元コードは idx+1 を渡しており余分に削除する可能性があった）
 			if (idx !== -1) data.splice(idx, 1);
 			data.push({path: savePath, code});
-			const limit = config.get("codeSaver.limit", 10);
-			while (data.length > limit) data.shift();
+			while (data.length > config.get<number>("codeSaver.limit", 10)) data.shift();
 			codeSaver.set(data);
 		},
-		restore(savedPath) {
+		restore(savedPath: string): Promise<string> {
 			const data = codeSaver.get();
 			const idx = data.findIndex(({path}) => path === savedPath);
 			if (idx === -1 || !(data[idx] instanceof Object))
@@ -459,7 +505,7 @@
 			return Promise.resolve(data[idx].code);
 		}
 	};
-	settings.add(`codeSaver (${location.host})`, (win) => {
+	settings.add(`codeSaver (${location.host})`, (_win: Window): HTMLElement => {
 		const root = newElement("table", {className: "table"}, [
 			newElement("thead", {}, [
 				newElement("tr", {}, [
@@ -484,9 +530,9 @@
 		return root;
 	});
 
-	function similarLangs(targetLang, candidateLangs) {
+	function similarLangs(targetLang: string, candidateLangs: string[]): string[] {
 		const [targetName, targetDetail = ""] = targetLang.split(" ", 2);
-		const selectedLangs = [];
+		const selectedLangs: Array<[string, number]> = [];
 		for (const candidateLang of candidateLangs) {
 			const spaceIdx = candidateLang.indexOf(" ");
 			const name = spaceIdx === -1 ? candidateLang : candidateLang.slice(0, spaceIdx);
@@ -499,7 +545,7 @@
 		return selectedLangs.map(([lang]) => lang);
 	}
 
-	function similarity(s, t) {
+	function similarity(s: string, t: string): number {
 		const n = s.length, m = t.length;
 		// Float64Arrayを使用してメモリ効率と速度を改善
 		let dp = new Float64Array(m + 1);
@@ -518,20 +564,26 @@
 	}
 
 	class CodeRunner {
-		get label() {
+		_label: string;
+
+		get label(): string {
 			return this._label;
 		}
 
-		constructor(label, site) {
+		constructor(label: string, site: string) {
 			this._label = `${label} [${site}]`;
 		}
 
-		async test(sourceCode, input, expectedOutput, options) {
-			let result = {status: "IE", input};
+		async run(_sourceCode: string, input: string, _options: RunnerOptions = {}): Promise<RunnerResult> {
+			return {status: "IE", input};
+		}
+
+		async test(sourceCode: string, input: string, expectedOutput: string | null, options: RunnerOptions): Promise<RunnerResult> {
+			let result: RunnerResult = {status: "IE", input};
 			try {
 				result = await this.run(sourceCode, input, options);
 			} catch (e) {
-				result.error = e.toString();
+				result.error = String(e);
 				return result;
 			}
 			if (expectedOutput != null)
@@ -543,7 +595,7 @@
 				expectedOutput = expectedOutput.trim();
 				output = output.trim();
 			}
-			let equals = (x, y) => x === y;
+			let equals = (x: string, y: string): boolean => x === y;
 			if (options.allowableError) {
 				const floatPattern = /^[-+]?[0-9]*\.[0-9]+([eE][-+]?[0-9]+)?$/;
 				const superEquals = equals;
@@ -577,35 +629,35 @@
 	}
 
 	class CustomRunner extends CodeRunner {
-		run;
+		run: (sourceCode: string, input: string, options?: RunnerOptions) => Promise<RunnerResult>;
 
-		constructor(label, run) {
+		constructor(label: string, run: (sourceCode: string, input: string, options?: RunnerOptions) => Promise<RunnerResult>) {
 			super(label, "Browser");
 			this.run = run;
 		}
 	}
 
-	let waitAtCoderCustomTest = Promise.resolve();
+	let waitAtCoderCustomTest: Promise<RunnerResult | void> = Promise.resolve();
 	const AtCoderCustomTestBase = location.href.replace(/\/tasks\/.+$/, "/custom_test");
 	const AtCoderCustomTestResultAPI = AtCoderCustomTestBase + "/json?reload=true";
 	const AtCoderCustomTestSubmitAPI = AtCoderCustomTestBase + "/submit/json";
 	const ce_groups = new Set();
 
 	class AtCoderRunner extends CodeRunner {
-		languageId;
+		languageId: string;
 
-		constructor(languageId, label) {
+		constructor(languageId: string, label: string) {
 			super(label, "AtCoder");
 			this.languageId = languageId;
 		}
 
-		async run(sourceCode, input, options = {}) {
+		async run(sourceCode: string, input: string, options: RunnerOptions = {}): Promise<RunnerResult> {
 			const promise = this.submit(sourceCode, input, options);
 			waitAtCoderCustomTest = promise;
 			return await promise;
 		}
 
-		async submit(sourceCode, input, options = {}) {
+		async submit(sourceCode: string, input: string, options: RunnerOptions = {}): Promise<RunnerResult> {
 			try {
 				await waitAtCoderCustomTest;
 			} catch (error) {
@@ -675,15 +727,16 @@
 	}
 
 	class PaizaIORunner extends CodeRunner {
-		name;
+		name: string;
 
-		constructor(name, label) {
+		constructor(name: string, label: string) {
 			super(label, "PaizaIO");
 			this.name = name;
 		}
 
-		async run(sourceCode, input, options = {}) {
-			let id, status, error;
+		async run(sourceCode: string, input: string, _options: RunnerOptions = {}): Promise<RunnerResult> {
+			let id: string;
+			let status: string;
 			try {
 				const res = await fetch("https://api.paiza.io/runners/create?" + buildParams({
 					source_code: sourceCode,
@@ -698,7 +751,6 @@
 				}).then(r => r.json());
 				id = res.id;
 				status = res.status;
-				error = res.error;
 			} catch (error) {
 				return {
 					status: "IE",
@@ -714,7 +766,6 @@
 					mode: "cors",
 				}).then(res => res.json());
 				status = res.status;
-				error = res.error;
 			}
 			const res = await fetch("https://api.paiza.io/runners/get_details?" + buildParams({
 				id,
@@ -722,7 +773,7 @@
 			}), {
 				mode: "cors",
 			}).then(r => r.json());
-			const result = {
+			const result: RunnerResult = {
 				status: "OK",
 				exitCode: String(res.exit_code),
 				execTime: +res.time * 1e3,
@@ -744,7 +795,7 @@
 		}
 	}
 
-	async function loadPyodide() {
+	async function loadPyodide(): Promise<any> {
 		const script = await fetch("https://cdn.jsdelivr.net/pyodide/v0.24.0/full/pyodide.js").then((res) => res.text());
 		unsafeWindow["Function"](script)();
 		const pyodide = await unsafeWindow["loadPyodide"]({
@@ -758,9 +809,9 @@ class __redirect_stdin(contextlib._RedirectStream):
 		return pyodide;
 	}
 
-	let _pyodide = Promise.reject("Pyodide is not yet loaded");
-	let _serial = Promise.resolve();
-	const pyodideRunner = new CustomRunner("Pyodide", (sourceCode, input, options = {}) => new Promise((resolve, reject) => {
+	let _pyodide: Promise<any> = Promise.reject("Pyodide is not yet loaded");
+	let _serial: Promise<void> = Promise.resolve();
+	const pyodideRunner = new CustomRunner("Pyodide", (sourceCode: string, input: string, _options: RunnerOptions = {}) => new Promise<RunnerResult>((resolve) => {
 		_serial = _serial.finally(async () => {
 			const pyodide = await (_pyodide = _pyodide.catch(loadPyodide));
 			const code = `
@@ -818,8 +869,8 @@ def __run():
 		});
 	}));
 
-	function pairs(list) {
-		const pairs = [];
+	function pairs<T>(list: ArrayLike<T>): Array<Pair<T>> {
+		const pairs: Array<Pair<T>> = [];
 		const len = list.length >> 1;
 		for (let i = 0; i < len; i++)
 			pairs.push([list[i * 2], list[i * 2 + 1]]);
@@ -829,12 +880,12 @@ def __run():
 	async function init$5() {
 		if (location.host !== "atcoder.jp")
 			throw "Not AtCoder";
-		const doc = unsafeWindow.document;
+		const doc = unsafeWindow.document as Document;
 		// "言語名 その他の説明..." となっている
 		// 注意:
 		// * 言語名にはスペースが入ってはいけない（スペース以降は説明とみなされる）
 		// * Python2 の言語名は「Python」、 Python3 の言語名は「Python3」
-		const langMap = {
+		const langMap: LanguageMap = {
 			4001: "C GCC 9.2.1",
 			4002: "C Clang 10.0.0",
 			4003: "C++ GCC 9.2.1",
@@ -1112,8 +1163,10 @@ def __run():
 			6118: "SQL DuckDB 1.3.2",
 		};
 		// filter langMap
-		const existingLangs = new Set();
-		for (const option of doc.querySelector("#select-lang select.current").options) {
+		const existingLangs = new Set<string>();
+		const langSelect = doc.querySelector<HTMLSelectElement>("#select-lang select.current");
+		if (!langSelect) throw new Error("AtCoder language selector was not found.");
+		for (const option of langSelect.options) {
 			existingLangs.add(option.value);
 		}
 		for (const key of Object.keys(langMap)) {
@@ -1121,13 +1174,13 @@ def __run():
 				delete langMap[key];
 			}
 		}
-		const languageId = new ObservableValue(unsafeWindow.$("#select-lang select.current").val());
+		const languageId = new ObservableValue<string>(String(unsafeWindow.$("#select-lang select.current").val()));
 		unsafeWindow.$("#select-lang select").change(() => {
-			languageId.value = unsafeWindow.$("#select-lang select.current").val();
+			languageId.value = String(unsafeWindow.$("#select-lang select.current").val());
 		});
-		const language = languageId.map(lang => langMap[lang]);
+		const language = languageId.map((lang: string) => langMap[lang] ?? "");
 		const isTestCasesHere = /^\/contests\/[^\/]+\/tasks\//.test(location.pathname);
-		const taskSelector = doc.querySelector("#select-task");
+		const taskSelector = doc.querySelector<HTMLSelectElement>("#select-task");
 		let warnedTestCasesNotLoaded = false;
 
 		function getTaskURI() {
@@ -1136,8 +1189,12 @@ def __run():
 			return `${location.origin}${location.pathname}`;
 		}
 
-		const testcasesCache = {};
-		let activeTestcaseFetchController = null;
+		const testcasesCache: Record<string, {
+			state: "loading";
+			promise: Promise<void>;
+			controller: AbortController
+		} | { state: "loaded"; testcases: TestCase[] } | { state: "error"; error: unknown }> = {};
+		let activeTestcaseFetchController: AbortController | null = null;
 		if (taskSelector) {
 			const doFetchTestCases = () => {
 				const taskURI = getTaskURI();
@@ -1173,7 +1230,7 @@ def __run():
 			doFetchTestCases();
 		}
 
-		async function fetchTestCases(taskUrl, signal = undefined) {
+		async function fetchTestCases(taskUrl: string, signal: AbortSignal | undefined = undefined): Promise<TestCase[]> {
 			const res = await fetch(taskUrl, {signal, credentials: "include"});
 			if (!res.ok)
 				throw new Error(`Failed to fetch task page: ${res.status} ${res.statusText}`);
@@ -1182,8 +1239,8 @@ def __run():
 			return getTestCases(taskDoc);
 		}
 
-		function getTestCases(doc) {
-			const selectors = [
+		function getTestCases(doc: Document): TestCase[] {
+			const selectors: Array<[string, string]> = [
 				["#task-statement p+pre.literal-block", ".section"],
 				["#task-statement pre.source-code-for-copy", ".part"],
 				["#task-statement .lang>*:nth-child(1) .div-btn-copy+pre", ".part"],
@@ -1194,8 +1251,8 @@ def __run():
 				["#task-statement pre", ".part"],
 			];
 			for (const [selector, closestSelector] of selectors) {
-				let e = [...doc.querySelectorAll(selector)];
-				e = e.filter(e => {
+				let e: Element[] = [...doc.querySelectorAll(selector)];
+				e = e.filter((e: Element) => {
 					if (e.closest(".io-style")) return false;
 					return !e.querySelector("var");
 				});
@@ -1203,25 +1260,26 @@ def __run():
 					continue;
 				return pairs(e).map(([input, output], index) => {
 					const container = input.closest(closestSelector) || input.parentElement;
+					if (!container) throw new Error("Sample container was not found.");
 					return {
 						selector,
 						title: `Sample ${index + 1}`,
-						input: input.textContent,
-						output: output.textContent,
+						input: input.textContent ?? "",
+						output: output.textContent ?? "",
 						anchor: container.querySelector(".btn-copy") || container.querySelector("h1,h2,h3,h4,h5,h6"),
 					};
 				});
 			}
 			{ // maximum_cup_2018_d
-				let e = [...doc.querySelectorAll("#task-statement .div-btn-copy+pre")];
-				e = e.filter(f => !f.childElementCount);
+				let e: Element[] = [...doc.querySelectorAll("#task-statement .div-btn-copy+pre")];
+				e = e.filter((f: Element) => !f.childElementCount);
 				if (e.length) {
 					return pairs(e).map(([input, output], index) => ({
 						selector: "#task-statement .div-btn-copy+pre",
 						title: `Sample ${index + 1}`,
-						input: input.textContent,
-						output: output.textContent,
-						anchor: (input.closest(".part") || input.parentElement).querySelector(".btn-copy"),
+						input: input.textContent ?? "",
+						output: output.textContent ?? "",
+						anchor: (input.closest(".part") || input.parentElement)?.querySelector(".btn-copy") ?? input,
 					}));
 				}
 			}
@@ -1248,14 +1306,14 @@ def __run():
 				const $ = unsafeWindow.document.querySelector.bind(unsafeWindow.document);
 				if (typeof unsafeWindow["ace"] !== "undefined") {
 					unsafeWindow["ace"].edit($("#editor")).setValue(sourceCode);
-					$("#plain-textarea").value = sourceCode;
+					($("#plain-textarea") as HTMLTextAreaElement).value = sourceCode;
 				} else {
-					doc.querySelector(".plain-textarea").value = sourceCode;
+					(doc.querySelector(".plain-textarea") as HTMLTextAreaElement).value = sourceCode;
 					unsafeWindow.$(".editor").data("editor").doc.setValue(sourceCode);
 				}
 			},
 			submit() {
-				doc.querySelector("#submit").click();
+				(doc.querySelector("#submit") as HTMLElement).click();
 			},
 			get testButtonContainer() {
 				return doc.querySelector("#submit").parentElement;
@@ -1299,12 +1357,12 @@ def __run():
 		if (location.host !== "yukicoder.me")
 			throw "Not yukicoder";
 		const $ = unsafeWindow.$;
-		const doc = unsafeWindow.document;
+		const doc = unsafeWindow.document as Document;
 		const editor = unsafeWindow.ace.edit("rich_source");
 		const eSourceObject = $("#source");
 		const eLang = $("#lang");
 		const eSamples = $(".sample");
-		const langMap = {
+		const langMap: LanguageMap = {
 			"cpp14": "C++ C++14 GCC 11.1.0 + Boost 1.77.0",
 			"cpp17": "C++ C++17 GCC 11.1.0 + Boost 1.77.0",
 			"cpp-clang": "C++ C++17 Clang 10.0.0 + Boost 1.76.0",
@@ -1356,9 +1414,9 @@ def __run():
 		for (const btnCopyInput of doc.querySelectorAll(".copy-sample-input")) {
 			btnCopyInput.parentElement.insertBefore(newElement("span", {className: "atcoder-easy-test-anchor"}), btnCopyInput);
 		}
-		const language = new ObservableValue(langMap[eLang.val()]);
+		const language = new ObservableValue<string>(langMap[String(eLang.val())] ?? "");
 		eLang.on("change", () => {
-			language.value = langMap[eLang.val()];
+			language.value = langMap[String(eLang.val())] ?? "";
 		});
 		return {
 			name: "yukicoder",
@@ -1373,7 +1431,7 @@ def __run():
 				editor.getSession().setValue(sourceCode);
 			},
 			submit() {
-				doc.querySelector(`#submit_form input[type="submit"]`).click();
+				(doc.querySelector(`#submit_form input[type="submit"]`) as HTMLElement).click();
 			},
 			get testButtonContainer() {
 				return doc.querySelector("#submit_form");
@@ -1388,16 +1446,16 @@ def __run():
 				return doc.querySelector("#content");
 			},
 			get testCases() {
-				const testCases = [];
+				const testCases: TestCase[] = [];
 				let sampleId = 1;
 				for (let i = 0; i < eSamples.length; i++) {
 					const eSample = eSamples.eq(i);
 					const [eInput, eOutput] = eSample.find("pre");
 					testCases.push({
 						title: `Sample ${sampleId++}`,
-						input: eInput.textContent,
-						output: eOutput.textContent,
-						anchor: eSample.find(".atcoder-easy-test-anchor")[0],
+						input: eInput.textContent ?? "",
+						output: eOutput.textContent ?? "",
+						anchor: eSample.find(".atcoder-easy-test-anchor")[0] ?? eSample[0],
 					});
 				}
 				return testCases;
@@ -1412,32 +1470,32 @@ def __run():
 	}
 
 	class Editor {
-		_element;
+		_element: HTMLTextAreaElement;
 
-		constructor(lang) {
+		constructor(_lang: string) {
 			this._element = document.createElement("textarea");
 			this._element.style.fontFamily = "monospace";
 			this._element.style.width = "100%";
 			this._element.style.minHeight = "5em";
 		}
 
-		get element() {
+		get element(): HTMLTextAreaElement {
 			return this._element;
 		}
 
-		get sourceCode() {
+		get sourceCode(): string {
 			return this._element.value;
 		}
 
-		set sourceCode(sourceCode) {
+		set sourceCode(sourceCode: string) {
 			this._element.value = sourceCode;
 		}
 
-		setLanguage(lang) {
+		setLanguage(_lang: string): void {
 		}
 	}
 
-	const langMap = {
+	const langMap: LanguageMap = {
 		3: "Delphi 7",
 		4: "Pascal Free Pascal 3.0.2",
 		6: "PHP 7.2.13",
@@ -1484,8 +1542,9 @@ def __run():
 	async function init$3() {
 		if (location.host !== "codeforces.com")
 			throw "not Codeforces";
-		const doc = unsafeWindow.document;
-		const eLang = doc.querySelector("select[name='programTypeId']");
+		const doc = unsafeWindow.document as Document;
+		const eLang = doc.querySelector<HTMLSelectElement>("select[name='programTypeId']");
+		if (!eLang) throw new Error("Codeforces language selector was not found.");
 		doc.head.appendChild(newElement("link", {
 			rel: "stylesheet",
 			href: "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css",
@@ -1508,12 +1567,13 @@ def __run():
 			jQuery,
 			$: jQuery
 		});
-		const language = new ObservableValue(langMap[eLang.value]);
+		const language = new ObservableValue<string>(langMap[eLang.value] ?? "");
 		eLang.addEventListener("change", () => {
 			language.value = langMap[eLang.value];
 		});
 		let _sourceCode = "";
-		const eFile = doc.querySelector(".submitForm").elements["sourceFile"];
+		const submitForm = doc.querySelector(".submitForm") as HTMLFormElement;
+		const eFile = submitForm.elements.namedItem("sourceFile") as HTMLInputElement;
 		eFile.addEventListener("change", async () => {
 			if (eFile.files[0]) {
 				_sourceCode = await eFile.files[0].text();
@@ -1521,7 +1581,7 @@ def __run():
 					editor.sourceCode = _sourceCode;
 			}
 		});
-		let editor = null;
+		let editor: { element?: HTMLElement; sourceCode: string; setLanguage(lang: string): void } | null = null;
 		let waitCfFastSubmitCount = 0;
 		const waitCfFastSubmit = setInterval(() => {
 			if (document.getElementById("editor")) {
@@ -1529,7 +1589,7 @@ def __run():
 				if (editor && editor.element)
 					editor.element.style.display = "none";
 				// 言語セレクトを同期させる
-				const eLang2 = doc.querySelector(".submit-form select[name='programTypeId']");
+				const eLang2 = doc.querySelector<HTMLSelectElement>(".submit-form select[name='programTypeId']");
 				if (eLang2) {
 					eLang.addEventListener("change", () => {
 						eLang2.value = eLang.value;
@@ -1548,11 +1608,12 @@ def __run():
 					set sourceCode(sourceCode) {
 						aceEditor.setValue(sourceCode);
 					},
-					setLanguage(lang) {
+					setLanguage(_lang: string): void {
 					},
 				};
 				// ボタンを追加する
-				const buttonContainer = doc.querySelector(".submit-form .submit").parentElement;
+				const buttonContainer = (doc.querySelector(".submit-form .submit") as HTMLElement).parentElement;
+				if (!buttonContainer) throw new Error("Codeforces button container was not found.");
 				buttonContainer.appendChild(newElement("button", {
 					type: "button",
 					className: "btn btn-info",
@@ -1574,8 +1635,8 @@ def __run():
 		}, 100);
 		if (config.get("site.codeforces.showEditor", true)) {
 			editor = new Editor(langMap[eLang.value].split(" ")[0]);
-			doc.getElementById("pageContent").appendChild(editor.element);
-			language.addListener(lang => {
+			doc.getElementById("pageContent")?.appendChild(editor.element);
+			language.addListener((lang: string) => {
 				editor.setLanguage(lang);
 			});
 		}
@@ -1590,7 +1651,7 @@ def __run():
 			set sourceCode(sourceCode) {
 				const container = new DataTransfer();
 				container.items.add(new File([sourceCode], "prog.txt", {type: "text/plain"}));
-				const eFile = doc.querySelector(".submitForm").elements["sourceFile"];
+				const eFile = (doc.querySelector(".submitForm") as HTMLFormElement).elements.namedItem("sourceFile") as HTMLInputElement;
 				eFile.files = container.files;
 				_sourceCode = sourceCode;
 				if (editor)
@@ -1600,7 +1661,7 @@ def __run():
 				if (editor)
 					_sourceCode = editor.sourceCode;
 				this.sourceCode = _sourceCode;
-				doc.querySelector(`.submitForm .submit`).click();
+				(doc.querySelector(`.submitForm .submit`) as HTMLElement).click();
 			},
 			get testButtonContainer() {
 				return eButtons;
@@ -1626,7 +1687,7 @@ def __run():
 						let inputText = "";
 						for (const node of inputs[i].childNodes) {
 							inputText += node.textContent;
-							if (node.nodeType === node.ELEMENT_NODE && (node.tagName === "DIV" || node.tagName === "BR")) {
+							if (node.nodeType === Node.ELEMENT_NODE && ((node as Element).tagName === "DIV" || (node as Element).tagName === "BR")) {
 								inputText += "\n";
 							}
 						}
@@ -1657,7 +1718,7 @@ def __run():
 		const url = /\/contest\/(\d+)\/problem\/([^/]+)/.exec(location.pathname);
 		const contestId = url[1];
 		const problemId = url[2];
-		const doc = unsafeWindow.document;
+		const doc = unsafeWindow.document as Document;
 		const main = doc.querySelector("main");
 		doc.head.appendChild(newElement("link", {
 			rel: "stylesheet",
@@ -1665,10 +1726,10 @@ def __run():
 		}));
 		await loadScript("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js");
 		const language = new ObservableValue("");
-		let submit = () => {
+		let submit: () => void = () => {
 		};
-		let getSourceCode = () => "";
-		let setSourceCode = (_) => {
+		let getSourceCode: () => string = () => "";
+		let setSourceCode: (sourceCode: string) => void = (_sourceCode: string) => {
 		};
 		// make Editor
 		if (config.get("site.codeforcesMobile.showEditor", true)) {
@@ -1679,13 +1740,20 @@ def __run():
 				},
 			});
 			doc.body.appendChild(frame);
-			await new Promise(done => frame.onload = done);
+			await new Promise<void>(done => {
+				frame.onload = () => done();
+			});
 			const fdoc = frame.contentDocument;
-			const form = fdoc.querySelector("._SubmitPage_submitForm");
-			form.elements["problemIndex"].value = problemId;
-			form.elements["problemIndex"].readonly = true;
-			form.elements["programTypeId"].addEventListener("change", function () {
-				language.value = langMap[this.value];
+			if (!fdoc) throw new Error("Codeforces submit iframe document is not available.");
+			const form = fdoc.querySelector("._SubmitPage_submitForm") as HTMLFormElement | null;
+			if (!form) throw new Error("Codeforces submit form was not found.");
+			const problemIndexInput = form.elements.namedItem("problemIndex") as HTMLInputElement;
+			const programTypeSelect = form.elements.namedItem("programTypeId") as HTMLSelectElement;
+			const sourceInput = form.elements.namedItem("source") as HTMLTextAreaElement;
+			problemIndexInput.value = problemId;
+			problemIndexInput.readOnly = true;
+			programTypeSelect.addEventListener("change", (event) => {
+				language.value = langMap[(event.currentTarget as HTMLSelectElement).value];
 			});
 			for (const row of form.children) {
 				if (row.tagName !== "DIV")
@@ -1698,9 +1766,9 @@ def __run():
 			form.parentElement.removeChild(form);
 			main.appendChild(form);
 			submit = () => form.submit();
-			getSourceCode = () => form.elements["source"].value;
-			setSourceCode = sourceCode => {
-				form.elements["source"].value = sourceCode;
+			getSourceCode = () => sourceInput.value;
+			setSourceCode = (sourceCode: string): void => {
+				sourceInput.value = sourceCode;
 			};
 		}
 		return {
@@ -1725,13 +1793,13 @@ def __run():
 			get resultListContainer() {
 				return main;
 			},
-			get testCases() {
-				const testcases = [];
+			get testCases(): TestCase[] {
+				const testcases: TestCase[] = [];
 				let index = 1;
 				for (const container of doc.querySelectorAll(".sample-test")) {
-					const input = container.querySelector(".input pre.content").textContent;
-					const output = container.querySelector(".output pre.content").textContent;
-					const anchor = container.querySelector(".input .title");
+					const input = container.querySelector(".input pre.content")?.textContent ?? "";
+					const output = container.querySelector(".output pre.content")?.textContent ?? "";
+					const anchor = container.querySelector(".input .title") ?? container;
 					testcases.push({
 						input, output, anchor,
 						title: `Sample ${index++}`,
@@ -1751,7 +1819,7 @@ def __run():
 	async function init$1() {
 		if (location.host !== "greasyfork.org" && !location.href.match(/433152-atcoder-easy-test-v2/))
 			throw "Not about page";
-		const doc = unsafeWindow.document;
+		const doc = unsafeWindow.document as Document;
 		await loadScript("https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js");
 		const jQuery = unsafeWindow["jQuery"];
 		await loadScript("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js", null, {
@@ -1770,7 +1838,7 @@ def __run():
 			get sourceCode() {
 				return "";
 			},
-			set sourceCode(sourceCode) {
+			set sourceCode(_sourceCode) {
 			},
 			submit() {
 			},
@@ -1786,7 +1854,7 @@ def __run():
 			get resultListContainer() {
 				return e;
 			},
-			get testCases() {
+			get testCases(): TestCase[] {
 				return [];
 			},
 			get jQuery() {
@@ -1799,7 +1867,7 @@ def __run():
 	}
 
 	// 設定ページが開けなくなるのを避ける
-	const inits = [init$1()];
+	const inits: Array<Promise<any>> = [init$1()];
 	config.registerFlag("site.atcoder", true, "Use AtCoder Easy Test in AtCoder");
 	if (config.get("site.atcoder", true))
 		inits.push(init$5());
@@ -1820,21 +1888,21 @@ def __run():
 	});
 
 	class WandboxRunner extends CodeRunner {
-		name;
-		options;
+		name: string;
+		options: RunnerOptions | ((sourceCode: string, input: string) => RunnerOptions);
 
-		constructor(name, label, options = {}) {
+		constructor(name: string, label: string, options: RunnerOptions | ((sourceCode: string, input: string) => RunnerOptions) = {}) {
 			super(label, "Wandbox");
 			this.name = name;
 			this.options = options;
 		}
 
-		getOptions(sourceCode, input) {
+		getOptions(sourceCode: string, input: string): RunnerOptions {
 			if (typeof this.options === "function") return this.options(sourceCode, input);
 			return this.options;
 		}
 
-		run(sourceCode, input, options = {}) {
+		run(sourceCode: string, input: string, options: RunnerOptions = {}): Promise<RunnerResult> {
 			return this.request(Object.assign({
 				compiler: this.name,
 				code: sourceCode,
@@ -1842,9 +1910,9 @@ def __run():
 			}, Object.assign(options, this.getOptions(sourceCode, input))));
 		}
 
-		async request(body) {
+		async request(body: WandboxRequest): Promise<RunnerResult> {
 			const startTime = Date.now();
-			let res;
+			let res: Record<string, any>;
 			try {
 				res = await fetch("https://wandbox.org/api/compile.json", {
 					method: "POST",
@@ -1884,13 +1952,13 @@ def __run():
 	}
 
 	class WandboxCppRunner extends WandboxRunner {
-		async run(sourceCode, input, options = {}) {
+		async run(sourceCode: string, input: string, _options: RunnerOptions = {}): Promise<RunnerResult> {
 			// ACL を結合する
 			const ACLBase = "https://cdn.jsdelivr.net/gh/atcoder/ac-library/";
-			const files = new Map();
-			const includeHeader = async (source) => {
+			const files = new Map<string, string | null>();
+			const includeHeader = async (source: string): Promise<void> => {
 				const pattern = /^#\s*include\s*[<"]atcoder\/([^>"]+)[>"]/gm;
-				const loaded = [];
+				const loaded: Array<[string, Promise<string>]> = [];
 				for (const match of source.matchAll(pattern)) {
 					const file = "atcoder/" + match[1];
 					if (files.has(file))
@@ -1901,7 +1969,7 @@ def __run():
 						cache: "force-cache",
 					}).then(r => r.text())]);
 				}
-				const included = await Promise.all(loaded.map(async ([file, r]) => {
+				const included = await Promise.all(loaded.map(async ([file, r]: [string, Promise<string>]) => {
 					const source = await r;
 					files.set(file, source);
 					return source;
@@ -1911,7 +1979,7 @@ def __run():
 				}
 			};
 			await includeHeader(sourceCode);
-			const codes = [];
+			const codes: Array<{ file: string; code: string | null }> = [];
 			for (const [file, code] of files) {
 				codes.push({file, code,});
 			}
@@ -1927,7 +1995,7 @@ def __run():
 	// 設定項目を定義
 	config.registerCount("wandboxAPI.cacheLifetime", 24 * 60 * 60 * 1000, "lifetime [ms] of Wandbox compiler list cache");
 
-	async function fetchWandboxCompilers() {
+	async function fetchWandboxCompilers(): Promise<WandboxCompiler[]> {
 		// キャッシュが有効な場合はキャッシュを使う
 		const cached = config.get("wandboxAPI.cachedCompilerList", {value: null, lastModified: -Infinity});
 		if (Date.now() - cached.lastModified <= config.get("wandboxAPI.cacheLifetime", 24 * 60 * 60 * 1000)) {
@@ -1941,13 +2009,13 @@ def __run():
 		return compilers;
 	}
 
-	function getOptimizationOption(compiler) {
+	function getOptimizationOption(compiler: WandboxCompiler): string | undefined {
 		// Optimizationという名前のSwitchから、最適化のオプションを取得する
-		return compiler.switches.find((sw) => sw["display-name"] === "Optimization")
+		return compiler.switches.find((sw: Record<string, string>) => sw["display-name"] === "Optimization")
 			?.name;
 	}
 
-	function toRunner(compiler) {
+	function toRunner(compiler: WandboxCompiler): WandboxRunner {
 		const optimizationOption = getOptimizationOption(compiler);
 		if (compiler.language === "C++") {
 			return new WandboxCppRunner(compiler.name, compiler.language + " " + compiler.name + " + ACL", {
@@ -1961,16 +2029,15 @@ def __run():
 		}
 	}
 
-	const pattern = /^https?:\/\//;
-	let runners$1 = {};
-	const currentLocalRunners = [];
+	let runners$1: RunnerMap = {};
+	const currentLocalRunners: string[] = [];
 	let localRunnerCacheURL = "";
 	let localRunnerCacheSignature = "";
 
 	class LocalRunner extends CodeRunner {
-		compilerName;
+		compilerName: string;
 
-		static setRunners(_runners) {
+		static setRunners(_runners: RunnerMap) {
 			runners$1 = _runners;
 		}
 
@@ -1988,7 +2055,7 @@ def __run():
 				localRunnerCacheSignature = "";
 				return true;
 			}
-			if (!pattern.test(apiURL)) throw "LocalRunner: invalid localRunnerURL";
+			if (!isHttpUrl(apiURL)) throw "LocalRunner: invalid localRunnerURL";
 			try {
 				const res = await fetch(apiURL, {
 					method: "POST",
@@ -1996,13 +2063,11 @@ def __run():
 					headers: {
 						"Content-Type": "application/json",
 					},
-					body: JSON.stringify({
-						mode: "list",
-					}),
-				}).then(r => r.json());
+					body: JSON.stringify(buildLocalRunnerListRequest()),
+				}).then(r => r.json()) as LocalRunnerCompilerInfo[];
 				const nextEntries = [];
-				for (const {language, compilerName, label} of res) {
-					const key = `${language} ${compilerName} ${label}`;
+				for (const {compilerName, label, ...info} of res) {
+					const key = buildLocalRunnerKey({compilerName, label, ...info});
 					nextEntries.push({key, compilerName, label});
 				}
 				const nextSignature = nextEntries.map(({key}) => key).join("\n");
@@ -2026,17 +2091,17 @@ def __run():
 			}
 		}
 
-		constructor(compilerName, label) {
+		constructor(compilerName: string, label: string) {
 			super(label, "Local");
 			this.compilerName = compilerName;
 		}
 
-		async run(sourceCode, input, options = {}) {
+		async run(sourceCode: string, input: string, _options: RunnerOptions = {}): Promise<RunnerResult> {
 			const apiURL = config.getString("codeRunner.localRunnerURL", "");
-			if (!pattern.test(apiURL)) {
+			if (!isHttpUrl(apiURL)) {
 				throw "LocalRunner: invalid localRunnerURL";
 			}
-			let res;
+			let res: LocalRunnerRunResponse;
 			try {
 				res = await fetch(apiURL, {
 					method: "POST",
@@ -2044,13 +2109,8 @@ def __run():
 					headers: {
 						"Content-Type": "application/json",
 					},
-					body: JSON.stringify({
-						mode: "run",
-						compilerName: this.compilerName,
-						sourceCode,
-						stdin: input,
-					}),
-				}).then(r => r.json());
+					body: JSON.stringify(buildLocalRunnerRunRequest(sourceCode, input, this.compilerName)),
+				}).then(r => r.json()) as LocalRunnerRunResponse;
 			} catch (error) {
 				return {
 					status: "IE",
@@ -2058,8 +2118,8 @@ def __run():
 					error: String(error),
 				};
 			}
-			const result = {
-				status: "OK",
+			const result: RunnerResult = {
+				status: toEasyTestStatus(res.status, res.exitCode),
 				exitCode: String(res.exitCode),
 				execTime: +res.time,
 				memory: +res.memory,
@@ -2067,38 +2127,12 @@ def __run():
 				output: res.stdout ?? "",
 				error: res.stderr ?? "",
 			};
-			switch (res.status) {
-				case "success": {
-					if (res.exitCode === 0) {
-						result.status = "OK";
-					} else {
-						result.status = "RE";
-					}
-					break;
-				}
-				case "runtimeError": {
-					result.status = "RE";
-					break;
-				}
-				case "timeLimitExceeded": {
-					result.status = "TLE";
-					break;
-				}
-				case "compileError": {
-					result.status = "CE";
-					break;
-				}
-				case "internalError":
-				default: {
-					result.status = "IE";
-				}
-			}
 			return result;
 		}
 	}
 
 	// runners[key] = runner; key = language + " " + environmentInfo
-	const runners = {
+	const runners: RunnerMap = {
 		"C C17 Clang paiza.io": new PaizaIORunner("c", "C (C17 / Clang)"),
 		"Python3 CPython paiza.io": new PaizaIORunner("python3", "Python3"),
 		"Python3 Pyodide": pyodideRunner,
@@ -2138,11 +2172,11 @@ def __run():
 	// 以前はロード時に即 fetchWandboxCompilers() を呼び出していたが、
 	// 実際に必要になる（= getEnvironment が呼ばれる）まで遅延させることで
 	// ページロード直後の負荷を少し抑える。
-	let wandboxPromise = null;
+	let wandboxPromise: Promise<void> | null = null;
 
-	function ensureWandboxCompilersLoaded() {
+	function ensureWandboxCompilersLoaded(): Promise<void> {
 		if (!wandboxPromise) {
-			wandboxPromise = fetchWandboxCompilers().then((compilers) => {
+			wandboxPromise = fetchWandboxCompilers().then((compilers: WandboxCompiler[]) => {
 				for (const compiler of compilers) {
 					let language = compiler.language;
 					if (compiler.language === "Python" && /python-3\./.test(compiler.version)) {
@@ -2160,7 +2194,7 @@ def __run():
 	site.then(site => {
 		if (site.name === "AtCoder") {
 			// AtCoderRunner がない場合は、追加する
-			for (const [languageId, descriptor] of Object.entries(site.langMap)) {
+			for (const [languageId, descriptor] of Object.entries(site.langMap as Record<string, string>)) {
 				const m = descriptor.match(/([^ ]+)(.*)/);
 				if (m) {
 					const name = `${m[1]} ${m[2].slice(1)} AtCoder`;
@@ -2182,7 +2216,7 @@ def __run():
 	// 「ローカルサーバーをデフォルトで使いたい」という要望に合わせて、既定値は true にする。
 	config.registerFlag("codeRunner.precompile.enable", true, "Enable LocalRunner precompile on editor changes");
 
-	let precompileTimeout = null;
+	let precompileTimeout: ReturnType<typeof setTimeout> | null = null;
 	let lastPrecompiledCode = '';
 	let isPrecompiling = false;
 	const PRECOMPILE_DELAY_MS = 180;
@@ -2193,7 +2227,7 @@ def __run():
 
 		try {
 			const apiURL = config.getString("codeRunner.localRunnerURL", "");
-			if (!apiURL || !/^https?:\/\//.test(apiURL)) return;
+			if (!apiURL || !isHttpUrl(apiURL)) return;
 
 			// 設定で無効化されている場合は何もしない
 			if (!config.get("codeRunner.precompile.enable", true)) return;
@@ -2208,10 +2242,7 @@ def __run():
 				method: "POST",
 				mode: "cors",
 				headers: {"Content-Type": "application/json"},
-				body: JSON.stringify({
-					mode: "precompile",
-					sourceCode: sourceCode
-				})
+				body: JSON.stringify(buildLocalRunnerPrecompileRequest(sourceCode))
 			}).catch(() => {
 			});
 
@@ -2263,7 +2294,10 @@ def __run():
 	config.registerCount("codeRunner.maxRetry", 3, "Max count of retry when IE (Internal Error)");
 	const codeRunner = {
 		// 指定した環境でコードを実行する
-		async run(runnerId, sourceCode, input, expectedOutput, options = {trim: true, split: true}) {
+		async run(runnerId: string, sourceCode: string, input: string, expectedOutput: string | null, options: RunnerOptions = {
+			trim: true,
+			split: true
+		}) {
 			// CodeRunner が存在しない言語ID
 			if (!(runnerId in runners))
 				return Promise.reject("Language not supported");
@@ -2291,7 +2325,7 @@ def __run():
 		},
 		// 環境の名前の一覧を取得する
 		// @return runnerIdとラベルのペアの配列
-		async getEnvironment(languageId, options = {}) {
+		async getEnvironment(languageId: string, options: RunnerOptions = {}): Promise<Array<[string, string | undefined]>> {
 			const {refreshLocalRunner = true} = options;
 			ensureWandboxCompilersLoaded(); // wandboxAPI がコンパイラ情報を取ってくるのを待つ
 			await localRunnerPromise; // LocalRunner がコンパイラ情報を取ってくるのを待つ
@@ -2332,30 +2366,33 @@ def __run():
 
 	async function init() {
 		const site$1 = await site;
-		const style = html2element(hStyle$1);
-		const bottomMenu = html2element(hBottomMenu);
+		const style = html2element<HTMLElement>(hStyle$1);
+		const bottomMenu = html2element<HTMLElement>(hBottomMenu);
 		unsafeWindow.document.head.appendChild(style);
 		site$1.bottomMenuContainer.appendChild(bottomMenu);
-		const bottomMenuKey = bottomMenu.querySelector("#bottom-menu-key");
-		const bottomMenuTabs = bottomMenu.querySelector("#bottom-menu-tabs");
-		const bottomMenuContents = bottomMenu.querySelector("#bottom-menu-contents");
+		const bottomMenuKey = bottomMenu.querySelector<HTMLElement>("#bottom-menu-key");
+		const bottomMenuTabs = bottomMenu.querySelector<HTMLElement>("#bottom-menu-tabs");
+		const bottomMenuContents = bottomMenu.querySelector<HTMLElement>("#bottom-menu-contents");
+		if (!bottomMenuKey || !bottomMenuTabs || !bottomMenuContents) {
+			throw new Error("bottom menu elements were not found.");
+		}
 		// メニューのリサイズ
 		{
-			let resizeStart = null;
-			const onStart = (event) => {
-				const target = event.target;
+			let resizeStart: { y: number; height: number } | null = null;
+			const onStart = (event: MouseEvent): void => {
+				const target = event.target as HTMLElement;
 				const pageY = event.pageY;
 				if (target.id !== "bottom-menu-tabs")
 					return;
 				resizeStart = {y: pageY, height: bottomMenuContents.getBoundingClientRect().height};
 			};
-			const onMove = (event) => {
+			const onMove = (event: MouseEvent): void => {
 				if (!resizeStart)
 					return;
 				event.preventDefault();
 				bottomMenuContents.style.height = `${resizeStart.height - (event.pageY - resizeStart.y)}px`;
 			};
-			const onEnd = () => {
+			const onEnd = (): void => {
 				resizeStart = null;
 			};
 			bottomMenuTabs.addEventListener("mousedown", onStart);
@@ -2363,14 +2400,14 @@ def __run():
 			bottomMenuTabs.addEventListener("mouseup", onEnd);
 			bottomMenuTabs.addEventListener("mouseleave", onEnd);
 		}
-		let tabs = new Set();
-		let selectedTab = null;
+		let tabs = new Set<HTMLAnchorElement>();
+		let selectedTab: string | null = null;
 		/** 下メニューの操作
 		 * 下メニューはいくつかのタブからなる。タブはそれぞれ tabId, ラベル, 中身を持っている。
 		 */
 		const menuController = {
 			/** タブを選択 */
-			selectTab(tabId) {
+			selectTab(tabId: string): void {
 				const tab = site$1.jQuery(`#bottom-menu-tab-${tabId}`);
 				if (tab && tab[0]) {
 					tab.tab("show"); // Bootstrap 3
@@ -2378,7 +2415,10 @@ def __run():
 				}
 			},
 			/** 下メニューにタブを追加する */
-			addTab(tabId, tabLabel, paneContent, options = {}) {
+			addTab(tabId: string, tabLabel: string, paneContent: Node, options: {
+				active?: boolean;
+				closeButton?: boolean
+			} = {}) {
 				log.debug(`addTab: ${tabLabel} (${tabId})`, paneContent);
 				// タブを追加
 				const tab = document.createElement("a");
@@ -2413,7 +2453,8 @@ def __run():
 						if (selectedTab === tabId) {
 							selectedTab = null;
 							if (tabs.size > 0) {
-								menuController.selectTab(tabs.values().next().value.dataset.id);
+								const nextTab = tabs.values().next().value;
+								if (nextTab?.dataset.id) menuController.selectTab(nextTab.dataset.id);
 							}
 						}
 					},
@@ -2421,7 +2462,7 @@ def __run():
 						menuController.show();
 						menuController.selectTab(tabId);
 					},
-					set color(color) {
+					set color(color: string) {
 						tab.style.backgroundColor = color;
 					},
 				};
@@ -2456,14 +2497,14 @@ def __run():
 	const hRowTemplate = "<div class=\"atcoder-easy-test-cases-row alert alert-dismissible\">\n  <button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"close\">\n    <span aria-hidden=\"true\">×</span>\n  </button>\n  <div class=\"progress\">\n    <div class=\"progress-bar\" style=\"width: 0;\">0 / 0</div>\n  </div>\n  <div class=\"atcoder-easy-test-cases-row-date\" style=\"font-family: monospace; text-align: right; position: absolute; right: 1em;\"></div>\n</div>";
 
 	class ResultRow {
-		_tabs;
-		_element;
-		_promise;
+		_tabs: Array<Promise<{ close(): void }>>;
+		_element: HTMLElement;
+		_promise: Promise<void[]>;
 
-		constructor(pairs) {
-			this._tabs = pairs.map(([_, tab]) => tab);
-			this._element = html2element(hRowTemplate);
-			this._element.querySelector(".close").addEventListener("click", () => this.remove());
+		constructor(pairs: ResultPair[]) {
+			this._tabs = pairs.map(([_pResult, tab]: ResultPair) => tab);
+			this._element = html2element<HTMLElement>(hRowTemplate);
+			this._element.querySelector(".close")?.addEventListener("click", () => this.remove());
 			{
 				const date = new Date();
 				const h = date.getHours().toString().padStart(2, "0");
@@ -2474,51 +2515,54 @@ def __run():
 			const numCases = pairs.length;
 			let numFinished = 0;
 			let numAccepted = 0;
-			const progressBar = this._element.querySelector(".progress-bar");
+			const progressBar = this._element.querySelector<HTMLElement>(".progress-bar");
+			if (!progressBar) throw new Error("Progress bar was not found.");
 			progressBar.textContent = `${numFinished} / ${numCases}`;
-			this._promise = Promise.all(pairs.map(([pResult, tab]) => {
-				const button = html2element(`<div class="label label-default" style="margin: 3px; cursor: pointer;">WJ</div>`);
+			this._promise = Promise.all(pairs.map(async ([pResult, tab]: ResultPair) => {
+				const button = html2element<HTMLElement>(`<div class="label label-default" style="margin: 3px; cursor: pointer;">WJ</div>`);
 				button.addEventListener("click", async () => {
 					(await tab).show();
 				});
 				this._element.appendChild(button);
-				return pResult.then(result => {
-					button.textContent = result.status;
-					if (result.status === "AC") {
+				try {
+					const result_1 = await pResult;
+					button.textContent = result_1.status;
+					if (result_1.status === "AC") {
 						button.classList.add("label-success");
-					} else if (result.status !== "OK") {
+					} else if (result_1.status !== "OK") {
 						button.classList.add("label-warning");
 					}
 					numFinished++;
-					if (result.status === "AC")
+					if (result_1.status === "AC")
 						numAccepted++;
 					progressBar.textContent = `${numFinished} / ${numCases}`;
 					progressBar.style.width = `${100 * numFinished / numCases}%`;
 					if (numFinished === numCases) {
 						if (numAccepted === numCases)
 							this._element.classList.add("alert-success");
+
 						else
 							this._element.classList.add("alert-warning");
 					}
-				}).catch(reason => {
+				} catch (reason) {
 					button.textContent = "IE";
 					button.classList.add("label-danger");
 					console.error(reason);
-				});
+				}
 			}));
 		}
 
-		get element() {
+		get element(): HTMLElement {
 			return this._element;
 		}
 
-		onFinish(listener) {
+		onFinish(listener: () => void): void {
 			this._promise.then(listener);
 		}
 
-		remove() {
+		remove(): void {
 			for (const pTab of this._tabs)
-				pTab.then(tab => tab.close());
+				pTab.then((tab: { close(): void }) => tab.close());
 			const parent = this._element.parentElement;
 			if (parent)
 				parent.removeChild(this._element);
@@ -2530,7 +2574,7 @@ def __run():
 	const eResultList = html2element(hResultList);
 	site.then(site => site.resultListContainer.appendChild(eResultList));
 	const resultList = {
-		addResult(pairs) {
+		addResult(pairs: ResultPair[]): ResultRow {
 			const result = new ResultRow(pairs);
 			eResultList.insertBefore(result.element, eResultList.firstChild);
 			return result;
@@ -2553,9 +2597,9 @@ def __run():
 		get hasUpdate() {
 			return this.compare(this.current, this.latest) < 0;
 		},
-		compare(a, b) {
-			const x = a.split(".").map((s) => parseInt(s, 10));
-			const y = b.split(".").map((s) => parseInt(s, 10));
+		compare(a: string, b: string): number {
+			const x = a.split(".").map((s: string) => parseInt(s, 10));
+			const y = b.split(".").map((s: string) => parseInt(s, 10));
 			for (let i = 0; i < 3; i++) {
 				if (x[i] < y[i]) {
 					return -1;
@@ -2565,7 +2609,7 @@ def __run():
 			}
 			return 0;
 		},
-		async checkUpdate(force = false) {
+		async checkUpdate(force = false): Promise<string> {
 			const now = Date.now();
 			if (!force && now - version.lastCheck < config.get("version.checkInterval", aDay)) {
 				return this.current;
@@ -2598,9 +2642,9 @@ def __run():
 	settings.add("version", (win) => {
 		const root = newElement("div");
 		const text = win.document.createTextNode.bind(win.document);
-		const textAuto = (property) => {
+		const textAuto = (property: ObservableValue<string | number>) => {
 			const t = text(property.value);
-			property.addListener(value => {
+			property.addListener((value: string | number) => {
 				t.textContent = value;
 			});
 			return t;
@@ -2648,8 +2692,8 @@ def __run():
 
 	const hTabTemplate = "<div class=\"atcoder-easy-test-result container\">\n  <div class=\"row\">\n    <div class=\"atcoder-easy-test-result-col-input col-xs-12\" data-if-expected-output=\"col-sm-6 col-sm-push-6\">\n      <div class=\"form-group\">\n        <label class=\"control-label col-xs-12\">\n          Standard Input\n          <div class=\"col-xs-12\">\n            <textarea class=\"atcoder-easy-test-result-input form-control\" rows=\"3\" readonly=\"readonly\"></textarea>\n          </div>\n        </label>\n      </div>\n    </div>\n    <div class=\"atcoder-easy-test-result-col-expected-output col-xs-12 col-sm-6 hidden\" data-if-expected-output=\"!hidden col-sm-pull-6\">\n      <div class=\"form-group\">\n        <label class=\"control-label col-xs-12\">\n          Expected Output\n          <div class=\"col-xs-12\">\n            <textarea class=\"atcoder-easy-test-result-expected-output form-control\" rows=\"3\" readonly=\"readonly\"></textarea>\n          </div>\n        </label>\n      </div>\n    </div>\n  </div>\n  <div class=\"row\"><div class=\"col-sm-6 col-sm-offset-3\">\n    <div class=\"panel panel-default\">\n      <table class=\"table table-condensed\">\n        <tbody>\n          <tr>\n            <th class=\"text-center\">Exit Code</th>\n            <th class=\"text-center\">Exec Time</th>\n            <th class=\"text-center\">Memory</th>\n          </tr>\n          <tr>\n            <td class=\"atcoder-easy-test-result-exit-code text-center\"></td>\n            <td class=\"atcoder-easy-test-result-exec-time text-center\"></td>\n            <td class=\"atcoder-easy-test-result-memory text-center\"></td>\n          </tr>\n        </tbody>\n      </table>\n    </div>\n  </div></div>\n  <div class=\"row\">\n    <div class=\"atcoder-easy-test-result-col-output col-xs-12\" data-if-error=\"col-md-6\">\n      <div class=\"form-group\">\n        <label class=\"control-label col-xs-12\">\n          Standard Output\n          <div class=\"col-xs-12\">\n            <textarea class=\"atcoder-easy-test-result-output form-control\" rows=\"5\" readonly=\"readonly\"></textarea>\n          </div>\n        </label>\n      </div>\n    </div>\n    <div class=\"atcoder-easy-test-result-col-error col-xs-12 col-md-6 hidden\" data-if-error=\"!hidden\">\n      <div class=\"form-group\">\n        <label class=\"control-label col-xs-12\">\n          Standard Error\n          <div class=\"col-xs-12\">\n            <textarea class=\"atcoder-easy-test-result-error form-control\" rows=\"5\" readonly=\"readonly\"></textarea>\n          </div>\n        </label>\n      </div>\n    </div>\n  </div>\n</div>";
 
-	function setClassFromData(element, name) {
-		const classes = element.dataset[name].split(/\s+/);
+	function setClassFromData(element: HTMLElement, name: string): void {
+		const classes = (element.dataset[name] ?? "").split(/\s+/);
 		for (let className of classes) {
 			let flag = true;
 			if (className[0] === "!") {
@@ -2661,10 +2705,10 @@ def __run():
 	}
 
 	class ResultTabContent {
-		_title;
-		_uid;
-		_element;
-		_result;
+		_title = "";
+		_uid: string;
+		_element: HTMLElement;
+		_result: RunnerResult | null;
 
 		constructor() {
 			this._uid = Date.now().toString(16) + Math.floor(Math.random() * 256).toString(16);
@@ -2673,7 +2717,7 @@ def __run():
 			this._element.id = `atcoder-easy-test-result-${this._uid}`;
 		}
 
-		set result(result) {
+		set result(result: RunnerResult) {
 			this._result = result;
 			if (result.status === "AC") {
 				this.outputStyle.backgroundColor = "#dff0d8";
@@ -2694,76 +2738,78 @@ def __run():
 				this.error = result.error;
 		}
 
-		get result() {
+		get result(): RunnerResult | null {
 			return this._result;
 		}
 
-		get uid() {
+		get uid(): string {
 			return this._uid;
 		}
 
-		get element() {
+		get element(): HTMLElement {
 			return this._element;
 		}
 
-		set title(title) {
+		set title(title: string) {
 			this._title = title;
 		}
 
-		get title() {
+		get title(): string {
 			return this._title;
 		}
 
-		set input(input) {
-			this._get("input").value = input;
+		set input(input: string) {
+			(this._get("input") as HTMLTextAreaElement).value = input;
 		}
 
-		get inputStyle() {
+		get inputStyle(): CSSStyleDeclaration {
 			return this._get("input").style;
 		}
 
-		set expectedOutput(output) {
-			this._get("expected-output").value = output;
+		set expectedOutput(output: string | undefined) {
+			(this._get("expected-output") as HTMLTextAreaElement).value = output ?? "";
 			setClassFromData(this._get("col-input"), "ifExpectedOutput");
 			setClassFromData(this._get("col-expected-output"), "ifExpectedOutput");
 		}
 
-		get expectedOutputStyle() {
+		get expectedOutputStyle(): CSSStyleDeclaration {
 			return this._get("expected-output").style;
 		}
 
-		set output(output) {
-			this._get("output").value = output;
+		set output(output: string | undefined) {
+			(this._get("output") as HTMLTextAreaElement).value = output ?? "";
 		}
 
-		get outputStyle() {
+		get outputStyle(): CSSStyleDeclaration {
 			return this._get("output").style;
 		}
 
-		set error(error) {
-			this._get("error").value = error;
+		set error(error: string) {
+			(this._get("error") as HTMLTextAreaElement).value = error;
 			setClassFromData(this._get("col-output"), "ifError");
 			setClassFromData(this._get("col-error"), "ifError");
 		}
 
-		set exitCode(code) {
+		set exitCode(code: string | number | undefined) {
 			const element = this._get("exit-code");
-			element.textContent = code;
+			element.textContent = String(code ?? "");
 			const isSuccess = code === "0";
 			element.classList.toggle("bg-success", isSuccess);
 			element.classList.toggle("bg-danger", !isSuccess);
 		}
 
-		set execTime(time) {
+		set execTime(time: string) {
 			this._get("exec-time").textContent = time;
 		}
 
-		set memory(memory) {
+		set memory(memory: string) {
 			this._get("memory").textContent = memory;
 		}
 
-		_get(name) {
-			return this._element.querySelector(`.atcoder-easy-test-result-${name}`);
+		_get(name: string): HTMLInputElement | HTMLTextAreaElement | HTMLElement {
+			const element = this._element.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLElement>(`.atcoder-easy-test-result-${name}`);
+			if (!element) throw new Error(`Result tab element not found: ${name}`);
+			return element;
 		}
 	}
 
@@ -2779,7 +2825,7 @@ def __run():
 
 	(async () => {
 		const site$1 = await site;
-		const doc = unsafeWindow.document;
+		const doc = unsafeWindow.document as Document;
 		// init bottomMenu
 		const pBottomMenu = init();
 		pBottomMenu.then(bottomMenu => {
@@ -2802,7 +2848,10 @@ def __run():
 				events.trig("disable");
 			},
 			runCount: 0,
-			runTest(title, language, sourceCode, input, output = null, options = {trim: true, split: true,}) {
+			runTest(title: string, language: string, sourceCode: string, input: string, output: string | null = null, options: RunnerOptions = {
+				trim: true,
+				split: true,
+			}) {
 				this.disableButtons();
 				const content = new ResultTabContent();
 				const pTab = pBottomMenu.then(bottomMenu => bottomMenu.addTab("easy-test-result-" + content.uid, `#${++this.runCount} ${title}`, content.element, {
@@ -2827,16 +2876,20 @@ def __run():
 		// place "Easy Test" tab
 		{
 			// declare const hRoot: string;
-			const root = html2element(hRoot);
-			const E = (id) => root.querySelector(`#atcoder-easy-test-${id}`);
-			const eLanguage = E("language");
-			const eInput = E("input");
-			const eAllowableErrorCheck = E("allowable-error-check");
-			const eAllowableError = E("allowable-error");
-			const eOutput = E("output");
-			const eRun = E("run");
-			const eSetting = E("setting");
-			const eVersion = E("version");
+			const root = html2element<HTMLFormElement>(hRoot);
+			const E = <T extends HTMLElement>(id: string): T => {
+				const element = root.querySelector<T>(`#atcoder-easy-test-${id}`);
+				if (!element) throw new Error(`AtCoder Easy Test element not found: ${id}`);
+				return element;
+			};
+			const eLanguage = E<HTMLSelectElement>("language");
+			const eInput = E<HTMLTextAreaElement>("input");
+			const eAllowableErrorCheck = E<HTMLInputElement>("allowable-error-check");
+			const eAllowableError = E<HTMLInputElement>("allowable-error");
+			const eOutput = E<HTMLTextAreaElement>("output");
+			const eRun = E<HTMLAnchorElement>("run");
+			const eSetting = E<HTMLAnchorElement>("setting");
+			const eVersion = E<HTMLElement>("version");
 			eVersion.textContent = atCoderEasyTest.version.current;
 			events.on("enable", () => {
 				eRun.classList.remove("disabled");
@@ -2849,7 +2902,7 @@ def __run():
 			});
 			// バージョン確認
 			{
-				let button = null;
+				let button: HTMLAnchorElement | null = null;
 				const showButton = () => {
 					if (!version.hasUpdate)
 						return;
@@ -2875,7 +2928,7 @@ def __run():
 				let isLocalServerPolling = false;
 
 				async function onEnvChange() {
-					const langSelection = config.get("langSelection", {});
+					const langSelection = config.get("langSelection", {}) as Record<string, string>;
 					langSelection[site$1.language.value] = eLanguage.value;
 					config.set("langSelection", langSelection);
 					config.save();
@@ -2911,7 +2964,7 @@ def __run():
 							eLanguage.dataset.envSignature = nextSignature;
 						}
 						let nextValue = previousValue;
-						const langSelection = config.get("langSelection", {});
+						const langSelection = config.get("langSelection", {}) as Record<string, string>;
 						if (!langs.some(([runnerId, _]) => runnerId === nextValue)) {
 							nextValue = "";
 						}
@@ -2937,7 +2990,7 @@ def __run():
 							eLanguage.removeChild(eLanguage.firstChild);
 						const option = document.createElement("option");
 						option.className = "fg-danger";
-						option.textContent = error;
+						option.textContent = String(error);
 						eLanguage.appendChild(option);
 						events.trig("disable");
 					}
@@ -2963,31 +3016,31 @@ def __run():
 				}, 5000);
 
 				eAllowableError.disabled = !eAllowableErrorCheck.checked;
-				eAllowableErrorCheck.addEventListener("change", event => {
+				eAllowableErrorCheck.addEventListener("change", () => {
 					eAllowableError.disabled = !eAllowableErrorCheck.checked;
 				});
 			}
 
 			// テスト実行
-			function runTest(title, input, output = null, options = {}) {
-				const opts = Object.assign({trim: true, split: true,}, options);
+			function runTest(title: string, input: string, output: string | null = null, options: RunnerOptions = {}): ResultPair {
+				const opts: RunnerOptions = Object.assign({trim: true, split: true,}, options);
 				if (eAllowableErrorCheck.checked) {
 					opts.allowableError = parseFloat(eAllowableError.value);
 				}
-				return atCoderEasyTest.runTest(title, eLanguage.value, site$1.sourceCode, input, output, opts);
+				return atCoderEasyTest.runTest(title, eLanguage.value, site$1.sourceCode, input, output, opts) as ResultPair;
 			}
 
-			function runAllCases(testcases) {
+			function runAllCases(testcases: TestCase[]): Promise<RunnerResult[]> {
 				const runGroupId = uuid();
-				const pairs = testcases.map(testcase => runTest(testcase.title, testcase.input, testcase.output, {runGroupId}));
+				const pairs: ResultPair[] = testcases.map((testcase: TestCase) => runTest(testcase.title, testcase.input, testcase.output, {runGroupId}));
 				resultList.addResult(pairs);
-				return Promise.all(pairs.map(([pResult, _]) => pResult.then(result => {
+				return Promise.all(pairs.map(([pResult, _pTab]: ResultPair) => pResult.then((result: RunnerResult) => {
 					if (result.status === "AC") return Promise.resolve(result);
 					else return Promise.reject(result);
 				})));
 			}
 
-			eRun.addEventListener("click", _ => {
+			eRun.addEventListener("click", (_event: MouseEvent) => {
 				const title = "Run";
 				const input = eInput.value;
 				const output = eOutput.value;
@@ -2998,7 +3051,7 @@ def __run():
 			for (const testCase of site$1.testCases) {
 				const eRunButton = html2element(hRunButton);
 				eRunButton.addEventListener("click", async () => {
-					const [pResult, pTab] = runTest(testCase.title, testCase.input, testCase.output);
+					const [pResult, pTab] = runTest(testCase.title, testCase.input, testCase.output) as ResultPair;
 					await pResult;
 					(await pTab).show();
 				});
@@ -3055,7 +3108,7 @@ def __run():
 		}
 		// キーボードショートカット
 		config.registerFlag("ui.useKeyboardShortcut", true, "Use Keyboard Shortcuts");
-		unsafeWindow.addEventListener("keydown", (event) => {
+		unsafeWindow.addEventListener("keydown", (event: KeyboardEvent) => {
 			if (config.get("ui.useKeyboardShortcut", true)) {
 				if (event.key === "Enter" && event.ctrlKey) {
 					events.trig("testAndSubmit");
@@ -3068,4 +3121,3 @@ def __run():
 		});
 	})();
 })();
-

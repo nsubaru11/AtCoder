@@ -1,21 +1,3 @@
-﻿// ==UserScript==
-// @name         AtCoder Perf Graph
-// @namespace    https://github.com/nsubaru11/AtCoder/tools/userscripts
-// @version      1.1.4
-// @description  レーティンググラフにパフォーマンスのグラフを重ねて表示します
-// @author       nzm_ort (original), nsubaru11 (modified)
-// @license      MIT
-// @homepageURL  https://github.com/nsubaru11/AtCoder/tree/main/tools/userscripts/AtCoderRatingGraph
-// @supportURL   https://github.com/nsubaru11/AtCoder/issues
-// @match        https://atcoder.jp/users/*
-// @exclude      *://atcoder.jp/users/*?graph=rank
-// @exclude      *://atcoder.jp/users/*?graph=dist
-// @exclude      *://atcoder.jp/users/*/history*
-// @grant        none
-// @run-at       document-end
-// @downloadURL  https://raw.githubusercontent.com/nsubaru11/AtCoder/main/tools/userscripts/AtCoderRatingGraph/dist/AtCoderRatingGraph.user.js
-// @updateURL    https://raw.githubusercontent.com/nsubaru11/AtCoder/main/tools/userscripts/AtCoderRatingGraph/dist/AtCoderRatingGraph.user.js
-// ==/UserScript==
 "use strict";
 
 // ヒューリスティックコンテストかどうかを判定
@@ -66,8 +48,8 @@ const OFFSET_X = 50;
 const OFFSET_Y = 5;
 const DEFAULT_WIDTH = 640;
 const GRAPH_READY_TIMEOUT_MS = 10000;
-let canvas_status = null;
-let canvas_graph = null;
+let canvas_status: HTMLCanvasElement | null = null;
+let canvas_graph: HTMLCanvasElement | null = null;
 let STATUS_WIDTH = 0;
 let STATUS_HEIGHT = 0;
 let PANEL_WIDTH = 0;
@@ -81,7 +63,7 @@ const START_YEAR = 2010;
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const YEAR_SEC = 86400 * 365;
 const STEP_SIZE = 400;
-const COLORS = [[0, "#808080", 0.15], [400, "#804000", 0.15], [800, "#008000", 0.15], [1200, "#00C0C0", 0.2], [1600, "#0000FF", 0.1], [2000, "#C0C000", 0.25], [2400, "#FF8000", 0.2], [2800, "#FF0000", 0.1]];
+const COLORS: Array<[number, string, number]> = [[0, "#808080", 0.15], [400, "#804000", 0.15], [800, "#008000", 0.15], [1200, "#00C0C0", 0.2], [1600, "#0000FF", 0.1], [2000, "#C0C000", 0.25], [2400, "#FF8000", 0.2], [2800, "#FF0000", 0.1]];
 
 const STAR_MIN = 3200;
 const PARTICLE_MIN = 3;
@@ -89,36 +71,129 @@ const PARTICLE_MAX = 20;
 const LIFE_MAX = 30;
 const EPS = 1e-9;
 
-let cj = null;
-let stage_graph, stage_status;
+let cj: any = null;
+let stage_graph: any, stage_status: any;
 // graph
-let panel_shape, border_shape;
-let chart_container, line_shape, vertex_shapes, highest_shape;
-let n, x_min, x_max, y_min, y_max;
+let panel_shape: {
+	x: number;
+	y: number;
+	alpha: number;
+	graphics: {
+		beginFill: (arg0: string) => {
+			(): any;
+			new(): any;
+			rect: { (arg0: number, arg1: number, arg2: number, arg3: number): void; new(): any; };
+		};
+	};
+}, border_shape: {
+	x: number;
+	y: number;
+	graphics: {
+		beginStroke: (arg0: string) => { (): any; new(): any; setStrokeStyle: { (arg0: number): void; new(): any; }; };
+		moveTo: (arg0: number, arg1: number) => {
+			(): any;
+			new(): any;
+			lineTo: { (arg0: number, arg1: number): void; new(): any; };
+		};
+		mt: (arg0: number, arg1: number) => {
+			(): any;
+			new(): any;
+			lt: { (arg0: number, arg1: number): void; new(): any; };
+		};
+		s: (arg0: string) => {
+			(): any;
+			new(): any;
+			ss: {
+				(arg0: number): {
+					(): any;
+					new(): any;
+					rr: { (arg0: number, arg1: number, arg2: number, arg3: number, arg4: number): void; new(): any; };
+				};
+				new(): any;
+			};
+		};
+	};
+};
+let chart_container: { shadow: any; }, line_shape: {
+	graphics: {
+		s: (arg0: string) => { (): any; new(): any; ss: { (arg0: number): void; new(): any; }; };
+		mt: (arg0: any, arg1: any) => void;
+		lt: (arg0: any, arg1: any) => void;
+	};
+}, vertex_shapes: any[], highest_shape: {
+	graphics: {
+		s: (arg0: string) => {
+			(): any;
+			new(): any;
+			mt: {
+				(arg0: any, arg1: any): { (): any; new(): any; lt: { (arg0: any, arg1: number): void; new(): any; }; };
+				new(): any;
+			};
+			f: {
+				(arg0: string): {
+					(): any;
+					new(): any;
+					rr: { (arg0: number, arg1: number, arg2: number, arg3: number, arg4: number): void; new(): any; };
+				};
+				new(): any;
+			};
+		};
+	};
+	i: number;
+	addEventListener: (arg0: string, arg1: { (e: any): void; (e: any): void; }) => void;
+};
+let n: number, x_min: number, x_max: number, y_min: number, y_max: number;
 
 //performance graph - グローバルスコープで明示的に定義
-let perf_panel_shape, perf_border_shape;
-let perf_chart_container, perf_line_shape, perf_vertex_shapes, perf_highest_shape;
-let perf_n, perf_x_min, perf_x_max, perf_y_min, perf_y_max;
+let perf_panel_shape: any, perf_border_shape: any;
+let perf_chart_container: { shadow: any; visible: boolean; }, perf_line_shape: {
+	graphics: {
+		s: (arg0: string) => { (): any; new(): any; ss: { (arg0: number): void; new(): any; }; };
+		mt: (arg0: any, arg1: any) => void;
+		lt: (arg0: any, arg1: any) => void;
+	};
+}, perf_vertex_shapes: any[], perf_highest_shape: {
+	graphics: {
+		s: (arg0: string) => {
+			(): any;
+			new(): any;
+			mt: {
+				(arg0: any, arg1: any): { (): any; new(): any; lt: { (arg0: any, arg1: number): void; new(): any; }; };
+				new(): any;
+			};
+			f: {
+				(arg0: string): {
+					(): any;
+					new(): any;
+					rr: { (arg0: number, arg1: number, arg2: number, arg3: number, arg4: number): void; new(): any; };
+				};
+				new(): any;
+			};
+		};
+	};
+	i: number;
+	addEventListener: (arg0: string, arg1: { (e: any): void; (e: any): void; }) => void;
+};
+let perf_n: number, perf_x_min: number, perf_x_max: number, perf_y_min: number, perf_y_max: number;
 // windowオブジェクトに格納してグローバルアクセスを保証
 window.perf_rating_history = [];
 
 // status
-let border_status_shape;
-let rating_text, place_text, diff_text, date_text, contest_name_text, perf_text;
-let particles;
-let standings_url;
-const username = document.getElementsByClassName("username")[0].textContent;
+let border_status_shape: any;
+let rating_text: any, place_text: any, diff_text: any, date_text: any, contest_name_text: any, perf_text: any;
+let particles: any[];
+let standings_url: string;
+const username = document.getElementsByClassName("username")[0].textContent ?? "";
 
-function waitForPageLoad() {
+function waitForPageLoad(): Promise<void> {
 	if (document.readyState === "complete") return Promise.resolve();
-	return new Promise((resolve) => {
-		window.addEventListener("load", resolve, {once: true});
+	return new Promise<void>((resolve) => {
+		window.addEventListener("load", () => resolve(), {once: true});
 	});
 }
 
-function waitForDependencies() {
-	return new Promise((resolve, reject) => {
+function waitForDependencies(): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
 		const start = Date.now();
 		const timer = setInterval(() => {
 			const hasHistory = Array.isArray(window.rating_history);
@@ -137,12 +212,12 @@ function waitForDependencies() {
 	});
 }
 
-function refreshCanvasRefs() {
-	canvas_status = document.getElementById("ratingStatus");
-	canvas_graph = document.getElementById("ratingGraph");
+function refreshCanvasRefs(): void {
+	canvas_status = document.getElementById("ratingStatus") as HTMLCanvasElement | null;
+	canvas_graph = document.getElementById("ratingGraph") as HTMLCanvasElement | null;
 }
 
-function replaceCanvas(id) {
+function replaceCanvas(id: string): Node | null {
 	const oldCanvas = document.getElementById(id);
 	if (!oldCanvas || !oldCanvas.parentNode) return null;
 	const newCanvas = oldCanvas.cloneNode(false);
@@ -150,7 +225,7 @@ function replaceCanvas(id) {
 	return newCanvas;
 }
 
-function prepareCanvases() {
+function prepareCanvases(): void {
 	if (window.__perf_graph_canvas_ready) {
 		refreshCanvasRefs();
 		return;
@@ -162,7 +237,7 @@ function prepareCanvases() {
 }
 
 // キャンバスサイズなど設定
-function initStage(stage, canvas) {
+function initStage(stage: any, canvas: HTMLCanvasElement): { cssWidth: number; cssHeight: number } {
 	const rect = canvas.getBoundingClientRect();
 	const attrWidth = Number(canvas.getAttribute('width')) || canvas.width || DEFAULT_WIDTH;
 	const attrHeight = Number(canvas.getAttribute('height')) || canvas.height || 0;
@@ -183,14 +258,14 @@ function initStage(stage, canvas) {
 }
 
 // 図形の追加
-function newShape(parent) {
+function newShape(parent: any): any {
 	let s = new cj.Shape();
 	parent.addChild(s);
 	return s;
 }
 
 // テキストの追加
-function newText(parent, x, y, font) {
+function newText(parent: any, x: number, y: number, font: string): any {
 	let t = new cj.Text("", font, "#000");
 	t.x = x;
 	t.y = y;
@@ -201,7 +276,7 @@ function newText(parent, x, y, font) {
 }
 
 // 描画などもろもろ実行
-function init(click_num) {
+function init(click_num: number): void {
 	// windowオブジェクトから参照
 	let perf_rating_history = window.perf_rating_history;
 
@@ -273,24 +348,24 @@ function init(click_num) {
 	cj.Ticker.setFPS(60);
 	cj.Ticker.addEventListener("tick", handleTick);
 
-	function handleTick(event) {
+	function handleTick(_event: unknown): void {
 		updateParticles();
 		stage_status.update();
 	}
 }
 
-function getPer(x, l, r) {
+function getPer(x: number, l: number, r: number): number {
 	return (x - l) / (r - l);
 }
 
-function getColor(x) {
+function getColor(x: number): [number, string, number] {
 	for (let i = COLORS.length - 1; i >= 0; i--) {
 		if (x >= COLORS[i][0]) return COLORS[i];
 	}
 	return [-1, "#000000", 0.1];
 }
 
-function initBackground() {
+function initBackground(): void {
 	panel_shape = newShape(stage_graph);
 	panel_shape.x = OFFSET_X;
 	panel_shape.y = OFFSET_Y;
@@ -301,7 +376,7 @@ function initBackground() {
 	border_shape.y = OFFSET_Y;
 
 	// 左軸
-	function newLabelY(s, y) {
+	function newLabelY(s: string, y: number): void {
 		let t = new cj.Text(s, LABEL_FONT, "#000");
 		t.x = OFFSET_X - 10;
 		t.y = OFFSET_Y + y;
@@ -311,7 +386,7 @@ function initBackground() {
 	}
 
 	// x軸ラベル
-	function newLabelX(s, x, y) {
+	function newLabelX(s: string, x: number, y: number): void {
 		let t = new cj.Text(s, LABEL_FONT, "#000");
 		t.x = OFFSET_X + x;
 		t.y = OFFSET_Y + PANEL_HEIGHT + 2 + y;
@@ -376,7 +451,7 @@ function initBackground() {
 	border_shape.graphics.s("#888").ss(1.5).rr(0, 0, PANEL_WIDTH, PANEL_HEIGHT, 2);
 }
 
-function initChart(click_num4) {
+function initChart(click_num4: number): void {
 	// windowオブジェクトから参照
 	let perf_rating_history = window.perf_rating_history;
 
@@ -389,13 +464,13 @@ function initChart(click_num4) {
 	vertex_shapes = [];
 
 	// マウスホバー時のアニメーション
-	function mouseoverVertex(e) {
+	function mouseoverVertex(e: any): void {
 		vertex_shapes[e.target.i].scaleX = vertex_shapes[e.target.i].scaleY = 1.2;
 		stage_graph.update();
 		setStatus(rating_history[e.target.i], perf_rating_history[e.target.i], true, click_num4);
 	}
 
-	function mouseoutVertex(e) {
+	function mouseoutVertex(e: any): void {
 		vertex_shapes[e.target.i].scaleX = vertex_shapes[e.target.i].scaleY = 1;
 		stage_graph.update();
 	}
@@ -453,7 +528,7 @@ function initChart(click_num4) {
 }
 
 // パフォーマンスグラフの描画
-function initPerfChart(click_num2) {
+function initPerfChart(click_num2: number): void {
 	// windowオブジェクトから参照
 	let perf_rating_history = window.perf_rating_history;
 
@@ -471,13 +546,13 @@ function initPerfChart(click_num2) {
 		return;
 	}
 
-	function mouseoverVertex(e) {
+	function mouseoverVertex(e: any): void {
 		perf_vertex_shapes[e.target.i].scaleX = perf_vertex_shapes[e.target.i].scaleY = 1.2;
 		stage_graph.update();
 		setStatus(rating_history[e.target.i], perf_rating_history[e.target.i], true, click_num2);
 	}
 
-	function mouseoutVertex(e) {
+	function mouseoutVertex(e: any): void {
 		perf_vertex_shapes[e.target.i].scaleX = perf_vertex_shapes[e.target.i].scaleY = 1;
 		stage_graph.update();
 	}
@@ -549,7 +624,7 @@ function initPerfChart(click_num2) {
 }
 
 // status情報初期化関数
-function initStatus(click_num5) {
+function initStatus(click_num5: number): void {
 	// windowオブジェクトから参照
 	let perf_rating_history = window.perf_rating_history;
 
@@ -588,7 +663,7 @@ function initStatus(click_num5) {
 	}
 }
 
-function getRatingPer(x) {
+function getRatingPer(x: number): number {
 	let pre = COLORS[COLORS.length - 1][0] + STEP_SIZE;
 	for (let i = COLORS.length - 1; i >= 0; i--) {
 		if (x >= COLORS[i][0]) return (x - COLORS[i][0]) / (pre - COLORS[i][0]);
@@ -597,18 +672,18 @@ function getRatingPer(x) {
 	return 0;
 }
 
-function getOrdinal(x) {
+function getOrdinal(x: number): string {
 	let s = ["th", "st", "nd", "rd"], v = x % 100;
 	return x + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-function getDiff(x) {
+function getDiff(x: number): string {
 	let sign = x === 0 ? '±' : (x < 0 ? '-' : '+');
 	return sign + Math.abs(x);
 }
 
 // status更新
-function setStatus(data, data2, particle_flag, click_num3) {
+function setStatus(data: RatingHistoryEntry | undefined, data2: RatingHistoryEntry | undefined, particle_flag: boolean, click_num3: number): void {
 	if (!data || !data2) return;
 
 	let date = new Date(data.EndTime * 1000);
@@ -629,7 +704,7 @@ function setStatus(data, data2, particle_flag, click_num3) {
 	contest_name_text.text = contest_name;
 
 	if (particle_flag) {
-		let particle_num = parseInt(Math.pow(getRatingPer(rating), 2) * (PARTICLE_MAX - PARTICLE_MIN) + PARTICLE_MIN);
+		let particle_num = Math.floor(Math.pow(getRatingPer(rating), 2) * (PARTICLE_MAX - PARTICLE_MIN) + PARTICLE_MIN);
 		setParticles(particle_num, color, alpha, rating);
 	}
 	standings_url = data.StandingsUrl;
@@ -644,7 +719,7 @@ function setStatus(data, data2, particle_flag, click_num3) {
 }
 
 // ホバー時のレート変化アニメーション
-function setParticle(particle, x, y, color, alpha, star_flag) {
+function setParticle(particle: any, x: number, y: number, color: string, alpha: number, star_flag: boolean): void {
 	particle.x = x;
 	particle.y = y;
 	let ang = Math.random() * Math.PI * 2;
@@ -659,7 +734,7 @@ function setParticle(particle, x, y, color, alpha, star_flag) {
 	particle.alpha = alpha;
 }
 
-function setParticles(num, color, alpha, rating) {
+function setParticles(num: number, color: string, alpha: number, rating: number): void {
 	for (let i = 0; i < PARTICLE_MAX; i++) {
 		if (i < num) {
 			setParticle(particles[i], rating_text.x, rating_text.y, color, alpha, rating >= STAR_MIN);
@@ -670,7 +745,7 @@ function setParticles(num, color, alpha, rating) {
 	}
 }
 
-function updateParticle(particle) {
+function updateParticle(particle: any): void {
 	if (particle.life <= 0) {
 		particle.visible = false;
 		return;
@@ -684,7 +759,7 @@ function updateParticle(particle) {
 	particle.rotation += particle.rot_speed;
 }
 
-function updateParticles() {
+function updateParticles(): void {
 	for (let i = 0; i < PARTICLE_MAX; i++) {
 		if (particles[i].life > 0) {
 			updateParticle(particles[i]);
@@ -693,8 +768,8 @@ function updateParticles() {
 }
 
 // main関数
-async function main() {
-	let json, page;
+async function main(): Promise<void> {
+	let json: RatingHistoryEntry[], page: HTMLCollection;
 
 	try {
 		let parser = new DOMParser();
@@ -726,7 +801,7 @@ async function main() {
 	for (let i = 0; i < json.length; i++) {
 		let rated = json[i].IsRated;
 		if (rated && page[i] && page[i].children[3]) {
-			const perfValue = Number(page[i].children[3].innerText);
+			const perfValue = Number((page[i].children[3] as HTMLElement).innerText);
 			json[i].Performance = Math.max(0, perfValue);
 			window.perf_rating_history.push({...json[i]});
 		}
@@ -811,4 +886,3 @@ async function bootstrap() {
 }
 
 bootstrap();
-
