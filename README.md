@@ -1,20 +1,57 @@
-# atcoder
+# AtCoder
 
-## commit message
+[AtCoder](https://atcoder.jp/) 向けの解答・補助ツールをまとめたリポジトリです。
 
-- Solved: ABC000 [A ~ G]
-- Resolved: ABC000 [A ~ G]
-- Update: JDK17→24.0.2 ABC000 [A ~ G]
+- **プロフィール**: https://atcoder.jp/users/nsubaru
+- **問題フォルダ**: `ABC/` などコンテスト単位で `src/` に解答を配置
+- **テンプレート**: ルートの `TemplateCode.java` / `TemplateCode17.java`
 
-## notes
+## リポジトリ構成
 
-- site: https://atcoder.jp/
-- profile: https://atcoder.jp/users/nsubaru
-- template entry points: `TemplateCode.java` / `TemplateCode17.java` sit at the repo root for quick starts
-- problem folders under `ABC000~` et al. keep each contest isolated in its `src` directory
-- `tools/runner/bin/start-local-runner.ps1` is the Windows entry point for the local runner daemon, with automatic Windows legacy fallback when WSL startup fails
-- invoke the PowerShell script directly from IntelliJ or a terminal to avoid the usual batch Ctrl+C confirmation in IDE terminals
-- `tools/runner/bin/start-local-runner.sh` starts the Node.js local runner inside WSL and keeps a Java `Dispatcher` process resident
-- the local runner stores compile artifacts under `/dev/shm/atcoder-local-runner` to reduce I/O latency
-- browser userscripts are developed under `tools/userscripts/<Name>/src/main.ts` and built into `tools/userscripts/<Name>/dist/<Name>.user.js` with Bun (`cd tools/userscripts && bun run build`); `AtCoder_Scripts/` is kept as a legacy distribution path whose `@updateURL`/`@downloadURL` redirect Tampermonkey to the new `dist` location
-- CLI submission and local runner tooling is under `tools/runner`; shared TypeScript modules (AtCoder URL parsing, types) live under `tools/shared`
+```text
+AtCoder/
+├── ABC/                 # コンテスト別の解答 (Java のみ)
+├── TemplateCode.java    # テンプレ
+├── tools/
+│   ├── shared/          # runner / userscripts 共通 TypeScript
+│   ├── userscripts/     # Tampermonkey 用 UserScript (TypeScript → .user.js)
+│   └── runner/          # ローカル実行・CLI (test / submit)
+└── AtCoder_Scripts/     # 旧配布パス (@updateURL リダイレクト用)
+```
+
+## 補助ツール (tools)
+
+| パッケージ       | 説明               | README                                                       |
+|-------------|------------------|--------------------------------------------------------------|
+| tools       | Bun ワークスペースの親    | [tools/README.md](./tools/README.md)                         |
+| shared      | 共通ライブラリ          | [tools/shared/README.md](./tools/shared/README.md)           |
+| userscripts | ブラウザ拡張スクリプト      | [tools/userscripts/README.md](./tools/userscripts/README.md) |
+| runner      | CLI・Local Runner | [tools/runner/README.md](./tools/runner/README.md)           |
+
+### クイックスタート
+
+```powershell
+cd tools
+bun install
+bun --cwd userscripts run build
+bun --cwd runner run typecheck
+```
+
+ローカルランナー起動 (Windows):
+
+```powershell
+powershell -File "tools/runner/bin/start-local-runner.ps1" 24
+```
+
+## コミットメッセージの例
+
+```text
+Solved: ABC000 [A ~ G]
+Resolved: ABC000 [A ~ G]
+Update: JDK17→24.0.2 ABC000 [A ~ G]
+```
+
+## 補足
+
+- UserScript のインストール URL は `tools/userscripts/<Name>/dist/<Name>.user.js` を参照してください。
+- `AtCoder_Scripts/` はレガシー配布用です。新規開発は `tools/userscripts` を編集し、`bun run build` で `dist` を更新します。

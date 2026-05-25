@@ -52,4 +52,4 @@ logs/
 # その他の一時ファイル
 **/*.tmp               # 一時ファイル
 
-/tools/*/node_modules/
+tools/**/node_modules/
