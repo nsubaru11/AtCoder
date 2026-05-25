@@ -13,6 +13,7 @@ import java.nio.*;
 import java.nio.charset.*;
 import java.util.*;
 import java.util.function.*;
+import java.util.stream.*;
 
 public final class ${NAME} {
 
@@ -316,11 +317,40 @@ public final class ${NAME} {
 		}
 	}
 
+	private static void debugln(final Object... args) {
+		if (DEBUG) {
+			out.flush();
+			System.err.println(stream(args).map(${NAME}::stringify).collect(Collectors.joining("\n", "\n", "")));
+		}
+	}
+
 	private static void debug(final Object... args) {
 		if (DEBUG) {
 			out.flush();
-			System.err.println(deepToString(args));
+			System.err.println(stream(args).map(${NAME}::stringify).collect(Collectors.joining(", ", "\n", "")));
 		}
+	}
+
+	private static String stringify(final Object obj) {
+		return switch (obj) {
+			case null -> "null";
+			case int[][] arr -> "\n" + stream(arr).map(Arrays::toString).collect(Collectors.joining("\n"));
+			case long[][] arr -> "\n" + stream(arr).map(Arrays::toString).collect(Collectors.joining("\n"));
+			case char[][] arr -> "\n" + stream(arr).map(String::valueOf).collect(Collectors.joining("\n"));
+			case Object[][] arr -> "\n" + stream(arr).map(Arrays::deepToString).collect(Collectors.joining("\n"));
+			case int[] arr -> Arrays.toString(arr);
+			case long[] arr -> Arrays.toString(arr);
+			case double[] arr -> Arrays.toString(arr);
+			case char[] arr -> Arrays.toString(arr);
+			case boolean[] arr -> Arrays.toString(arr);
+			case Object[] arr -> deepToString(arr);
+			case Iterable<?> it -> {
+				final StringJoiner sj = new StringJoiner(", ", "[", "]");
+				for (final Object e : it) sj.add(stringify(e));
+				yield sj.toString();
+			}
+			default -> obj.toString();
+		};
 	}
 
 	@SuppressWarnings("unused")
