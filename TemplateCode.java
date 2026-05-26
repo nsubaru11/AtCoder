@@ -306,6 +306,53 @@ public final class ${NAME} {
 			}
 		}
 	}
+
+	private static int digit2(long n) {
+		if (n == 0) return 1;
+		if (n == Long.MIN_VALUE) return 63;
+		return 64 - Long.numberOfLeadingZeros(Math.abs(n));
+	}
+
+	private static int digit2(int n) {
+		if (n == 0) return 1;
+		if (n == Integer.MIN_VALUE) return 31;
+		return 32 - Integer.numberOfLeadingZeros(Math.abs(n));
+	}
+
+	private static int digit10(long n) {
+		if (n == Long.MIN_VALUE) return 19;
+		if (n < 0) n = -n;
+		int res = 0;
+		do {
+			res++;
+			n /= 10;
+		} while (n > 0);
+		return res;
+	}
+
+	private static int digit10(int n) {
+		if (n == Integer.MIN_VALUE) return 10;
+		if (n < 0) n = -n;
+		int res = 0;
+		do {
+			res++;
+			n /= 10;
+		} while (n > 0);
+		return res;
+	}
+
+	private static long lSqrt(final long n) {
+		if (n <= 0) return 0;
+		long x = (long) sqrt(n);
+		while (x * x > n) x--;
+		while ((x + 1) * (x + 1) <= n) x++;
+		return x;
+	}
+
+	private static int iSqrt(final int n) {
+		if (n <= 0) return 0;
+		return (int) sqrt(n);
+	}
 	// endregion
 
 	// region < I/O & Debug >
