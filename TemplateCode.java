@@ -364,17 +364,19 @@ public final class ${NAME} {
 		}
 	}
 
+	@SuppressWarnings("Convert2MethodRef")
 	private static void debugln(final Object... args) {
 		if (DEBUG) {
 			out.flush();
-			System.err.println(stream(args).map(${NAME}::stringify).collect(Collectors.joining("\n", "\n", "")));
+			System.err.println(stream(args).map(o -> stringify(o)).collect(Collectors.joining("\n", "\n", "")));
 		}
 	}
 
+	@SuppressWarnings("Convert2MethodRef")
 	private static void debug(final Object... args) {
 		if (DEBUG) {
 			out.flush();
-			System.err.println(stream(args).map(${NAME}::stringify).collect(Collectors.joining(", ", "\n", "")));
+			System.err.println(stream(args).map(o -> stringify(o)).collect(Collectors.joining(", ", "\n", "")));
 		}
 	}
 

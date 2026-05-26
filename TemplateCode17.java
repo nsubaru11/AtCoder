@@ -12,6 +12,7 @@ import java.math.*;
 import java.nio.charset.*;
 import java.util.*;
 import java.util.function.*;
+import java.util.stream.*;
 
 import sun.misc.*;
 
@@ -21,6 +22,7 @@ public final class ${NAME} {
 	private static final boolean DEBUG = true;
 	private static final int MOD = 998244353;
 	// private static final int MOD = 1_000_000_007;
+	private static final char[] op = new char[]{'L', 'U', 'R', 'D'};
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
 	private static final FastScanner sc = new FastScanner();
@@ -305,6 +307,53 @@ public final class ${NAME} {
 			}
 		}
 	}
+
+	private static int digit2(long n) {
+		if (n == 0) return 1;
+		if (n == Long.MIN_VALUE) return 63;
+		return 64 - Long.numberOfLeadingZeros(Math.abs(n));
+	}
+
+	private static int digit2(int n) {
+		if (n == 0) return 1;
+		if (n == Integer.MIN_VALUE) return 31;
+		return 32 - Integer.numberOfLeadingZeros(Math.abs(n));
+	}
+
+	private static int digit10(long n) {
+		if (n == Long.MIN_VALUE) return 19;
+		if (n < 0) n = -n;
+		int res = 0;
+		do {
+			res++;
+			n /= 10;
+		} while (n > 0);
+		return res;
+	}
+
+	private static int digit10(int n) {
+		if (n == Integer.MIN_VALUE) return 10;
+		if (n < 0) n = -n;
+		int res = 0;
+		do {
+			res++;
+			n /= 10;
+		} while (n > 0);
+		return res;
+	}
+
+	private static long lSqrt(final long n) {
+		if (n <= 0) return 0;
+		long x = (long) sqrt(n);
+		while (x * x > n) x--;
+		while ((x + 1) * (x + 1) <= n) x++;
+		return x;
+	}
+
+	private static int iSqrt(final int n) {
+		if (n <= 0) return 0;
+		return (int) sqrt(n);
+	}
 	// endregion
 
 	// region < I/O & Debug >
@@ -316,11 +365,44 @@ public final class ${NAME} {
 		}
 	}
 
+	@SuppressWarnings("Convert2MethodRef")
+	private static void debugln(final Object... args) {
+		if (DEBUG) {
+			out.flush();
+			System.err.println(stream(args).map(o -> stringify(o)).collect(Collectors.joining("\n", "\n", "")));
+		}
+	}
+
+	@SuppressWarnings("Convert2MethodRef")
 	private static void debug(final Object... args) {
 		if (DEBUG) {
 			out.flush();
-			System.err.println(deepToString(args));
+			System.err.println(stream(args).map(o -> stringify(o)).collect(Collectors.joining(", ", "\n", "")));
 		}
+	}
+
+	private static String stringify(final Object obj) {
+		if (obj == null) return "null";
+		else if (obj instanceof int[][] arr)
+			return "\n" + stream(arr).map(Arrays::toString).collect(Collectors.joining("\n"));
+		else if (obj instanceof long[][] arr)
+			return "\n" + stream(arr).map(Arrays::toString).collect(Collectors.joining("\n"));
+		else if (obj instanceof char[][] arr)
+			return "\n" + stream(arr).map(String::valueOf).collect(Collectors.joining("\n"));
+		else if (obj instanceof Object[][] arr)
+			return "\n" + stream(arr).map(Arrays::deepToString).collect(Collectors.joining("\n"));
+		else if (obj instanceof int[] arr) return Arrays.toString(arr);
+		else if (obj instanceof long[] arr) return Arrays.toString(arr);
+		else if (obj instanceof double[] arr) return Arrays.toString(arr);
+		else if (obj instanceof char[] arr) return Arrays.toString(arr);
+		else if (obj instanceof boolean[] arr) return Arrays.toString(arr);
+		else if (obj instanceof Object[] arr) return deepToString(arr);
+		else if (obj instanceof Iterable<?> it) {
+			final StringJoiner sj = new StringJoiner(", ", "[", "]");
+			for (final Object e : it) sj.add(stringify(e));
+			return sj.toString();
+		}
+		return obj.toString();
 	}
 
 	@SuppressWarnings("unused")
