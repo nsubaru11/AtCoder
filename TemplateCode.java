@@ -185,6 +185,18 @@ public final class ${NAME} {
 		return max;
 	}
 
+	private static int diff(final int a, final int b) {
+		return a > b ? a - b : b - a;
+	}
+
+	private static long diff(final long a, final long b) {
+		return a > b ? a - b : b - a;
+	}
+
+	private static double diff(final double a, final double b) {
+		return a > b ? a - b : b - a;
+	}
+
 	private static long lModPow(long a, long b, final long mod) {
 		if (b == 0) return 1;
 		long ans = 1;
@@ -376,7 +388,7 @@ public final class ${NAME} {
 	private static void debug(final Object... args) {
 		if (DEBUG) {
 			out.flush();
-			System.err.println(stream(args).map(o -> stringify(o)).collect(Collectors.joining(", ", "\n", "")));
+			System.err.println(stream(args).map(o -> stringify(o)).collect(Collectors.joining(", ", "", "")));
 		}
 	}
 
