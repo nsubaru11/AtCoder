@@ -1,0 +1,4 @@
+[submodule "tools"]
+	branch = main
+	path = tools
+	url = https://github.com/nsubaru11/atcoder-java-tools
