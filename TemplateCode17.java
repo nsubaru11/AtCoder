@@ -19,7 +19,7 @@ import sun.misc.*;
 public final class ${NAME} {
 
 	// region < Constants & Globals >
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 	private static final int MOD = 998244353;
 	// private static final int MOD = 1_000_000_007;
 	private static final char[] op = new char[]{'L', 'U', 'R', 'D'};
@@ -377,19 +377,25 @@ public final class ${NAME} {
 		}
 	}
 
-	@SuppressWarnings("Convert2MethodRef")
 	private static void debugln(final Object... args) {
 		if (DEBUG) {
 			out.flush();
+			#if (${NAME} == "E")
 			System.err.println(stream(args).map(o -> stringify(o)).collect(Collectors.joining("\n", "\n", "")));
+			#else
+			System.err.println(stream(args).map(${NAME}::stringify).collect(Collectors.joining("\n", "\n", "")));
+			#end
 		}
 	}
 
-	@SuppressWarnings("Convert2MethodRef")
 	private static void debug(final Object... args) {
 		if (DEBUG) {
 			out.flush();
+			#if (${NAME} == "E")
 			System.err.println(stream(args).map(o -> stringify(o)).collect(Collectors.joining(", ", "", "")));
+			#else
+			System.err.println(stream(args).map(${NAME}::stringify).collect(Collectors.joining(", ", "", "")));
+			#end
 		}
 	}
 
