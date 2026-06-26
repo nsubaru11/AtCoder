@@ -377,6 +377,20 @@ public final class ${NAME} {
 		}
 	}
 
+	private static void debug(final Object o) {
+		if (DEBUG) {
+			out.flush();
+			System.err.println(stringify(o));
+		}
+	}
+
+	private static void debugln(final Object o) {
+		if (DEBUG) {
+			out.flush();
+			System.err.println("\n" + stringify(o));
+		}
+	}
+
 	private static void debugln(final Object... args) {
 		if (DEBUG) {
 			out.flush();
