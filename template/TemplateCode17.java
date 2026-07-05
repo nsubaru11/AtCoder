@@ -22,7 +22,7 @@ import sun.misc.*;
 public final class TemplateCode17 {
 
 	// region < Constants & Globals >
-	private static final boolean DEBUG = false;
+	private static final boolean DEBUG = true;
 	private static final int MOD = 998244353;
 	// private static final int MOD = 1_000_000_007;
 	private static final char[] op = new char[]{'L', 'U', 'R', 'D'};
@@ -33,12 +33,7 @@ public final class TemplateCode17 {
 	// endregion
 
 	private static void solve() {
-		int[][] arr = new int[10][2];
-		setAll(arr[0], i -> (i + 11) % 7);
-		setAll(arr[1], i -> (i + 17) % 3);
-		sort(arr, comparingInt(a -> a[0]));
-		Entry<Integer, Integer> e = Map.entry(arr[0][0], arr[0][1]);
-		debug(e, stream(arr).collect(toSet()));
+
 	}
 
 	// region < Utility Methods >
@@ -373,6 +368,48 @@ public final class TemplateCode17 {
 	private static int iSqrt(final int n) {
 		if (n <= 0) return 0;
 		return (int) sqrt(n);
+	}
+
+	private static void prefix2D(final int[][] a, final IntBinaryOperator op) {
+		for (int[] ai : a) parallelPrefix(ai, op);
+		for (int i = 1, h = a.length, w = a[0].length; i < h; i++) {
+			for (int j = 0; j < w; j++) {
+				a[i][j] = op.applyAsInt(a[i][j], a[i - 1][j]);
+			}
+		}
+	}
+
+	private static void prefix2D(final long[][] a, final LongBinaryOperator op) {
+		for (long[] ai : a) parallelPrefix(ai, op);
+		for (int i = 1, h = a.length, w = a[0].length; i < h; i++) {
+			for (int j = 0; j < w; j++) {
+				a[i][j] = op.applyAsLong(a[i][j], a[i - 1][j]);
+			}
+		}
+	}
+
+	private static int rangeSum(final int[] a, final int i, final int j) {
+		return i > 0 ? a[j] - a[i - 1] : a[j];
+	}
+
+	private static long rangeSum(final long[] a, final int i, final int j) {
+		return i > 0 ? a[j] - a[i - 1] : a[j];
+	}
+
+	private static int rectSum(final int[][] a, final int i1, final int j1, final int i2, final int j2) {
+		int ans = a[i2][j2];
+		if (i1 > 0) ans -= a[i1 - 1][j2];
+		if (j1 > 0) ans -= a[i2][j1 - 1];
+		if (i1 > 0 && j1 > 0) ans += a[i1 - 1][j1 - 1];
+		return ans;
+	}
+
+	private static long rectSum(final long[][] a, final int i1, final int j1, final int i2, final int j2) {
+		long ans = a[i2][j2];
+		if (i1 > 0) ans -= a[i1 - 1][j2];
+		if (j1 > 0) ans -= a[i2][j1 - 1];
+		if (i1 > 0 && j1 > 0) ans += a[i1 - 1][j1 - 1];
+		return ans;
 	}
 	// endregion
 
