@@ -39,6 +39,8 @@ public final class D {
 }
 ```
 
+LocalRunner経由（`run`、`test`、`toclip`、JavaCodeSubmitter、AtCoderEasyTest）では、importを書かずに`FastScanner`や`UnionFind`を使用しても、Java Compiler APIが一意なlibrary型を自動importします。コードの可読性とIDE補完のため、ローカル解答では通常どおり明示importする運用を推奨します。
+
 IntelliJでは`File → New → AtCoder Library Solution`から雛形を作成できます。`lib.*`に対して補完、定義ジャンプ、Find Usages、Renameが利用できます。
 
 `src/patterns`は読む・写経する資料であり、importや自動バンドルの対象ではありません。
@@ -86,7 +88,7 @@ $env:ATCODER_LIB_SRC = "C:\path\to\competitive-programming-java-library\src"
 - 本文中で`lib.ds.UnionFind`のような完全修飾参照を使わない
 - 解答と依存クラスでトップレベル型の単純名を重複させない
 
-ワイルドカードimportを使った場合も、本文で実際に参照しているトップレベル型だけがインラインされます。バンドル後の元importは削除されず、`// import lib.some.*;`のようにコメントとして残ります。
+ワイルドカードimportを使った場合も、javacが実際にシンボル解決したトップレベル型だけがインラインされます。バンドル後の元importは削除されず、`// import lib.some.*;`のようにコメントとして残ります。Main化、コンストラクタ・自己参照の変更、DEBUG切替、package/import範囲もJava Compiler APIのASTとシンボル情報に基づきます。
 
 エラー時には未解決importのまま提出せず、runnerが停止します。
 
