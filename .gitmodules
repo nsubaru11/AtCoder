@@ -2,3 +2,7 @@
 	branch = main
 	path = tools
 	url = https://github.com/nsubaru11/atcoder-java-tools
+[submodule "library"]
+	path = library
+	url = https://github.com/nsubaru11/competitive-programming-java-library.git
+	branch = main

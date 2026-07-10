@@ -4,14 +4,16 @@
 
 - **プロフィール**: https://atcoder.jp/users/nsubaru
 - **問題フォルダ**: `ABC/` などコンテスト単位で `src/` に解答を配置
-- **テンプレート**: ルートの `TemplateCode.java` / `TemplateCode17.java`
+- **テンプレート**: `template/`のライブラリ版・自己完結版テンプレート
 
 ## リポジトリ構成
 
 ```text
 AtCoder/
 ├── ABC/                 # コンテスト別の解答 (Java のみ)
-├── TemplateCode.java    # テンプレ
+├── library/             # パッケージ化された競プロライブラリ (submodule)
+├── template/            # ライブラリ版・自己完結版テンプレート
+├── setup-library.ps1    # IntelliJモジュール依存とFile Templateの設定
 ├── tools/
 │   ├── shared/          # runner / userscripts 共通 TypeScript
 │   ├── userscripts/     # Tampermonkey 用 UserScript (TypeScript → .user.js)
@@ -36,6 +38,15 @@ bun install
 bun --cwd userscripts run build
 bun --cwd runner run typecheck
 ```
+
+競プロライブラリを初期化し、IntelliJの全解答モジュールから参照できるようにします。
+
+```powershell
+git submodule update --init --recursive
+powershell -ExecutionPolicy Bypass -File .\setup-library.ps1
+```
+
+解答では`import lib.ds.UnionFind;`のように記述します。`run` / `test` / `tomain` / `submit`時に推移的依存を含む単一の`Main.java`へ自動展開されます。詳細は[LIBRARY_USAGE.md](./LIBRARY_USAGE.md)を参照してください。
 
 ローカルランナー起動 (Windows):
 

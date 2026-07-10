@@ -1,0 +1,17 @@
+import lib.io.FastPrinter;
+import lib.io.FastScanner;
+
+public final class ${NAME} {
+	private static final boolean DEBUG = true;
+
+	private static void solve(final FastScanner sc, final FastPrinter out) {
+
+	}
+
+	public static void main(final String[] args) {
+		final FastScanner sc = new FastScanner();
+		try (final FastPrinter out = new FastPrinter()) {
+			solve(sc, out);
+		}
+	}
+}
