@@ -86,6 +86,8 @@ $env:ATCODER_LIB_SRC = "C:\path\to\competitive-programming-java-library\src"
 - 本文中で`lib.ds.UnionFind`のような完全修飾参照を使わない
 - 解答と依存クラスでトップレベル型の単純名を重複させない
 
+ワイルドカードimportを使った場合も、本文で実際に参照しているトップレベル型だけがインラインされます。バンドル後の元importは削除されず、`// import lib.some.*;`のようにコメントとして残ります。
+
 エラー時には未解決importのまま提出せず、runnerが停止します。
 
 ## 手貼りへのフォールバック
