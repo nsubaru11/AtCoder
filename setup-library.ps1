@@ -8,7 +8,6 @@ $ideaDir = Join-Path $root ".idea"
 $modulesPath = Join-Path $ideaDir "modules.xml"
 $moduleName = "competitive-programming-library"
 $modulePath = Join-Path $root "$moduleName.iml"
-$legacyModulePath = Join-Path $ideaDir "$moduleName.iml"
 $templateSource = Join-Path $root "template\AtCoderLibrarySolution.java.template"
 $templateDir = Join-Path $ideaDir "fileTemplates"
 $templateTarget = Join-Path $templateDir "AtCoder Library Solution.java"
@@ -39,9 +38,6 @@ $moduleXml = @"
 </module>
 "@
 [IO.File]::WriteAllText($modulePath, $moduleXml, [Text.UTF8Encoding]::new($false))
-if (Test-Path -LiteralPath $legacyModulePath) {
-	Remove-Item -LiteralPath $legacyModulePath -Force
-}
 
 function Save-Xml([xml]$Document, [string]$Path) {
 	$settings = [Xml.XmlWriterSettings]::new()
@@ -72,7 +68,6 @@ Save-Xml $modulesDocument $modulesPath
 $libraryPrefix = [IO.Path]::GetFullPath((Join-Path $root "library")) + [IO.Path]::DirectorySeparatorChar
 $toolsPrefix = [IO.Path]::GetFullPath((Join-Path $root "tools")) + [IO.Path]::DirectorySeparatorChar
 $configured = 0
-$cleanedSourceRoots = 0
 
 Get-ChildItem -LiteralPath $root -Recurse -Filter *.iml -File | ForEach-Object {
 	$fullPath = [IO.Path]::GetFullPath($_.FullName)
@@ -87,34 +82,20 @@ Get-ChildItem -LiteralPath $root -Recurse -Filter *.iml -File | ForEach-Object {
 	if ($null -eq $manager) {
 		return
 	}
-
-	$changed = $false
-	@($manager.SelectNodes("content/sourceFolder")) | ForEach-Object {
-		$url = $_.GetAttribute("url").Replace("\", "/")
-		if ($url -match "/library/(src|test)$") {
-			[void]$_.ParentNode.RemoveChild($_)
-			$cleanedSourceRoots++
-			$changed = $true
-		}
+	if ($null -ne $manager.SelectSingleNode("orderEntry[@type='module' and @module-name='$moduleName']")) {
+		return
 	}
 
-	if ($null -eq $manager.SelectSingleNode("orderEntry[@type='module' and @module-name='$moduleName']")) {
-		$entry = $document.CreateElement("orderEntry")
-		$entry.SetAttribute("type", "module")
-		$entry.SetAttribute("module-name", $moduleName)
-		[void]$manager.AppendChild($entry)
-		$configured++
-		$changed = $true
-	}
-
-	if ($changed) {
-		Save-Xml $document $fullPath
-	}
+	$entry = $document.CreateElement("orderEntry")
+	$entry.SetAttribute("type", "module")
+	$entry.SetAttribute("module-name", $moduleName)
+	[void]$manager.AppendChild($entry)
+	Save-Xml $document $fullPath
+	$configured++
 }
 
 Copy-Item -LiteralPath $templateSource -Destination $templateTarget -Force
 
 Write-Output "Library module: $modulePath"
 Write-Output "Updated solution modules: $configured"
-Write-Output "Removed duplicate library source roots: $cleanedSourceRoots"
 Write-Output "File template: $templateTarget"
