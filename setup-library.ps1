@@ -7,7 +7,8 @@ $librarySrc = Join-Path $root "library\src"
 $ideaDir = Join-Path $root ".idea"
 $modulesPath = Join-Path $ideaDir "modules.xml"
 $moduleName = "competitive-programming-library"
-$modulePath = Join-Path $ideaDir "$moduleName.iml"
+$modulePath = Join-Path $root "$moduleName.iml"
+$legacyModulePath = Join-Path $ideaDir "$moduleName.iml"
 $templateSource = Join-Path $root "template\AtCoderLibrarySolution.java.template"
 $templateDir = Join-Path $ideaDir "fileTemplates"
 $templateTarget = Join-Path $templateDir "AtCoder Library Solution.java"
@@ -26,11 +27,11 @@ $moduleXml = @"
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://`$PROJECT_DIR`$/library">
-      <sourceFolder url="file://`$PROJECT_DIR`$/library/src" isTestSource="false" />
-      <sourceFolder url="file://`$PROJECT_DIR`$/library/test" isTestSource="true" />
-      <excludeFolder url="file://`$PROJECT_DIR`$/library/docs" />
-      <excludeFolder url="file://`$PROJECT_DIR`$/library/out" />
+    <content url="file://`$MODULE_DIR`$/library">
+      <sourceFolder url="file://`$MODULE_DIR`$/library/src" isTestSource="false" />
+      <sourceFolder url="file://`$MODULE_DIR`$/library/test" isTestSource="true" />
+      <excludeFolder url="file://`$MODULE_DIR`$/library/docs" />
+      <excludeFolder url="file://`$MODULE_DIR`$/library/out" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
@@ -38,6 +39,9 @@ $moduleXml = @"
 </module>
 "@
 [IO.File]::WriteAllText($modulePath, $moduleXml, [Text.UTF8Encoding]::new($false))
+if (Test-Path -LiteralPath $legacyModulePath) {
+	Remove-Item -LiteralPath $legacyModulePath -Force
+}
 
 function Save-Xml([xml]$Document, [string]$Path) {
 	$settings = [Xml.XmlWriterSettings]::new()
@@ -56,13 +60,14 @@ $modulesNode = $modulesDocument.SelectSingleNode("/project/component[@name='Proj
 if ($null -eq $modulesNode) {
 	throw ".idea/modules.xml のProjectModuleManagerを解釈できません。"
 }
-if ($null -eq $modulesNode.SelectSingleNode("module[contains(@filepath, '$moduleName.iml')]")) {
+$moduleNode = $modulesNode.SelectSingleNode("module[contains(@filepath, '$moduleName.iml')]")
+if ($null -eq $moduleNode) {
 	$moduleNode = $modulesDocument.CreateElement("module")
-	$moduleNode.SetAttribute("fileurl", "file://`$PROJECT_DIR`$/.idea/$moduleName.iml")
-	$moduleNode.SetAttribute("filepath", "`$PROJECT_DIR`$/.idea/$moduleName.iml")
 	[void]$modulesNode.AppendChild($moduleNode)
-	Save-Xml $modulesDocument $modulesPath
 }
+$moduleNode.SetAttribute("fileurl", "file://`$PROJECT_DIR`$/$moduleName.iml")
+$moduleNode.SetAttribute("filepath", "`$PROJECT_DIR`$/$moduleName.iml")
+Save-Xml $modulesDocument $modulesPath
 
 $libraryPrefix = [IO.Path]::GetFullPath((Join-Path $root "library")) + [IO.Path]::DirectorySeparatorChar
 $toolsPrefix = [IO.Path]::GetFullPath((Join-Path $root "tools")) + [IO.Path]::DirectorySeparatorChar
