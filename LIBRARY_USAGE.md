@@ -54,8 +54,8 @@ run D.java
 # AtCoderサンプルテスト
 test d
 
-# 提出用Main.javaを目視確認
-tomain -f D.java Main.java
+# ブラウザへ手動で貼り付ける提出コードをコピー
+toclip d
 
 # サンプルテスト後に提出
 submit d
@@ -67,7 +67,9 @@ submit d
 Bundled library classes: lib.graph.Kruskal, lib.ds.UnionFind
 ```
 
-`run`、`localtest`、`test`、`crosscheck`、`tomain`、`submit`はすべて同じバンドル処理を通るため、ローカル実行と提出コードが一致します。
+`run`、`localtest`、`test`、`crosscheck`、`tomain`、`toclip`、`submit`はすべて同じバンドル処理を通るため、ローカル実行と提出コードが一致します。
+
+`toclip d`はカレントディレクトリの`D.java`を短縮指定で解決します。`toclip D.java`のような明示指定も可能です。バンドル、`Main`化、`DEBUG=false`化を行った提出コードがそのままクリップボードへ入ります。
 
 ## libraryが見つからない場合
 
@@ -90,6 +92,6 @@ $env:ATCODER_LIB_SRC = "C:\path\to\competitive-programming-java-library\src"
 
 バンドラに問題がある場合は、次の順で切り戻せます。
 
-1. `tomain`が出力した、最後に成功した`Main.java`を使用
+1. `toclip`でコピーした、最後に成功した提出コードを使用
 2. `library/src/lib/...`からログに表示されたクラスを手動展開
 3. 従来の自己完結テンプレート`template/TemplateCode.java`またはJava 17版を使用
