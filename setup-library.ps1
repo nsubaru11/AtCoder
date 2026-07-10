@@ -26,11 +26,11 @@ $moduleXml = @"
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://`$MODULE_DIR`$/../library">
-      <sourceFolder url="file://`$MODULE_DIR`$/../library/src" isTestSource="false" />
-      <sourceFolder url="file://`$MODULE_DIR`$/../library/test" isTestSource="true" />
-      <excludeFolder url="file://`$MODULE_DIR`$/../library/docs" />
-      <excludeFolder url="file://`$MODULE_DIR`$/../library/out" />
+    <content url="file://`$PROJECT_DIR`$/library">
+      <sourceFolder url="file://`$PROJECT_DIR`$/library/src" isTestSource="false" />
+      <sourceFolder url="file://`$PROJECT_DIR`$/library/test" isTestSource="true" />
+      <excludeFolder url="file://`$PROJECT_DIR`$/library/docs" />
+      <excludeFolder url="file://`$PROJECT_DIR`$/library/out" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
@@ -67,6 +67,7 @@ if ($null -eq $modulesNode.SelectSingleNode("module[contains(@filepath, '$module
 $libraryPrefix = [IO.Path]::GetFullPath((Join-Path $root "library")) + [IO.Path]::DirectorySeparatorChar
 $toolsPrefix = [IO.Path]::GetFullPath((Join-Path $root "tools")) + [IO.Path]::DirectorySeparatorChar
 $configured = 0
+$cleanedSourceRoots = 0
 
 Get-ChildItem -LiteralPath $root -Recurse -Filter *.iml -File | ForEach-Object {
 	$fullPath = [IO.Path]::GetFullPath($_.FullName)
@@ -81,20 +82,34 @@ Get-ChildItem -LiteralPath $root -Recurse -Filter *.iml -File | ForEach-Object {
 	if ($null -eq $manager) {
 		return
 	}
-	if ($null -ne $manager.SelectSingleNode("orderEntry[@type='module' and @module-name='$moduleName']")) {
-		return
+
+	$changed = $false
+	@($manager.SelectNodes("content/sourceFolder")) | ForEach-Object {
+		$url = $_.GetAttribute("url").Replace("\", "/")
+		if ($url -match "/library/(src|test)$") {
+			[void]$_.ParentNode.RemoveChild($_)
+			$cleanedSourceRoots++
+			$changed = $true
+		}
 	}
 
-	$entry = $document.CreateElement("orderEntry")
-	$entry.SetAttribute("type", "module")
-	$entry.SetAttribute("module-name", $moduleName)
-	[void]$manager.AppendChild($entry)
-	Save-Xml $document $fullPath
-	$configured++
+	if ($null -eq $manager.SelectSingleNode("orderEntry[@type='module' and @module-name='$moduleName']")) {
+		$entry = $document.CreateElement("orderEntry")
+		$entry.SetAttribute("type", "module")
+		$entry.SetAttribute("module-name", $moduleName)
+		[void]$manager.AppendChild($entry)
+		$configured++
+		$changed = $true
+	}
+
+	if ($changed) {
+		Save-Xml $document $fullPath
+	}
 }
 
 Copy-Item -LiteralPath $templateSource -Destination $templateTarget -Force
 
 Write-Output "Library module: $modulePath"
 Write-Output "Updated solution modules: $configured"
+Write-Output "Removed duplicate library source roots: $cleanedSourceRoots"
 Write-Output "File template: $templateTarget"
