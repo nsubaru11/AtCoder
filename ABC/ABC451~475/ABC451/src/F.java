@@ -5,9 +5,10 @@ import java.util.*;
 import java.util.function.*;
 import java.util.stream.*;
 
+import lib.ds.*;
 import lib.io.*;
 
-public final class A {
+public final class F {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG = true;
@@ -17,11 +18,37 @@ public final class A {
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
 	private static final FastScanner sc = new FastScanner();
-	private static final FastPrinter out = new FastPrinter(64);
+	private static final FastPrinter out = new FastPrinter();
 	// endregion
 
 	private static void solve() {
-		out.println(sc.nextChars().length % 5 == 0);
+		int n = sc.nextInt(), q = sc.nextInt();
+		int[] cnt = new int[n * 2];
+		fill(cnt, n, 2 * n, 1);
+		UnionFind uf = new UnionFind(n * 2);
+		int ans = 0;
+		while (q-- > 0) {
+			int uw = sc.nextInt0();
+			int vw = sc.nextInt0();
+			int ub = uw + n, vb = vw + n;
+			if (ans == -1) out.println(ans);
+			else if (uf.isConnected(uw, vb)) {
+				out.println(ans);
+			} else if (uf.isConnected(uw, vw)) {
+				ans = -1;
+				out.println(ans);
+			} else {
+				int cuw = cnt[uf.find(uw)], cvw = cnt[uf.find(vw)];
+				int cub = cnt[uf.find(ub)], cvb = cnt[uf.find(vb)];
+				ans -= min(cuw, cub) + min(cvw, cvb);
+				uf.union(uw, vb);
+				uf.union(vw, ub);
+				cnt[uf.find(uw)] = cuw + cvb;
+				cnt[uf.find(ub)] = cub + cvw;
+				ans += min(cnt[uf.find(uw)], cnt[uf.find(ub)]);
+				out.println(ans);
+			}
+		}
 	}
 
 	// region < Utility Methods >
@@ -415,7 +442,7 @@ public final class A {
 			out.flush();
 			if (args == null) System.err.println("null");
 			else if (args.getClass().getComponentType().isArray()) System.err.println(stringify(args));
-			else System.err.println(stream(args).map(A::stringify).collect(Collectors.joining("\n", "\n", "")));
+			else System.err.println(stream(args).map(F::stringify).collect(Collectors.joining("\n", "\n", "")));
 		}
 	}
 
@@ -424,7 +451,7 @@ public final class A {
 			out.flush();
 			if (args == null) System.err.println("null");
 			else if (args.getClass().getComponentType().isArray()) System.err.println(stringify(args));
-			else System.err.println(stream(args).map(A::stringify).collect(Collectors.joining(", ", "", "")));
+			else System.err.println(stream(args).map(F::stringify).collect(Collectors.joining(", ", "", "")));
 		}
 	}
 
