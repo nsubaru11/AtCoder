@@ -22,7 +22,7 @@ public final class A {
 
 	private static void solve() {
 		int n = sc.nextInt();
-		out.println(IntStream.range(0, n).filter(_ -> sc.nextInt() < 0).count() == n);
+		out.println(IntStream.range(0, n).allMatch(_ -> sc.nextInt() < 0));
 	}
 
 	// region < Utility Methods >
