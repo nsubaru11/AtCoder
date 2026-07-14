@@ -415,7 +415,7 @@ public final class TemplateCode {
 	}
 	// endregion
 
-	// region < main & Debug >
+	// region < main & debug >
 	public static void main(final String[] args) {
 		try {
 			solve();
