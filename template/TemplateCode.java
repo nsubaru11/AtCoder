@@ -269,19 +269,6 @@ public final class TemplateCode {
 		return a << commonShift;
 	}
 
-	private static void compression(final int[] a, final int len) {
-		final int[] b = copyOf(a, len);
-		sort(b);
-		int n = 1;
-		for (int i = 1; i < len; i++) {
-			if (b[i] == b[i - 1]) continue;
-			b[n++] = b[i];
-		}
-		for (int i = 0; i < len; i++) {
-			a[i] = binarySearch(b, 0, n, a[i]);
-		}
-	}
-
 	private static void compression(final int[][] a, final int n, final int m) {
 		final int len = n * m;
 		final int[] b = new int[len];
@@ -362,8 +349,8 @@ public final class TemplateCode {
 	private static long lSqrt(final long n) {
 		if (n <= 0) return 0;
 		long x = (long) sqrt(n);
-		while (x * x > n) x--;
-		while ((x + 1) * (x + 1) <= n) x++;
+		if (x * x > n) x--;
+		else if ((x + 1) * (x + 1) <= n) x++;
 		return x;
 	}
 
@@ -388,14 +375,6 @@ public final class TemplateCode {
 				a[i][j] = op.applyAsLong(a[i][j], a[i - 1][j]);
 			}
 		}
-	}
-
-	private static int rangeSum(final int[] a, final int i, final int j) {
-		return i > 0 ? a[j] - a[i - 1] : a[j];
-	}
-
-	private static long rangeSum(final long[] a, final int i, final int j) {
-		return i > 0 ? a[j] - a[i - 1] : a[j];
 	}
 
 	private static int rectSum(final int[][] a, final int i1, final int j1, final int i2, final int j2) {
