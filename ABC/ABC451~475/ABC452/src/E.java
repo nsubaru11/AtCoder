@@ -1,22 +1,13 @@
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
-import static java.util.Comparator.*;
-import static java.util.stream.Collectors.*;
-import static java.util.stream.Gatherers.*;
 
-import java.io.*;
-import java.lang.invoke.*;
-import java.math.*;
-import java.nio.*;
-import java.nio.charset.*;
 import java.util.*;
-import java.util.Map.*;
 import java.util.function.*;
 import java.util.stream.*;
 
 import lib.io.*;
 
-public final class C {
+public final class E {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG = true;
@@ -26,35 +17,31 @@ public final class C {
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
 	private static final FastScanner sc = new FastScanner();
-	private static final FastPrinter out = new FastPrinter();
+	private static final FastPrinter out = new FastPrinter(64);
 	// endregion
 
 	private static void solve() {
-		int n = sc.nextInt();
-		int[][] ab = sc.nextIntMat(n, 2);
-		int m = sc.nextInt();
-		boolean[][][] f = new boolean[10][10][26];
-		char[][] s = new char[m][];
-		for (int i = 0; i < m; i++) {
-			char[] si = s[i] = sc.nextChars();
-			boolean[][] fi = f[si.length - 1];
-			for (int j = 0; j < si.length; j++) {
-				fi[j][si[j] - 'a'] = true;
+		int n = sc.nextInt(), m = sc.nextInt();
+		int[] a = sc.nextInt(n);
+		int[] b = sc.nextInt(m);
+		// A[i] * B[j] * (i % j)
+		// = A[i] * B[j] * (i - j * ceil(i / j))
+		// = A[i] * i * B[j] - A[i] * B[j] * j * ceil(i / j)
+		int sumB = 0;
+		for (int bj : b) sumB = (sumB + bj) % MOD;
+		int ans = 0;
+		for (int i = 1; i <= n; i++) {
+			int ai = (int) ((long) a[i - 1] * i % MOD);
+			ans = (int) ((ans + (long) ai * sumB) % MOD);
+		}
+		parallelPrefix(a, (l, r) -> (l + r) % MOD);
+		for (int j = 1; j <= m; j++) {
+			int bj = (int) ((long) b[j - 1] * j % MOD);
+			for (int i = j - 1, k = 1; i < n; i += j, k++) {
+				ans = (int) ((ans - (long) bj * (a[min(n - 1, i + j - 1)] - (i > 0 ? a[i - 1] : 0)) % MOD * k) % MOD);
 			}
 		}
-		for (int j = 0; j < m; j++) {
-			boolean flag = s[j].length == n;
-			if (flag) {
-				for (int i = 0; i < n; i++) {
-					int ai = ab[i][0] - 1, bi = ab[i][1] - 1;
-					if (!f[ai][bi][s[j][i] - 'a']) {
-						flag = false;
-						break;
-					}
-				}
-			}
-			out.println(flag);
-		}
+		out.println(ans < 0 ? ans + MOD : ans);
 	}
 
 	// region < Utility Methods >
@@ -448,7 +435,7 @@ public final class C {
 			out.flush();
 			if (args == null) System.err.println("null");
 			else if (args.getClass().getComponentType().isArray()) System.err.println(stringify(args));
-			else System.err.println(stream(args).map(C::stringify).collect(Collectors.joining("\n", "\n", "")));
+			else System.err.println(stream(args).map(o -> stringify(o)).collect(Collectors.joining("\n", "\n", "")));
 		}
 	}
 
@@ -457,7 +444,7 @@ public final class C {
 			out.flush();
 			if (args == null) System.err.println("null");
 			else if (args.getClass().getComponentType().isArray()) System.err.println(stringify(args));
-			else System.err.println(stream(args).map(C::stringify).collect(Collectors.joining(", ", "", "")));
+			else System.err.println(stream(args).map(o -> stringify(o)).collect(Collectors.joining(", ", "", "")));
 		}
 	}
 

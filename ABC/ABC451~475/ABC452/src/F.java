@@ -1,22 +1,14 @@
 import static java.lang.Math.*;
 import static java.util.Arrays.*;
-import static java.util.Comparator.*;
-import static java.util.stream.Collectors.*;
-import static java.util.stream.Gatherers.*;
 
-import java.io.*;
-import java.lang.invoke.*;
-import java.math.*;
-import java.nio.*;
-import java.nio.charset.*;
 import java.util.*;
-import java.util.Map.*;
 import java.util.function.*;
 import java.util.stream.*;
 
+import lib.ds.*;
 import lib.io.*;
 
-public final class C {
+public final class F {
 
 	// region < Constants & Globals >
 	private static final boolean DEBUG = true;
@@ -26,35 +18,33 @@ public final class C {
 	private static final int[] di = new int[]{0, -1, 0, 1, -1, -1, 1, 1};
 	private static final int[] dj = new int[]{-1, 0, 1, 0, -1, 1, 1, -1};
 	private static final FastScanner sc = new FastScanner();
-	private static final FastPrinter out = new FastPrinter();
+	private static final FastPrinter out = new FastPrinter(64);
 	// endregion
 
 	private static void solve() {
 		int n = sc.nextInt();
-		int[][] ab = sc.nextIntMat(n, 2);
-		int m = sc.nextInt();
-		boolean[][][] f = new boolean[10][10][26];
-		char[][] s = new char[m][];
-		for (int i = 0; i < m; i++) {
-			char[] si = s[i] = sc.nextChars();
-			boolean[][] fi = f[si.length - 1];
-			for (int j = 0; j < si.length; j++) {
-				fi[j][si[j] - 'a'] = true;
+		long k = sc.nextLong();
+		int[] a = sc.nextInt0(n);
+		out.println(countK(a, n, k) - countK(a, n, k - 1));
+	}
+
+	private static long countK(int[] a, int n, long k) {
+		IntBIT bit = new IntBIT(n);
+		long ans = 0, cnt = 0;
+		for (int l = 0, r = 0; l < n; l++) {
+			r = max(r, l);
+			while (r < n && cnt + bit.query(a[r], n - 1) <= k) {
+				cnt += bit.query(a[r], n - 1);
+				bit.set(a[r], 1);
+				r++;
+			}
+			ans += r - l;
+			if (l < r) {
+				cnt -= bit.query(a[l]) - 1;
+				bit.set(a[l], 0);
 			}
 		}
-		for (int j = 0; j < m; j++) {
-			boolean flag = s[j].length == n;
-			if (flag) {
-				for (int i = 0; i < n; i++) {
-					int ai = ab[i][0] - 1, bi = ab[i][1] - 1;
-					if (!f[ai][bi][s[j][i] - 'a']) {
-						flag = false;
-						break;
-					}
-				}
-			}
-			out.println(flag);
-		}
+		return ans;
 	}
 
 	// region < Utility Methods >
@@ -448,7 +438,7 @@ public final class C {
 			out.flush();
 			if (args == null) System.err.println("null");
 			else if (args.getClass().getComponentType().isArray()) System.err.println(stringify(args));
-			else System.err.println(stream(args).map(C::stringify).collect(Collectors.joining("\n", "\n", "")));
+			else System.err.println(stream(args).map(F::stringify).collect(Collectors.joining("\n", "\n", "")));
 		}
 	}
 
@@ -457,7 +447,7 @@ public final class C {
 			out.flush();
 			if (args == null) System.err.println("null");
 			else if (args.getClass().getComponentType().isArray()) System.err.println(stringify(args));
-			else System.err.println(stream(args).map(C::stringify).collect(Collectors.joining(", ", "", "")));
+			else System.err.println(stream(args).map(F::stringify).collect(Collectors.joining(", ", "", "")));
 		}
 	}
 
