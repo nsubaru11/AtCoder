@@ -53,3 +53,5 @@ logs/
 **/*.tmp               # 一時ファイル
 
 tools/**/node_modules/
+
+ADT/
