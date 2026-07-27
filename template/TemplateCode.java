@@ -9,10 +9,7 @@ import static java.util.stream.Collectors.*;
 import static java.util.stream.Gatherers.*;
 
 import java.io.*;
-import java.lang.invoke.*;
 import java.math.*;
-import java.nio.*;
-import java.nio.charset.*;
 import java.util.*;
 import java.util.Map.*;
 import java.util.function.*;
@@ -269,49 +266,6 @@ public final class TemplateCode {
 		return a << commonShift;
 	}
 
-	private static void compression(final int[][] a, final int n, final int m) {
-		final int len = n * m;
-		final int[] b = new int[len];
-		for (int i = 0, j = 0; i < n; i++, j += m) {
-			System.arraycopy(a[i], 0, b, j, m);
-		}
-		sort(b);
-		int nm = 1;
-		for (int i = 1; i < len; i++) {
-			if (b[i] == b[i - 1]) continue;
-			b[nm++] = b[i];
-		}
-		for (int i = 0; i < n; i++) {
-			int[] ai = a[i];
-			for (int j = 0; j < m; j++) {
-				ai[j] = binarySearch(b, 0, nm, ai[j]);
-			}
-		}
-	}
-
-	private static void compression(final int[][] a, final int n) {
-		int len = 0;
-		for (int i = 0; i < n; i++) len += a[i].length;
-		final int[] b = new int[len];
-		for (int i = 0, j = 0; i < n; i++) {
-			int m = a[i].length;
-			System.arraycopy(a[i], 0, b, j, m);
-			j += m;
-		}
-		sort(b);
-		int nm = 1;
-		for (int i = 1; i < len; i++) {
-			if (b[i] == b[i - 1]) continue;
-			b[nm++] = b[i];
-		}
-		for (int i = 0; i < n; i++) {
-			int[] ai = a[i];
-			for (int j = 0, m = ai.length; j < m; j++) {
-				ai[j] = binarySearch(b, 0, nm, ai[j]);
-			}
-		}
-	}
-
 	private static int digit2(long n) {
 		if (n == 0) return 1;
 		if (n == Long.MIN_VALUE) return 63;
@@ -357,40 +311,6 @@ public final class TemplateCode {
 	private static int iSqrt(final int n) {
 		if (n <= 0) return 0;
 		return (int) sqrt(n);
-	}
-
-	private static void prefix2D(final int[][] a, final IntBinaryOperator op) {
-		for (int[] ai : a) parallelPrefix(ai, op);
-		for (int i = 1, h = a.length, w = a[0].length; i < h; i++) {
-			for (int j = 0; j < w; j++) {
-				a[i][j] = op.applyAsInt(a[i][j], a[i - 1][j]);
-			}
-		}
-	}
-
-	private static void prefix2D(final long[][] a, final LongBinaryOperator op) {
-		for (long[] ai : a) parallelPrefix(ai, op);
-		for (int i = 1, h = a.length, w = a[0].length; i < h; i++) {
-			for (int j = 0; j < w; j++) {
-				a[i][j] = op.applyAsLong(a[i][j], a[i - 1][j]);
-			}
-		}
-	}
-
-	private static int rectSum(final int[][] a, final int i1, final int j1, final int i2, final int j2) {
-		int ans = a[i2][j2];
-		if (i1 > 0) ans -= a[i1 - 1][j2];
-		if (j1 > 0) ans -= a[i2][j1 - 1];
-		if (i1 > 0 && j1 > 0) ans += a[i1 - 1][j1 - 1];
-		return ans;
-	}
-
-	private static long rectSum(final long[][] a, final int i1, final int j1, final int i2, final int j2) {
-		long ans = a[i2][j2];
-		if (i1 > 0) ans -= a[i1 - 1][j2];
-		if (j1 > 0) ans -= a[i2][j1 - 1];
-		if (i1 > 0 && j1 > 0) ans += a[i1 - 1][j1 - 1];
-		return ans;
 	}
 	// endregion
 
