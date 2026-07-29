@@ -5,7 +5,6 @@ import java.util.*;
 import java.util.stream.*;
 
 import lib.io.*;
-import lib.math.combinatorics.*;
 
 public final class C {
 
