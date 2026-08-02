@@ -16,6 +16,8 @@ import java.util.function.*;
 import java.util.stream.*;
 
 import lib.io.*;
+import lib.util.*;
+import lib.math.*;
 
 // public final class ${NAME} {
 public final class TemplateCode {
@@ -198,119 +200,6 @@ public final class TemplateCode {
 
 	private static double diff(final double a, final double b) {
 		return a > b ? a - b : b - a;
-	}
-
-	private static long lModPow(long a, long b, final long mod) {
-		if (b == 0) return 1;
-		long ans = 1;
-		for (a %= mod; b > 1; b >>= 1) {
-			if ((b & 1) == 1) ans = ans * a % mod;
-			a = a * a % mod;
-		}
-		return ans * a % mod;
-	}
-
-	private static int iModPow(int a, int b, final int mod) {
-		if (b == 0) return 1;
-		int ans = 1;
-		for (a %= mod; b > 1; b >>= 1) {
-			if ((b & 1) == 1) ans = (int) ((long) ans * a % mod);
-			a = (int) ((long) a * a % mod);
-		}
-		return (int) ((long) ans * a % mod);
-	}
-
-	private static long lcmLong(final long x, final long y) {
-		return x == 0 || y == 0 ? 0 : x / gcdLong(x, y) * y;
-	}
-
-	private static int lcmInt(final int x, final int y) {
-		return x == 0 || y == 0 ? 0 : x / gcdInt(x, y) * y;
-	}
-
-	private static long gcdLong(long a, long b) {
-		a = abs(a);
-		b = abs(b);
-		if (a == 0) return b;
-		if (b == 0) return a;
-		int commonShift = Long.numberOfTrailingZeros(a | b);
-		a >>= Long.numberOfTrailingZeros(a);
-		while (b != 0) {
-			b >>= Long.numberOfTrailingZeros(b);
-			if (a > b) {
-				long tmp = a;
-				a = b;
-				b = tmp;
-			}
-			b -= a;
-		}
-		return a << commonShift;
-	}
-
-	private static int gcdInt(int a, int b) {
-		a = abs(a);
-		b = abs(b);
-		if (a == 0) return b;
-		if (b == 0) return a;
-		int commonShift = Integer.numberOfTrailingZeros(a | b);
-		a >>= Integer.numberOfTrailingZeros(a);
-		while (b != 0) {
-			b >>= Integer.numberOfTrailingZeros(b);
-			if (a > b) {
-				int tmp = a;
-				a = b;
-				b = tmp;
-			}
-			b -= a;
-		}
-		return a << commonShift;
-	}
-
-	private static int digit2(long n) {
-		if (n == 0) return 1;
-		if (n == Long.MIN_VALUE) return 63;
-		return 64 - Long.numberOfLeadingZeros(Math.abs(n));
-	}
-
-	private static int digit2(int n) {
-		if (n == 0) return 1;
-		if (n == Integer.MIN_VALUE) return 31;
-		return 32 - Integer.numberOfLeadingZeros(Math.abs(n));
-	}
-
-	private static int digit10(long n) {
-		if (n == Long.MIN_VALUE) return 19;
-		if (n < 0) n = -n;
-		int res = 0;
-		do {
-			res++;
-			n /= 10;
-		} while (n > 0);
-		return res;
-	}
-
-	private static int digit10(int n) {
-		if (n == Integer.MIN_VALUE) return 10;
-		if (n < 0) n = -n;
-		int res = 0;
-		do {
-			res++;
-			n /= 10;
-		} while (n > 0);
-		return res;
-	}
-
-	private static long lSqrt(final long n) {
-		if (n <= 0) return 0;
-		long x = (long) sqrt(n);
-		if (x * x > n) x--;
-		else if ((x + 1) * (x + 1) <= n) x++;
-		return x;
-	}
-
-	private static int iSqrt(final int n) {
-		if (n <= 0) return 0;
-		return (int) sqrt(n);
 	}
 	// endregion
 
