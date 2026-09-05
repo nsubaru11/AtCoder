@@ -1,3 +1,9 @@
+// ====================================================================================================
+// Author: nsubaru
+// Runtime: Java 24
+// Library: https://github.com/nsubaru11/competitive-programming-java-library
+// ====================================================================================================
+
 // #if (${PACKAGE_NAME} && ${PACKAGE_NAME} != "")package ${PACKAGE_NAME};
 // #end
 // #parse("File Header.java")
