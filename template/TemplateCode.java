@@ -207,6 +207,38 @@ public final class TemplateCode {
 	private static double diff(final double a, final double b) {
 		return a > b ? a - b : b - a;
 	}
+
+	private static void fill2D(final char[][] a, final char v) {
+		for (final char[] ai : a) fill(ai, v);
+	}
+
+	private static void fill2D(final int[][] a, final int v) {
+		for (final int[] ai : a) fill(ai, v);
+	}
+
+	private static void fill2D(final long[][] a, final long v) {
+		for (final long[] ai : a) fill(ai, v);
+	}
+
+	private static void fill2D(final double[][] a, final double v) {
+		for (final double[] ai : a) fill(ai, v);
+	}
+
+	private static void fill3D(final char[][][] a, final char v) {
+		for (final char[][] ai : a) fill2D(ai, v);
+	}
+
+	private static void fill3D(final int[][][] a, final int v) {
+		for (final int[][] ai : a) fill2D(ai, v);
+	}
+
+	private static void fill3D(final long[][][] a, final long v) {
+		for (final long[][] ai : a) fill2D(ai, v);
+	}
+
+	private static void fill3D(final double[][][] a, final double v) {
+		for (final double[][] ai : a) fill2D(ai, v);
+	}
 	// endregion
 
 	// region < main & debug >
