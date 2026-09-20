@@ -1,56 +1,81 @@
 # OSごとの不要なファイル
-**/.DS_Store           # macOSの不要なファイル
-**/Thumbs.db           # Windowsの不要なファイル
-._*                 # macOSの隠しファイル
-**/desktop.ini         # Windowsの設定ファイル
+# macOSの不要なファイル
+**/.DS_Store
+# Windowsの不要なファイル
+**/Thumbs.db
+# macOSの隠しファイル
+._*
+# Windowsの設定ファイル
+**/desktop.ini
 
 # Java関連のファイル
-**/*.class             # コンパイル後のJavaクラスファイル
+# コンパイル後のJavaクラスファイル
+**/*.class
 
 # IntelliJ の設定ファイル
 .idea/
-*.iml
-
 # ビルド成果物
+*.iml
 out/
 *.class
-logs/
-
 # Eclipse & IntelliJ project files
-**/.idea/           # IntelliJ の設定ディレクトリ（全てのディレクトリに適用）
-**/*.iml               # IntelliJ のプロジェクト設定ファイル
-**/*.ipr               # IntelliJ のプロジェクト設定ファイル
-**/*.iws               # IntelliJ のワークスペース設定ファイル
-**/.classpath          # Eclipse のプロジェクト設定ファイル
-**/.project            # Eclipse のプロジェクト設定ファイル
-**/.settings/          # Eclipse の設定ディレクトリ
+logs/
+# IntelliJ の設定ディレクトリ（全てのディレクトリに適用）
+**/.idea/
+# IntelliJ のプロジェクト設定ファイル
+**/*.iml
+# IntelliJ のプロジェクト設定ファイル
+**/*.ipr
+# IntelliJ のワークスペース設定ファイル
+**/*.iws
+# Eclipse のプロジェクト設定ファイル
+**/.classpath
+# Eclipse のプロジェクト設定ファイル
+**/.project
+# Eclipse の設定ディレクトリ
+**/.settings/
 
 # ビルドディレクトリ
-**/bin/                # Eclipse のビルドディレクトリ
-**/out/                # IntelliJ のビルドディレクトリ
-**/target/             # Maven のビルドディレクトリ
-**/build/              # Gradle のビルドディレクトリ
-**/.gradle/            # Gradle の設定ディレクトリ
-**/.mvn/               # Maven の設定ディレクトリ
+# Eclipse のビルドディレクトリ
+**/bin/
+# IntelliJ のビルドディレクトリ
+**/out/
+# Maven のビルドディレクトリ
+**/target/
+# Gradle のビルドディレクトリ
+**/build/
+# Gradle の設定ディレクトリ
+**/.gradle/
+# Maven の設定ディレクトリ
+**/.mvn/
 
 # ログファイル
-**/*.log               # ログファイル
-**/history.txt
-
+# ログファイル
+**/*.log
 # 仮想環境や依存関係管理ファイル
-**/node_modules/       # Node.js の依存関係
-**/venv/               # Python の仮想環境
-**/*.jar               # ローカルで生成したJARファイル
-**/*.war               # Webアーカイブファイル
-**/*.ear               # エンタープライズアーカイブファイル
+**/history.txt
+# Node.js の依存関係
+**/node_modules/
+# Python の仮想環境
+**/venv/
+# ローカルで生成したJARファイル
+**/*.jar
+# Webアーカイブファイル
+**/*.war
+# エンタープライズアーカイブファイル
+**/*.ear
 
 # エディタの一時ファイル
-**/*.swp               # Vim のスワップファイル
-**/*.swo               # Vim のオープンファイル
-**/*.bak               # エディタでバックアップされたファイル
+# Vim のスワップファイル
+**/*.swp
+# Vim のオープンファイル
+**/*.swo
+# エディタでバックアップされたファイル
+**/*.bak
 
 # その他の一時ファイル
-**/*.tmp               # 一時ファイル
+# 一時ファイル
+**/*.tmp
 
 tools/**/node_modules/
 
